@@ -35,14 +35,14 @@ As with installing dependencies and building the library, you use Poetry to test
 
 ### Run all the tests
 
-To run all unit and integration tests, run `pytest` with `poetry run`, passing only the test directory path as the only argument:
+To run all unit and integration tests, run `pytest` with `poetry run`, passing the test directory path as the only argument:
 
 ```sh
 # Run ALL unit and integration tests in <repo-root>/tests/*.py
 poetry run pytest ../tests
 ```
 
-You should see a bunch of test output ending in a summary of the test results. Here's an abridge example of test output:
+You should see a bunch of test output ending in a summary of the test results. Here's an abridged example of test output:
 
 ```console
 $ poetry run pytest ../tests
@@ -96,7 +96,7 @@ PASSED                                                                          
 
 ### Run specific tests
 
-You can pass any argument you normally would to `pytest` when you run it with Poetry. For example, to run only the `test_remove_character_not_in_party` test, pass the `-k` filtering option followed by the test name:
+You can pass any argument you normally would to `pytest` when you run it with Poetry. For example, to run only tests related to removing characters from a party, pass `test_remove_character` as an arg to the `-k` filtering option:
 
 ```console
 $ poetry run pytest ../tests -k "test_remove_character"
