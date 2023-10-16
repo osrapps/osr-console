@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "osrgame"
+version = "0.1.0"
+description = "Text user interface (TUI) for OSR Console, a turn-based dungeon crawler RPG in the old-school renaissance style."
+authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+textual = "^0.40.0"
+osrlib = { path = "../osrlib" }
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+flake8 = "^6.1.0"
+flake8-docstrings = "^1.7.0"
+pytest = "^7.4.2"
+mkdocs-material = "^9.4.6"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -161,3 +161,4 @@ cython_debug/
 
 # Miscellaneous
 .DS_Store
+test_db.json
