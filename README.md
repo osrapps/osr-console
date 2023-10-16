@@ -14,9 +14,9 @@ Character creation isn't quite in, and there are no monsters or spells or combat
 - [x] Create public repo (this one).
 - [x] Init `mkdocs` project (sans actual docs).
 - [x] Move `osrlib`, `osrgame`, and `tests` projects to this repo.
-- [x] Move to [Poetry](https://python-poetry.org/)
+- [x] Move to [Poetry](https://python-poetry.org/).
 - [ ] 👉 Character save/load in [TinyDB](https://tinydb.readthedocs.io/).
-- [ ] Party and character creation workflow in UI
+- [ ] Party and character creation workflow in UI.
 - [ ] ...and everything else you need for a turn-based dungeon crawler fantasty RPG.
 
 ## Prerequisites
