@@ -1,6 +1,6 @@
 # osrgame: Textual TUI for an OSR-style turn-based RPG
 
-The `osrgame` package provides user interface for the OSR Console application--it's the thing you run to play the game.
+The `osrgame` package provides the user interface for the OSR Console application--it's the thing you run to play the game.
 
 ## Prerequisites
 
