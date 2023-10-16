@@ -346,7 +346,7 @@ saving_throws = {
 }
 
 
-character_classes = [
+all_character_classes = [
     CharacterClass(CharacterClassType.CLERIC),
     CharacterClass(CharacterClassType.THIEF),
     CharacterClass(CharacterClassType.DWARF),

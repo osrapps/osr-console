@@ -2,10 +2,9 @@ from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
-from osrlib.character_classes import CharacterClassType
 
-from osrlib.item import Armor, Weapon
-from .widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
+from osrlib import CharacterClassType, Armor, Weapon
+from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
 
 
 ####################

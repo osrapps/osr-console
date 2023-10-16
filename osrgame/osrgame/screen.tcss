@@ -1,0 +1,54 @@
+CharacterScreen {
+    layout: grid;
+    grid-size: 4;
+    grid-columns: 1.5fr 1.25fr 1fr 1fr;
+    grid-rows: 25% 25% 50%;
+    background: $surface;
+}
+
+#stat-block {
+    padding: 1;
+    column-span: 2;
+}
+#log {
+    column-span: 2;
+}
+
+#ability-block {
+    padding: 1;
+    column-span: 2;
+}
+
+#saving-throw-block {
+    padding: 1;
+    column-span: 2;
+}
+
+#item-block {
+    column-span: 3;
+}
+
+#char-buttons {
+    border: solid $surface-lighten-3;
+    layout: vertical;
+    align: center middle;
+}
+
+.box {
+    height: 100%;
+    border: solid lightgray;
+}
+
+.button {
+    margin: 1;
+    background: $surface-lighten-1;
+}
+
+.header-footer {
+    color: $text;
+    background: $surface-lighten-1;
+}
+.table {
+    color: $text;
+    background: $surface-lighten-1;
+}

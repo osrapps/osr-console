@@ -1,4 +1,4 @@
-"""Classes representing character abilities as described in the original Dungeons & Dragons Basic Set Rule Book released by TSR in 1981."""
+"""Defines player character abilities."""
 
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -330,13 +330,3 @@ class Charisma(Ability):
             REACTION: Modifier to reaction rolls when interacting with NPCs.
         """
         self.modifiers[ModifierType.REACTION] = self._get_modifier()
-
-
-# Example usage
-if __name__ == "__main__":
-    print(Strength(18))
-    print(Intelligence(18))
-    print(Wisdom(18))
-    print(Dexterity(18))
-    print(Constitution(18))
-    print(Charisma(18))

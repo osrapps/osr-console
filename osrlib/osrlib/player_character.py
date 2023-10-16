@@ -9,8 +9,14 @@ from osrlib.ability import (
     Strength,
     Wisdom,
 )
-from osrlib import character_classes, dice_roller, item
-from osrlib.inventory import Inventory
+from osrlib import (
+    dice_roller,
+    CharacterClass,
+    CharacterClassType,
+    ClassLevel,
+    Inventory,
+    Item,
+)
 
 
 class PlayerCharacter:
@@ -26,7 +32,7 @@ class PlayerCharacter:
     def __init__(
         self,
         name: str,
-        character_class_type: character_classes.CharacterClassType,
+        character_class_type: CharacterClassType,
         level: int = 1,
     ):
         """Initialize a new PlayerCharacter (PC) instance."""
@@ -44,7 +50,10 @@ class PlayerCharacter:
         Returns:
             str: A string representation of the PlayerCharacter instance.
         """
-        ability_str = ", ".join(f"{ability.name}: {attr.score:>2}" for ability, attr in self.abilities.items())
+        ability_str = ", ".join(
+            f"{ability.name}: {attr.score:>2}"
+            for ability, attr in self.abilities.items()
+        )
         return (
             f"Name: {self.name}, "
             f"Class: {self.character_class.class_type.name}, "
@@ -71,7 +80,11 @@ class PlayerCharacter:
         """Get the armor class of the character."""
         armor_class = 9
         armor_class += self.abilities[AbilityType.DEXTERITY].modifiers[ModifierType.AC]
-        armor_class += sum(armor_item.ac_modifier for armor_item in self.inventory.armor if armor_item.is_equipped)
+        armor_class += sum(
+            armor_item.ac_modifier
+            for armor_item in self.inventory.armor
+            if armor_item.is_equipped
+        )
         return armor_class
 
     def get_ability_roll(self):
@@ -79,22 +92,26 @@ class PlayerCharacter:
         roll = dice_roller.roll_dice("4d6", drop_lowest=True)
         return roll.total
 
-    def set_character_class(self, character_class_type: character_classes.CharacterClassType, level: int = 1):
+    def set_character_class(
+        self, character_class_type: CharacterClassType, level: int = 1
+    ):
         """Sets the character class of the character."""
         # TODO: Add validation to prevent setting a class if the class' ability score prerequisites aren't met
-        self.character_class = character_classes.CharacterClass(
+        self.character_class = CharacterClass(
             character_class_type,
             level,
             self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP],
         )
         return self.character_class
 
-    def grant_xp(self, xp: int) -> character_classes.ClassLevel:
+    def grant_xp(self, xp: int) -> ClassLevel:
         """Grants XP to the character, taking into account their Constitution ability modifier, if any."""
         self.character_class.xp += xp
         try:
             # Need to pass the character's Constitution modifier all the way down to the roll_hp method
-            return self.character_class.level_up(self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP])
+            return self.character_class.level_up(
+                self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
+            )
         except ValueError as e:
             print(e)
 
@@ -122,21 +139,23 @@ class PlayerCharacter:
         Returns:
             DiceRoll: The result of the HP roll. Value with modifiers can be negative.
         """
-        hp_modifier = self.abilities.get(AbilityType.CONSTITUTION).modifiers[ModifierType.HP]
+        hp_modifier = self.abilities.get(AbilityType.CONSTITUTION).modifiers[
+            ModifierType.HP
+        ]
 
         return self.character_class.roll_hp(hp_modifier)
 
-    def add_item_to_inventory(self, item: item.Item):
+    def add_item_to_inventory(self, item: Item):
         return self.inventory.add_item(item)
 
-    def get_item_from_inventory(self, item: item.Item):
+    def get_item_from_inventory(self, item: Item):
         return self.inventory.get_item(item)
 
-    def remove_item_from_inventory(self, item: item.Item):
+    def remove_item_from_inventory(self, item: Item):
         return self.inventory.remove_item(item)
 
-    def equip_item(self, item: item.Item):
+    def equip_item(self, item: Item):
         return self.inventory.equip_item(item)
 
-    def unequip_item(self, item: item.Item):
+    def unequip_item(self, item: Item):
         return self.inventory.unequip_item(item)

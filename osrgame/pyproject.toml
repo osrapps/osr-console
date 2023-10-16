@@ -9,7 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 textual = "^0.40.0"
-osrlib = {path = "../osrlib"}
+osrlib = { path = "../osrlib" }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"

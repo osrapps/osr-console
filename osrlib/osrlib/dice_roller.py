@@ -1,3 +1,4 @@
+"""Dice roller module for rolling dice based on the nDn or Dn notation, supporting modifiers."""
 import random
 import re
 from collections import namedtuple
@@ -9,6 +10,11 @@ class DiceRoll(
         ["num_dice", "num_sides", "total", "modifier", "total_with_modifier", "rolls"],
     )
 ):
+    """Roll dice based on the nDn or Dn notation, optionally including a modifier like '3d6+2' or '1d20-1'.
+
+    Args:
+        namedtuple (RollResult): The named tuple containing the number of dice, number of sides, base roll, modifier, total roll with modifier, and the individual rolls.
+    """
     def __str__(self):
         """
         Returns a string representation of the dice roll based on the ndn notation, including modifiers if applicable.
@@ -119,21 +125,3 @@ def _add_modifier_to_dice_notation(notation: str, modifier: int) -> str:
         return f"{num_dice}d{num_sides}+{new_modifier}"
     else:
         return f"{num_dice}d{num_sides}{new_modifier}"
-
-
-# Example usage
-if __name__ == "__main__":
-    dice_roll = roll_dice("3d6")
-    print(dice_roll.pretty_print())
-
-    dice_roll = roll_dice("1d20+3")
-    print(dice_roll.pretty_print())
-
-    dice_roll = roll_dice("2D8 - 3")
-    print(dice_roll.pretty_print())
-
-    dice_roll = roll_dice("4d6", drop_lowest=True)
-    print(dice_roll.pretty_print() + " (dropped lowest)")
-
-    dice_roll = roll_dice("d20")
-    print(dice_roll.pretty_print())

@@ -20,7 +20,7 @@ As of 14 OCT 2023,development has been in progress for about six weeks.
 ## Prerequisites
 
 - Python 3.10+
-- Poetry
+- Poetry 1.6+
 
 ## Installation
 

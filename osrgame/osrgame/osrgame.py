@@ -1,12 +1,11 @@
 from textual.app import App, ComposeResult
 
-from osrlib import CharacterClassType, PlayerCharacter
-from osrlib import Armor, Item, Weapon
-from osrui.screen import CharacterScreen, WelcomeScreen
+from osrlib import CharacterClassType, PlayerCharacter, Armor, Item, Weapon
+from screen import CharacterScreen, WelcomeScreen
 
 
 class OSRConsole(App):
-    CSS_PATH = "osrui/screen.tcss"
+    CSS_PATH = "screen.tcss"
 
     BINDINGS = [
         ("c", "character", "Character"),
