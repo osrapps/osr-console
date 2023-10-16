@@ -31,15 +31,7 @@ poetry build
 
 ## Test the library
 
-Install the unit and integration test dependencies with Poetry:
-
-```sh
-# Move into the tests directory (assumes you're in <repo-root>/osrlib)
-cd ../tests
-
-# Create tests venv and install test deps with Poetry
-poetry install
-```
+As with installing dependencies and building the library, you use Poetry to test it.
 
 ### Run all the tests
 
