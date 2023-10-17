@@ -357,8 +357,36 @@ def test_item_autoset_attributes_preserved_on_saveload(db):
 
     # Step 7: Clean up
     # TODO: Add an Inventory.drop_all_items() method to make this easier.
-    test_fighter.inventory.unequip_item(retrieved_armor)
-    test_fighter.inventory.unequip_item(retrieved_weapon)
-    test_fighter.inventory.remove_item(retrieved_armor)
-    test_fighter.inventory.remove_item(retrieved_weapon)
-    test_fighter.inventory.remove_item(retrieved_normal_item)
+    test_fighter.inventory.drop_all_items()
+
+def test_inventory_saveload(db):
+    inventory_table = db.table("inventory")
+    armor = item.Armor(
+        "Plate Mail Armor",
+        gp_value=50,
+        max_equipped=1,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    weapon = item.Weapon(
+        "Sword",
+        "1d8",
+        gp_value=30,
+        max_equipped=1,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    normal_item = item.Item("50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0)
+
+    test_fighter.inventory.add_item(armor)
+    test_fighter.inventory.add_item(weapon)
+    test_fighter.inventory.add_item(normal_item)
+    test_fighter.inventory.equip_item(armor)
+    test_fighter.inventory.equip_item(weapon)
+
+    gm.logger.info(f"Calling to_dict() on {test_fighter.inventory}")
+    inventory_dict = test_fighter.inventory.to_dict()
+    inventory_table.insert(inventory_dict)
+
+    InventoryQuery = Query()
+    retrieved_inventory_dict = inventory_table.search(InventoryQuery.owner == test_fighter.name)[0]
+    retrieved_inventory = test_fighter.inventory.from_dict(retrieved_inventory_dict)
+    gm.logger.info(f"Retrieved inventory: {retrieved_inventory}")

@@ -29,8 +29,6 @@ class Inventory:
         >>> inv = Inventory(pc)
     """
 
-    # TODO: Add a drop_all_items() method to remove all items from the inventory (unequip and set owner to None)
-
     def __init__(self, player_character_owner: "PlayerCharacter"):
         """Initialize a PlayerCharacter's inventory.
 
@@ -145,6 +143,24 @@ class Inventory:
         else:
             raise ItemNotEquippedError(f"Can't unequip item '{item.name}' because it is not currently equipped.")
 
+    def drop_all_items(self):
+        """Remove all items from the inventory and return a collection of the items that were removed.
+
+        Equipped items are unequipped prior to being removed.
+
+        Returns:
+            list[Item]: List of all items that were removed.
+        """
+        removed_items = []
+        for item in self.all_items:
+            if item.is_equipped:
+                self.unequip_item(item)
+
+            if self.remove_item(item):
+                removed_items.append(item)
+
+        return removed_items
+
     @property
     def all_items(self):
         """Gets all items stored in the items defaultdict inventory property.
@@ -209,3 +225,27 @@ class Inventory:
             list[Item]: List of miscellaneous items. Returns an empty list if no miscellaneous items are present.
         """
         return self.items[ItemType.ITEM]
+
+    def to_dict(self) -> dict:
+        return {
+            "items": [item.to_dict() for item in self.all_items],
+            "owner": self.owner.name,
+        }
+
+    @classmethod
+    def from_dict(cls, inventory_dict: dict) -> "Inventory":
+        """Converts a dictionary to an inventory.
+
+        Args:
+            inventory_dict (dict): Dictionary representation of the inventory.
+        """
+        inventory = cls(
+            inventory_dict["owner"],
+        )
+        inventory.items = [Item.from_dict(item_dict) for item_dict in inventory_dict["items"]]
+
+        # self.owner = inventory_dict["owner"]
+        # self.items = defaultdict(list)
+        # for item_dict in inventory_dict["items"]:
+        #     item = Item.from_dict(item_dict)
+        #     self.add_item(item)

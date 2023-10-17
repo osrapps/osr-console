@@ -2,11 +2,7 @@ import logging
 
 import pytest
 
-from osrlib.ability import AbilityType
-from osrlib.character_classes import CharacterClassType
-from osrlib.combat import ModifierType
-from osrlib.item import Armor
-from osrlib.player_character import PlayerCharacter
+from osrlib import AbilityType, CharacterClassType, ModifierType, Armor, PlayerCharacter
 
 logger = logging.getLogger(__name__)
 
