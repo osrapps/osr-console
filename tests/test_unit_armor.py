@@ -2,11 +2,7 @@ import logging
 
 import pytest
 
-from osrlib.ability import AbilityType
-from osrlib.character_classes import CharacterClassType
-from osrlib.combat import ModifierType
-from osrlib.item import Armor
-from osrlib.player_character import PlayerCharacter
+from osrlib import AbilityType, CharacterClassType, ModifierType, Armor, PlayerCharacter
 
 logger = logging.getLogger(__name__)
 
@@ -58,23 +54,23 @@ def setup_pc(character_class, armor):
 
     # Teardown
     if armor.is_equipped:
-        pc.unequip_item(armor)
-    pc.remove_item_from_inventory(armor)
+        pc.inventory.unequip_item(armor)
+    pc.inventory.remove_item(armor)
 
 
 # Armor should have been added to the inventory
 @pytest.mark.parametrize("armor, character_class, expected_result", generate_test_params())
 def test_armor_added_to_inventory(setup_pc, armor, expected_result):
     pc = setup_pc
-    pc.add_item_to_inventory(armor)
-    assert armor is pc.get_item_from_inventory(armor)
+    pc.inventory.add_item(armor)
+    assert armor is pc.inventory.get_item(armor)
 
 
 # Armor should "know" whether it's usable by the owning character's class
 @pytest.mark.parametrize("armor, character_class, expected_result", generate_test_params())
 def test_armor_usability_by_owner(setup_pc, armor, expected_result):
     pc = setup_pc
-    pc.add_item_to_inventory(armor)
+    pc.inventory.add_item(armor)
     assert armor.is_usable_by_owner == expected_result
 
 
@@ -83,12 +79,12 @@ def test_armor_usability_by_owner(setup_pc, armor, expected_result):
 @pytest.mark.parametrize("armor, character_class, expected_result", generate_test_params())
 def test_armor_equip_status(setup_pc, armor, expected_result):
     pc = setup_pc
-    pc.add_item_to_inventory(armor)
+    pc.inventory.add_item(armor)
     if armor.is_usable_by_owner:
         dex = pc.abilities[AbilityType.DEXTERITY].score
         ac_mod = pc.abilities[AbilityType.DEXTERITY].modifiers[ModifierType.AC]
         logger.info(f"{armor.name} is usable by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
-        pc.equip_item(armor)
+        pc.inventory.equip_item(armor)
         logger.info(f"{armor.name} equipped  by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
         assert armor.is_equipped
     else:

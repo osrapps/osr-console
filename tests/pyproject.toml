@@ -1,21 +1,16 @@
 [tool.poetry]
-name = "osrlib"
-version = "0.1.2"
-description = "Turn-based dungeon-crawler game engine for OSR-style RPGs."
+name = "tests"
+version = "0.1.0"
+description = "Test library for osrlib."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-tinydb = "^4.8.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.9.1"
-flake8 = "^6.1.0"
-flake8-docstrings = "^1.7.0"
+osrlib = {path = "../osrlib"}
 pytest = "^7.4.2"
-mkdocs-material = "^9.4.6"
+
 
 [build-system]
 requires = ["poetry-core"]

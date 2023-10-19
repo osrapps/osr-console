@@ -144,18 +144,3 @@ class PlayerCharacter:
         ]
 
         return self.character_class.roll_hp(hp_modifier)
-
-    def add_item_to_inventory(self, item: Item):
-        return self.inventory.add_item(item)
-
-    def get_item_from_inventory(self, item: Item):
-        return self.inventory.get_item(item)
-
-    def remove_item_from_inventory(self, item: Item):
-        return self.inventory.remove_item(item)
-
-    def equip_item(self, item: Item):
-        return self.inventory.equip_item(item)
-
-    def unequip_item(self, item: Item):
-        return self.inventory.unequip_item(item)

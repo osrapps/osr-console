@@ -14,9 +14,13 @@ from osrlib.ability import (
 from osrlib.combat import ModifierType
 
 
-test_fighter = PlayerCharacter("Test Fighter", character_classes.CharacterClassType.FIGHTER)
+test_fighter = PlayerCharacter(
+    "Test Fighter", character_classes.CharacterClassType.FIGHTER
+)
 test_elf = PlayerCharacter("Test Elf", character_classes.CharacterClassType.ELF)
-test_magic_user = PlayerCharacter("Test Magic User", character_classes.CharacterClassType.MAGIC_USER)
+test_magic_user = PlayerCharacter(
+    "Test Magic User", character_classes.CharacterClassType.MAGIC_USER
+)
 
 
 @pytest.fixture
@@ -109,7 +113,9 @@ def test_item_saveload(db):
         character_classes.CharacterClassType.FIGHTER,
         character_classes.CharacterClassType.THIEF,
     }
-    original_item = item.Item("50' rope", item.ItemType.ITEM, usable_by, max_equipped=0, gp_value=5)
+    original_item = item.Item(
+        "50' rope", item.ItemType.ITEM, usable_by, max_equipped=0, gp_value=5
+    )
 
     # Serialize and insert into DB
     item_dict = original_item.to_dict()
@@ -136,7 +142,9 @@ def test_armor_saveload(db):
         character_classes.CharacterClassType.FIGHTER,
         character_classes.CharacterClassType.ELF,
     }
-    original_item = item.Armor("Chain Mail", -4, usable_by_classes=usable_by, max_equipped=1, gp_value=40)
+    original_item = item.Armor(
+        "Chain Mail", -4, usable_by_classes=usable_by, max_equipped=1, gp_value=40
+    )
 
     # Serialize and insert into DB
     item_dict = original_item.to_dict()
@@ -297,7 +305,9 @@ def test_item_autoset_attributes_preserved_on_saveload(db):
         max_equipped=1,
         usable_by_classes={character_classes.CharacterClassType.FIGHTER},
     )
-    normal_item = item.Item("50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0)
+    normal_item = item.Item(
+        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    )
 
     # Step 2: Add to test_fighter's inventory
     test_fighter.inventory.add_item(armor)
@@ -357,8 +367,92 @@ def test_item_autoset_attributes_preserved_on_saveload(db):
 
     # Step 7: Clean up
     # TODO: Add an Inventory.drop_all_items() method to make this easier.
-    test_fighter.inventory.unequip_item(retrieved_armor)
-    test_fighter.inventory.unequip_item(retrieved_weapon)
-    test_fighter.inventory.remove_item(retrieved_armor)
-    test_fighter.inventory.remove_item(retrieved_weapon)
-    test_fighter.inventory.remove_item(retrieved_normal_item)
+    test_fighter.inventory.drop_all_items()
+
+
+def test_inventory_saveload(db):
+    inventory_table = db.table("inventory")
+    armor = item.Armor(
+        "Plate Mail Armor",
+        gp_value=50,
+        max_equipped=1,
+        ac_modifier=-6,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    weapon = item.Weapon(
+        "Sword",
+        "1d8",
+        gp_value=30,
+        max_equipped=1,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    normal_item = item.Item(
+        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    )
+
+    test_fighter.inventory.add_item(armor)
+    test_fighter.inventory.add_item(weapon)
+    test_fighter.inventory.add_item(normal_item)
+    test_fighter.inventory.equip_item(armor)
+    test_fighter.inventory.equip_item(weapon)
+
+    # SAVE the inventory to the DB
+    inventory_dict = test_fighter.inventory.to_dict()
+    inventory_table.insert(inventory_dict)
+
+    # Simulate a new or loaded character
+    test_fighter_loaded_from_db = PlayerCharacter(
+        "Fighter From DB", character_classes.CharacterClassType.FIGHTER
+    )
+
+    # LOAD the inventory from the DB
+    InventoryDict = Query()
+    retrieved_inventory_dict = inventory_table.search(
+        InventoryDict.owner == test_fighter.name
+    )[0]
+    test_fighter_loaded_from_db.inventory.from_dict(
+        retrieved_inventory_dict, test_fighter_loaded_from_db
+    )
+
+    # Assertion 1: Verify number of items
+    assert len(test_fighter.inventory.items) == len(inventory_dict["items"])
+
+    # Assertion 2: Verify item attributes
+    original_items = {item.name: item for item in test_fighter.inventory.all_items}
+    loaded_items = {
+        item.name: item for item in test_fighter_loaded_from_db.inventory.all_items
+    }
+    for name, original_item in original_items.items():
+        loaded_item = loaded_items[name]
+        assert original_item.gp_value == loaded_item.gp_value
+        assert original_item.max_equipped == loaded_item.max_equipped
+
+    # Assertion 3: Check 'is_equipped' status
+    assert all(
+        original_item.is_equipped == loaded_items[original_item.name].is_equipped
+        for original_item in original_items.values()
+    )
+
+    # Assertion 4: Verify owner
+    assert test_fighter_loaded_from_db.inventory.owner == test_fighter_loaded_from_db
+
+    # Assertion 5: Check usability of items
+    assert all(
+        original_item.is_usable_by_owner
+        == loaded_items[original_item.name].is_usable_by_owner
+        for original_item in original_items.values()
+    )
+
+    # Assertion 6: Validate integrity of modifiers
+    assert (
+        original_items["Plate Mail Armor"].ac_modifier
+        == loaded_items["Plate Mail Armor"].ac_modifier
+    )
+
+    # Assertion 7: Total Inventory Value
+    assert sum(item.gp_value for item in test_fighter.inventory.all_items) == sum(
+        item.gp_value for item in test_fighter_loaded_from_db.inventory.all_items
+    )
+
+    # Assertion 8: Check for extraneous items
+    assert set(original_items.keys()) == set(loaded_items.keys())

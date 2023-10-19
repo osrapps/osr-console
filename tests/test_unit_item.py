@@ -65,15 +65,15 @@ def test_weapon_usability_per_character_class(setup_pc, weapon, expected_result)
 
     # Item should be successfully added to inventory regardless of usability
     logger.info(f"Adding {weapon.name} to {pc.name}'s inventory")
-    assert pc.add_item_to_inventory(weapon), f"{weapon.name} not added to {pc.name}'s inventory"
+    assert pc.inventory.add_item(weapon), f"{weapon.name} not added to {pc.name}'s inventory"
 
     logger.info(f"Adding {weapon.name} to {pc.name}'s inventory again")
     with pytest.raises(ItemAlreadyInInventoryError):
-        pc.add_item_to_inventory(weapon)
+        pc.inventory.add_item(weapon)
 
     # Item should be retrievable from inventory if it was previously added
     logger.info(f"Getting {weapon.name} from {pc.name}'s inventory")
-    weapon_from_inv = pc.get_item_from_inventory(weapon)
+    weapon_from_inv = pc.inventory.get_item(weapon)
     assert weapon_from_inv == weapon, f"Could NOT get {weapon.name} from {pc.name}'s inventory"
 
     # Error should be raised when trying to get an item from inventory that's not in the inventory
@@ -81,7 +81,7 @@ def test_weapon_usability_per_character_class(setup_pc, weapon, expected_result)
         some_other_weapon = create_weapon(
             "THIS WEAPON NOT IN INVENTORY", "1d6", CLASSES_THAT_CAN_USE_ALL_WEAPONS, 1, 40
         )
-        pc.get_item_from_inventory(some_other_weapon)
+        pc.inventory.get_item(some_other_weapon)
 
     # Item should be usable by classes that can use it
     logger.info(f"Checking whether {pc.name} can use {weapon.name}")
@@ -94,22 +94,22 @@ def test_weapon_usability_per_character_class(setup_pc, weapon, expected_result)
     # Item should be equipable and unequipable if it's usable by owner
     if weapon.is_usable_by_owner:
         logger.info(f"Equipping {pc.name} with {weapon.name}")
-        assert pc.equip_item(weapon), f"{pc.name} could NOT equip {weapon.name}"
+        assert pc.inventory.equip_item(weapon), f"{pc.name} could NOT equip {weapon.name}"
 
         logger.info(f"Unequipping {pc.name}'s {weapon.name}")
-        assert pc.unequip_item(weapon), f"{pc.name} could NOT unequip {weapon.name}"
+        assert pc.inventory.unequip_item(weapon), f"{pc.name} could NOT unequip {weapon.name}"
 
         # Error should be raised when trying to unequip an item that's not equipped
         if not weapon.is_equipped:
             with pytest.raises(ItemNotEquippedError):
-                pc.unequip_item(weapon)
+                pc.inventory.unequip_item(weapon)
     else:
         logger.info(f"{weapon.name} is NOT usable by {pc.name}, skipping equip/unequip test")
 
     # Item should be removable from inventory
     logger.info(f"Removing {weapon.name} from {pc.name}'s inventory")
-    assert pc.remove_item_from_inventory(weapon), f"{weapon.name} could NOT be removed from {pc.name}'s inventory"
+    assert pc.inventory.remove_item(weapon), f"{weapon.name} could NOT be removed from {pc.name}'s inventory"
 
     # Error should be raised on attemping to remove an item not in inventory
     with pytest.raises(ItemNotInInventoryError):
-        pc.remove_item_from_inventory(weapon)
+        pc.inventory.remove_item(weapon)
