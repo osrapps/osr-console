@@ -10,6 +10,9 @@ from osrlib.item import (
     ItemNotInInventoryError,
     ItemNotUsableError,
     ItemType,
+    Armor,
+    Weapon,
+    Spell
 )
 
 
@@ -233,19 +236,31 @@ class Inventory:
         }
 
     @classmethod
-    def from_dict(cls, inventory_dict: dict) -> "Inventory":
+    def from_dict(cls, inventory_dict: dict, player_character_owner: "PlayerCharacter") -> "Inventory":
         """Converts a dictionary to an inventory.
 
         Args:
             inventory_dict (dict): Dictionary representation of the inventory.
         """
-        inventory = cls(
-            inventory_dict["owner"],
-        )
-        inventory.items = [Item.from_dict(item_dict) for item_dict in inventory_dict["items"]]
+        player_character_owner.inventory = Inventory(player_character_owner)
 
-        # self.owner = inventory_dict["owner"]
-        # self.items = defaultdict(list)
-        # for item_dict in inventory_dict["items"]:
-        #     item = Item.from_dict(item_dict)
-        #     self.add_item(item)
+        for item_dict in inventory_dict["items"]:
+            item_type = item_dict.get("item_type")
+            is_equipped = item_dict.get("is_equipped", False)
+
+            # Create the appropriate object based on ItemType
+            if item_type == ItemType.ARMOR.value[0]:
+                item = Armor.from_dict(item_dict)
+            elif item_type == ItemType.WEAPON.value[0]:
+                item = Weapon.from_dict(item_dict)
+            elif item_type == ItemType.SPELL.value[0]:
+                item = Spell.from_dict(item_dict)
+            else:
+                item = Item.from_dict(item_dict)
+
+            player_character_owner.inventory.add_item(item)
+
+            if is_equipped:
+                player_character_owner.inventory.equip_item(item)
+
+        return player_character_owner.inventory
