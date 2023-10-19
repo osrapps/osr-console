@@ -26,10 +26,11 @@ Character creation isn't quite in, and there are no monsters or spells or combat
 
 ## Installation
 
-This is a monorepo housing two projects: the game's library, `osrlib`, and its user interface, `osrgame`. For more information about each, see their respective `README.md` files.
+This is a monorepo housing three projects: the game's library, `osrlib`, the library's `tests`, and its user interface, `osrgame`. For more information about each, see their respective `README.md` files.
 
-- [osrgame: Textual TUI for an OSR-style turn-based RPG](osrgame/README.md)
-- [osrlib: Python library for OSR-style turn-based RPGs](osrlib/README.md)
+- [osrlib](osrlib/README.md) - Python library for OSR-style turn-based RPGs
+- [osrgame](osrgame/README.md) - Textual TUI for an OSR-style turn-based RPG
+- [tests](tests/README.md) - Unit and integration tests
 
 ## Usage
 
