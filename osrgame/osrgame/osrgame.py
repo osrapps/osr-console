@@ -18,9 +18,9 @@ class OSRConsole(App):
     armor = Armor("Chain Mail", -5, usable_by_classes = {CharacterClassType.FIGHTER}, max_equipped = 2, gp_value = 40)
     shield = Armor("Shield", -1, usable_by_classes = {CharacterClassType.FIGHTER}, max_equipped = 2, gp_value = 10)
     sword = Weapon("Sword", "1d8", usable_by_classes = {CharacterClassType.FIGHTER}, max_equipped = 1, gp_value = 10)
-    player_character.add_item_to_inventory(armor)
-    player_character.add_item_to_inventory(shield)
-    player_character.add_item_to_inventory(sword)
+    player_character.inventory.add_item(armor)
+    player_character.inventory.add_item(shield)
+    player_character.inventory.add_item(sword)
     player_character.inventory.equip_item(armor)
     player_character.inventory.equip_item(shield)
     player_character.inventory.equip_item(sword)
@@ -29,10 +29,10 @@ class OSRConsole(App):
     wineskin = Item("Wineskin", gp_value = 1)
     iron_rations = Item("Iron Rations", gp_value = 15)
     torch = Item("Torch", gp_value = 1)
-    player_character.add_item_to_inventory(backpack)
-    player_character.add_item_to_inventory(wineskin)
-    player_character.add_item_to_inventory(iron_rations)
-    player_character.add_item_to_inventory(torch)
+    player_character.inventory.add_item(backpack)
+    player_character.inventory.add_item(wineskin)
+    player_character.inventory.add_item(iron_rations)
+    player_character.inventory.add_item(torch)
 
     SCREENS = {"scr_character": CharacterScreen()}
 

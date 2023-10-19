@@ -377,26 +377,23 @@ def test_inventory_saveload(db):
     )
     normal_item = item.Item("50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0)
 
-    test_fighter.add_item_to_inventory(armor)
-    test_fighter.add_item_to_inventory(weapon)
-    test_fighter.add_item_to_inventory(normal_item)
-    test_fighter.equip_item(armor)
-    test_fighter.equip_item(weapon)
+    test_fighter.inventory.add_item(armor)
+    test_fighter.inventory.add_item(weapon)
+    test_fighter.inventory.add_item(normal_item)
+    test_fighter.inventory.equip_item(armor)
+    test_fighter.inventory.equip_item(weapon)
 
     gm.logger.info(f"Saving inventory with {len(test_fighter.inventory.items)} items to DB...")
     inventory_dict = test_fighter.inventory.to_dict()
     inventory_table.insert(inventory_dict)
 
+    # Simulate a new or loaded character
+    test_fighter_loaded_from_db = PlayerCharacter("Fighter From DB", character_classes.CharacterClassType.FIGHTER)
+    gm.logger.info(test_fighter_loaded_from_db)
+
     InventoryDict = Query()
     retrieved_inventory_dict = inventory_table.search(InventoryDict.owner == test_fighter.name)[0]
-    retrieved_inventory = test_fighter.inventory.from_dict(retrieved_inventory_dict, test_fighter)
-
-    gm.logger.info(f"Retrieved inventory with {len(retrieved_inventory.items)} items.")
-
-    test_fighter_loaded_from_db = PlayerCharacter("Fighter From DB", character_classes.CharacterClassType.FIGHTER)
-
-    gm.logger.info(f"Setting inventory owner to {test_fighter_loaded_from_db.name} (AC: {test_fighter_loaded_from_db.armor_class})...")
-
+    gm.logger.info(f"Loading inventory with {len(retrieved_inventory_dict['items'])} items into {test_fighter_loaded_from_db.name}'s inventory...")
     test_fighter_loaded_from_db.inventory.from_dict(retrieved_inventory_dict, test_fighter_loaded_from_db)
 
     gm.logger.info(f"Inventory with {len(test_fighter_loaded_from_db.inventory.all_items)} "
