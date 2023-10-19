@@ -16,6 +16,7 @@ from osrlib import (
     ClassLevel,
     Inventory,
     Item,
+    game_manager as gm
 )
 
 
@@ -129,6 +130,9 @@ class PlayerCharacter:
             roll = self.get_ability_roll()
             ability_instance = ability_class(roll)
             self.abilities[ability_instance.ability_type] = ability_instance
+            gm.logger.debug(
+                f"{self.name} rolled {roll} for {ability_instance.ability_type.name}"
+            )
 
     def roll_hp(self) -> dice_roller.DiceRoll:
         """Rolls the character's hit points, taking into account their Constitution modifier, if any.

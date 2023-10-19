@@ -24,7 +24,7 @@ files = [
 
 [[package]]
 name = "osrlib"
-version = "0.1.2"
+version = "0.1.3"
 description = "Turn-based dungeon-crawler game engine for OSR-style RPGs."
 optional = false
 python-versions = "^3.11"
