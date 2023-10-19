@@ -365,6 +365,7 @@ def test_inventory_saveload(db):
         "Plate Mail Armor",
         gp_value=50,
         max_equipped=1,
+        ac_modifier=-6,
         usable_by_classes={character_classes.CharacterClassType.FIGHTER},
     )
     weapon = item.Weapon(
@@ -376,17 +377,34 @@ def test_inventory_saveload(db):
     )
     normal_item = item.Item("50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0)
 
-    test_fighter.inventory.add_item(armor)
-    test_fighter.inventory.add_item(weapon)
-    test_fighter.inventory.add_item(normal_item)
-    test_fighter.inventory.equip_item(armor)
-    test_fighter.inventory.equip_item(weapon)
+    test_fighter.add_item_to_inventory(armor)
+    test_fighter.add_item_to_inventory(weapon)
+    test_fighter.add_item_to_inventory(normal_item)
+    test_fighter.equip_item(armor)
+    test_fighter.equip_item(weapon)
 
-    gm.logger.info(f"Calling to_dict() on {test_fighter.inventory}")
+    gm.logger.info(f"Saving inventory with {len(test_fighter.inventory.items)} items to DB...")
     inventory_dict = test_fighter.inventory.to_dict()
     inventory_table.insert(inventory_dict)
 
-    InventoryQuery = Query()
-    retrieved_inventory_dict = inventory_table.search(InventoryQuery.owner == test_fighter.name)[0]
-    retrieved_inventory = test_fighter.inventory.from_dict(retrieved_inventory_dict)
-    gm.logger.info(f"Retrieved inventory: {retrieved_inventory}")
+    InventoryDict = Query()
+    retrieved_inventory_dict = inventory_table.search(InventoryDict.owner == test_fighter.name)[0]
+    retrieved_inventory = test_fighter.inventory.from_dict(retrieved_inventory_dict, test_fighter)
+
+    gm.logger.info(f"Retrieved inventory with {len(retrieved_inventory.items)} items.")
+
+    test_fighter_loaded_from_db = PlayerCharacter("Fighter From DB", character_classes.CharacterClassType.FIGHTER)
+
+    gm.logger.info(f"Setting inventory owner to {test_fighter_loaded_from_db.name} (AC: {test_fighter_loaded_from_db.armor_class})...")
+
+    test_fighter_loaded_from_db.inventory.from_dict(retrieved_inventory_dict, test_fighter_loaded_from_db)
+
+    gm.logger.info(f"Inventory with {len(test_fighter_loaded_from_db.inventory.all_items)} "
+                   f"items ({len(test_fighter_loaded_from_db.inventory.equipped_items)} "
+                   f"equipped) assigned to {test_fighter_loaded_from_db.name} (AC: {test_fighter_loaded_from_db.armor_class}).")
+    gm.logger.info(f"Equipped: ")
+
+    for equipped_item in test_fighter_loaded_from_db.inventory.equipped_items:
+        gm.logger.info(f"\t{str(equipped_item)}")
+
+    assert len(test_fighter.inventory.items) == len(inventory_dict["items"])
