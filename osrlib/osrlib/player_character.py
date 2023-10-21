@@ -1,4 +1,5 @@
 """This module contains the PlayerCharacter class."""
+import osrlib.ability
 from osrlib.ability import (
     AbilityType,
     Charisma,
@@ -16,7 +17,7 @@ from osrlib import (
     ClassLevel,
     Inventory,
     Item,
-    game_manager as gm
+    game_manager as gm,
 )
 
 
@@ -143,8 +144,41 @@ class PlayerCharacter:
         Returns:
             DiceRoll: The result of the HP roll. Value with modifiers can be negative.
         """
-        hp_modifier = self.abilities.get(AbilityType.CONSTITUTION).modifiers[
+        hp_modifier = self.abilities[AbilityType.CONSTITUTION].modifiers[
             ModifierType.HP
         ]
-
+        hp_roll = self.character_class.roll_hp(hp_modifier)
+        gm.logger.debug(
+            f"{self.name} rolled {hp_roll} for HP and got {hp_roll.total_with_modifier} ({hp_roll.total} {hp_modifier})."
+        )
         return self.character_class.roll_hp(hp_modifier)
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "character_class_type": self.character_class.class_type.name,
+            "level": self.character_class.current_level.level_num,
+            "hit_points": self.character_class.hp,
+            "experience_points": self.character_class.xp,
+            "abilities": {k.value: v.to_dict() for k, v in self.abilities.items()},
+            "inventory": self.inventory.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data_dict: dict):
+        pc = cls(
+            name=data_dict["name"],
+            character_class_type=CharacterClassType[data_dict["character_class_type"]],
+            level=data_dict["level"],
+        )
+        pc.abilities = {
+            AbilityType[k.upper()]: getattr(
+                osrlib.ability, AbilityType[v["ability_type"]].value
+            )(score=v["score"])
+            for k, v in data_dict["abilities"].items()
+        }
+        pc.character_class.hp = data_dict["hit_points"]
+        pc.character_class.xp = data_dict["experience_points"]
+        pc.inventory = Inventory.from_dict(data_dict["inventory"], pc)
+
+        return pc

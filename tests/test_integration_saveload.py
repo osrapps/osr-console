@@ -13,29 +13,38 @@ from osrlib.ability import (
 )
 from osrlib.combat import ModifierType
 
+@pytest.fixture
+def test_fighter():
+    pc = PlayerCharacter(
+        "Test Fighter", character_classes.CharacterClassType.FIGHTER
+    )
+    yield pc
+    pc.inventory.drop_all_items()
 
-test_fighter = PlayerCharacter(
-    "Test Fighter", character_classes.CharacterClassType.FIGHTER
-)
-test_elf = PlayerCharacter("Test Elf", character_classes.CharacterClassType.ELF)
-test_magic_user = PlayerCharacter(
-    "Test Magic User", character_classes.CharacterClassType.MAGIC_USER
-)
+@pytest.fixture
+def test_elf():
+    pc = PlayerCharacter("Test Elf", character_classes.CharacterClassType.ELF)
+    yield pc
+    pc.inventory.drop_all_items()
 
+@pytest.fixture
+def test_magic_user():
+    pc = PlayerCharacter(
+        "Test Magic User", character_classes.CharacterClassType.MAGIC_USER
+    )
+    yield pc
+    pc.inventory.drop_all_items()
 
 @pytest.fixture
 def db():
     db_path = "test_db.json"
     full_path = os.path.abspath(db_path)
-    gm.logger.info(f"Creating TinyDB @ {full_path}")
+    gm.logger.info(f"Setting up TinyDB: {full_path}")
     db = TinyDB(db_path)
-    gm.logger.info(f"Created TinyDB: {db}")
     yield db
-    gm.logger.info(f"Dropping tables from TinyDB: {db}")
+    gm.logger.info(f"Tearing down TinyDB: {db}")
     db.drop_tables()
-    gm.logger.info(f"Closing TinyDB: {db}")
     db.close()
-
 
 def test_abilities_saveload(db):
     table = db.table("abilities")
@@ -165,7 +174,7 @@ def test_armor_saveload(db):
     assert original_item.ac_modifier == retrieved_item.ac_modifier
 
 
-def test_weapon_saveload(db):
+def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
     item_table = db.table("weapon")
 
     # Create an Item instance
@@ -225,7 +234,7 @@ def test_weapon_saveload(db):
     test_magic_user.inventory.remove_item(retrieved_sword)
 
 
-def test_spell_saveload(db):
+def test_spell_saveload(db, test_fighter, test_magic_user):
     item_table = db.table("spell")
 
     # Create a Spell instance
@@ -279,15 +288,16 @@ def test_spell_saveload(db):
     test_fighter.inventory.remove_item(retrieved_spell)
 
 
-def test_item_autoset_attributes_preserved_on_saveload(db):
+def test_item_autoset_attributes_preserved_on_saveload(db, test_fighter):
     """Tests whether a loaded item's dynamically assigned attribute values are preserved through the save/load process.
 
     For example, the is_usable attribute is determined by the owner's character class, and the is_equipped attribute
     is set by calling the owner's inventory.equip_item() method. Thus, we need to ensure those dynamically assigned
     attribute values are saved to and loaded from the DB as expected.
 
-    The handling of resetting the attribute values on the reconstituted items is (TODO: will be) handled in the
-    PlayerCharacter.from_dict() method and won't need to be handled manually by the library user as we're doing here.
+    The handling of resetting the attribute values on the reconstituted items is handled in the
+    PlayerCharacter.from_dict() method and doesn't need to be handled manually by the library user
+    as we're doing here.
     """
     item_table = db.table("item")
 
@@ -350,7 +360,8 @@ def test_item_autoset_attributes_preserved_on_saveload(db):
     #         is_usable attribute is determined by the owner's character class. Thus,
     #         just setting the is_equipped attribute to True is not enough to re-equip
     #         an item - it needs to be added to their inventory and then equipped.
-    #         TODO: Handle this re-adding and re-equipping of loaded items in the PlayerCharacter.from_dict().
+    #         All this re-adding and re-equipping of loaded items is handled
+    #         automatically in the PlayerCharacter save/load.
     test_fighter.inventory.add_item(retrieved_armor)
     test_fighter.inventory.add_item(retrieved_weapon)
     test_fighter.inventory.add_item(retrieved_normal_item)
@@ -365,12 +376,7 @@ def test_item_autoset_attributes_preserved_on_saveload(db):
     assert retrieved_weapon.is_equipped == True
     assert retrieved_normal_item.is_equipped == False
 
-    # Step 7: Clean up
-    # TODO: Add an Inventory.drop_all_items() method to make this easier.
-    test_fighter.inventory.drop_all_items()
-
-
-def test_inventory_saveload(db):
+def test_inventory_saveload(db, test_fighter):
     inventory_table = db.table("inventory")
     armor = item.Armor(
         "Plate Mail Armor",
@@ -456,3 +462,43 @@ def test_inventory_saveload(db):
 
     # Assertion 8: Check for extraneous items
     assert set(original_items.keys()) == set(loaded_items.keys())
+
+
+def test_player_character_saveload(db, test_fighter):
+    # Saving a PlayerCharacter
+    pc = test_fighter
+    armor = item.Armor(
+        "Plate Mail Armor",
+        gp_value=50,
+        max_equipped=1,
+        ac_modifier=-6,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    weapon = item.Weapon(
+        "Sword",
+        "1d8",
+        gp_value=30,
+        max_equipped=1,
+        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+    )
+    normal_item = item.Item(
+        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    )
+    pc.inventory.add_item(armor)
+    pc.inventory.add_item(weapon)
+    pc.inventory.add_item(normal_item)
+    pc.inventory.equip_item(armor)
+    pc.inventory.equip_item(weapon)
+
+    gm.logger.info(f"Saving PC: {pc}")
+    pc_table = db.table("player_characters")
+    pc_dict = pc.to_dict()
+    pc_table.insert(pc_dict)
+
+    PCQuery = Query()
+    loaded_pc_dict = pc_table.search(PCQuery.name == pc.name)[0]
+    loaded_pc = PlayerCharacter.from_dict(loaded_pc_dict)
+    gm.logger.info(f"Loaded PC: {loaded_pc}")
+
+    assert str(loaded_pc) == str(pc)
+    assert loaded_pc.inventory.items.keys() == pc.inventory.items.keys()

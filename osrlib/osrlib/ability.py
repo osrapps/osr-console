@@ -84,14 +84,14 @@ class Ability(ABC):
 
     def to_dict(self) -> dict:
         return {
-            "ability_type": self.ability_type.name,  # Enum converted to string
+            "ability_type": self.ability_type.name,
             "score": self.score,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Ability":
         ability = cls(score=data["score"])
-        # Assumes modifiers can be recomputed from score
+
         return ability
 
 
