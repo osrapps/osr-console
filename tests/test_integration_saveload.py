@@ -2,7 +2,14 @@ import os
 import pytest
 from tinydb import Query, TinyDB
 
-from osrlib import PlayerCharacter, item, character_classes, game_manager as gm
+from osrlib import (
+    Party,
+    PlayerCharacter,
+    item,
+    character_classes,
+    party,
+    game_manager as gm,
+)
 from osrlib.ability import (
     Strength,
     Intelligence,
@@ -13,19 +20,20 @@ from osrlib.ability import (
 )
 from osrlib.combat import ModifierType
 
+
 @pytest.fixture
 def test_fighter():
-    pc = PlayerCharacter(
-        "Test Fighter", character_classes.CharacterClassType.FIGHTER
-    )
+    pc = PlayerCharacter("Test Fighter", character_classes.CharacterClassType.FIGHTER)
     yield pc
     pc.inventory.drop_all_items()
+
 
 @pytest.fixture
 def test_elf():
     pc = PlayerCharacter("Test Elf", character_classes.CharacterClassType.ELF)
     yield pc
     pc.inventory.drop_all_items()
+
 
 @pytest.fixture
 def test_magic_user():
@@ -34,6 +42,7 @@ def test_magic_user():
     )
     yield pc
     pc.inventory.drop_all_items()
+
 
 @pytest.fixture
 def db():
@@ -45,6 +54,7 @@ def db():
     gm.logger.info(f"Tearing down TinyDB: {db}")
     db.drop_tables()
     db.close()
+
 
 def test_abilities_saveload(db):
     table = db.table("abilities")
@@ -376,6 +386,7 @@ def test_item_autoset_attributes_preserved_on_saveload(db, test_fighter):
     assert retrieved_weapon.is_equipped == True
     assert retrieved_normal_item.is_equipped == False
 
+
 def test_inventory_saveload(db, test_fighter):
     inventory_table = db.table("inventory")
     armor = item.Armor(
@@ -490,11 +501,13 @@ def test_player_character_saveload(db, test_fighter):
     pc.inventory.equip_item(armor)
     pc.inventory.equip_item(weapon)
 
+    # SAVE the PC
     gm.logger.info(f"Saving PC: {pc}")
     pc_table = db.table("player_characters")
     pc_dict = pc.to_dict()
     pc_table.insert(pc_dict)
 
+    # LOAD the PC
     PCQuery = Query()
     loaded_pc_dict = pc_table.search(PCQuery.name == pc.name)[0]
     loaded_pc = PlayerCharacter.from_dict(loaded_pc_dict)
@@ -502,3 +515,81 @@ def test_player_character_saveload(db, test_fighter):
 
     assert str(loaded_pc) == str(pc)
     assert loaded_pc.inventory.items.keys() == pc.inventory.items.keys()
+    assert len(loaded_pc.inventory.equipped_items) == len(pc.inventory.equipped_items)
+
+
+def test_party_saveload(db):
+    pc_party = party.get_default_party()
+
+    # Give one party member some gear
+    armor = item.Armor(
+        "Plate Mail Armor",
+        gp_value=50,
+        max_equipped=1,
+        ac_modifier=-6,
+        usable_by_classes={
+            character_classes.CharacterClassType.FIGHTER,
+            character_classes.CharacterClassType.ELF,
+        },
+    )
+    weapon = item.Weapon(
+        "Sword",
+        "1d8",
+        gp_value=30,
+        max_equipped=1,
+        usable_by_classes={
+            character_classes.CharacterClassType.FIGHTER,
+            character_classes.CharacterClassType.ELF,
+        },
+    )
+    normal_item = item.Item(
+        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    )
+    elf = pc_party.get_character_by_name("Mazpar")
+    elf.inventory.add_item(armor)
+    elf.inventory.add_item(weapon)
+    elf.inventory.add_item(normal_item)
+    elf.inventory.equip_item(armor)
+    elf.inventory.equip_item(weapon)
+
+    # Test party health after load - KILL 'EM ALL
+    for pc in pc_party.characters:
+        pc.character_class.hp = 0
+
+    # SAVE the party
+    gm.logger.info(
+        f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
+    )
+    party_table = db.table("player_characters")
+    party_dict = pc_party.to_dict()
+    doc_id = party_table.insert(party_dict)
+
+    assert doc_id == 1
+
+    # LOAD the party
+    gm.logger.info(f"Loading party {pc_party.name}...")
+    PartyQuery = Query()
+    fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
+    assert len(fetched_party_dicts) == 1
+    fetched_party_dict = fetched_party_dicts[0]
+
+    # Deserialize and create a Party object from the fetched dictionary
+    loaded_party = Party.from_dict(fetched_party_dict)
+    gm.logger.info(f"Loaded party:\n{loaded_party}")
+
+    # Verify if the loaded Party is the same as the original one
+    assert loaded_party.name == pc_party.name
+    assert len(loaded_party.characters) == len(pc_party.characters)
+    assert str(loaded_party) == str(pc_party)
+    assert not loaded_party.is_alive
+
+    for loaded_character, original_member in zip(
+        loaded_party.characters, pc_party.characters
+    ):
+        assert loaded_character.name == original_member.name
+        assert loaded_character.level
+        assert loaded_character.level == original_member.level
+
+    # Test party health after load - KILL 'EM ALL
+    for pc in pc_party.characters:
+        pc.character_class.hp = 0
