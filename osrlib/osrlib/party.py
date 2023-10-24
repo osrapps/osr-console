@@ -85,12 +85,15 @@ class Party:
         self.current_adventure = None
 
     def __str__(self):
-        """Get a string representation of the Party instance.
+        """Get a string representation of the Party instance, including its name and members.
 
         Returns:
             str: A string representation of the Party instance.
         """
-        return f"Party: {self.name}"
+        character_strs = [str(character) for character in self.characters]
+        character_list_str = '\n\t'.join(character_strs)
+
+        return f"Party: {self.name}\nMembers:\n\t[{character_list_str}]"
 
     @property
     def num_characters(self) -> int:
@@ -417,6 +420,21 @@ class Party:
             f"Started adventure '{adventure.name}' with party '{self.name}'."
         )
 
+    def to_dict(self):
+        party_dict = {
+            "characters": [character.to_dict() for character in self.characters],
+            "name": self.name,
+        }
+        return party_dict
+
+    @classmethod
+    def from_dict(cls, party_dict):
+        characters_from_dict = [
+            player_character.PlayerCharacter.from_dict(character_dict)
+            for character_dict in party_dict["characters"]
+        ]
+        name = party_dict["name"]
+        return cls(name, characters=characters_from_dict)
 
 def get_default_party():  # pragma: no cover
     """Get a party of six (6) first-level characters: a Fighter, Elf, Dwarf, Thief, Halfling, and Magic User.

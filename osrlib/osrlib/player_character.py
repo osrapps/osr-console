@@ -59,10 +59,10 @@ class PlayerCharacter:
         return (
             f"Name: {self.name}, "
             f"Class: {self.character_class.class_type.name}, "
-            f"Level: {self.character_class.current_level.level_num:2}, "
-            f"HP: {self.character_class.hp:3}, "
-            f"AC: {self.armor_class:2}, "
-            f"XP: {self.character_class.xp:7}, "
+            f"Level: {self.character_class.current_level.level_num}, "
+            f"HP: {self.character_class.hp}, "
+            f"AC: {self.armor_class}, "
+            f"XP: {self.character_class.xp}, "
             f"{ability_str}"
         )
 
@@ -76,6 +76,18 @@ class PlayerCharacter:
             bool: True if the character is alive (hit points > 0), False otherwise.
         """
         return self.hit_points > 0
+
+    @property
+    def level(self):
+        return (
+            self.character_class.current_level.level_num
+            if self.character_class.current_level.level_num is not None
+            else None
+        )
+
+    @property
+    def hit_points(self):
+        return self.character_class.hp
 
     @property
     def armor_class(self):

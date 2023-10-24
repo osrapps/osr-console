@@ -174,6 +174,15 @@ class Inventory:
         return [item for sublist in self.items.values() for item in sublist]
 
     @property
+    def equipped_items(self):
+        """Get all equipped items in the inventory.
+
+        Returns:
+            list[Item]: List of equipped items. Returns an empty list if no equipped items are present.
+        """
+        return [item for item in self.all_items if item.is_equipped]
+
+    @property
     def armor(self):
         """Gets all armor items stored in the items defaultdict inventory property.
 
