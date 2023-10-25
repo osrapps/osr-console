@@ -9,6 +9,7 @@ from osrlib import (
     character_classes,
     party,
     game_manager as gm,
+    DungeonMaster
 )
 from osrlib.ability import (
     Strength,

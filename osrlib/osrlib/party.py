@@ -4,7 +4,6 @@ of type PlayerCharacter)."""
 from typing import List
 
 from osrlib import player_character, game_manager as gm
-from osrlib.adventure import Adventure, AdventureAlreadyStartedError
 from osrlib.character_classes import CharacterClassType
 
 
@@ -396,29 +395,6 @@ class Party:
     def clear_party(self):
         """Removes all characters from the party."""
         self.characters.clear()
-
-    def start_adventure(self, adventure: Adventure):
-        """Add the party to an adventure and starts the adventure.
-
-        Once the adventure has started, you can't add or remove the adventuring party, and the party can't be added to
-        any other adventures.
-
-        Args:
-            adventure (Adventure): The adventure to start.
-
-        Raises:
-            AdventureAlreadyStartedError: If the adventure has already been started.
-        """
-        if adventure.is_started:
-            raise AdventureAlreadyStartedError(
-                f"Adventure '{adventure.name}' has already been started."
-            )
-
-        adventure.start_adventure(self)
-        self.current_adventure = adventure
-        gm.logger.info(
-            f"Started adventure '{adventure.name}' with party '{self.name}'."
-        )
 
     def to_dict(self):
         party_dict = {
