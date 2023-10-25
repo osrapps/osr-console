@@ -65,8 +65,9 @@ system_message = [
             "consistent and coherent gaming experience for the player by not duplicating, overusing, or repeating the same "
             "information for every visit. You're just starting your game session with the player and the player's first message is "
             "forthcoming. A final reminder: You never tell the player they perform any actions, nor do you ever ask them any "
-            "questions. You only describe the locations. The next several messages after this one are examples of gameplay, and "
-            "this is the opening description of the adventure that you're running for this session: "
+            "questions. You only describe the locations. The next few messages after this one are examples of gameplay and are "
+            "prefixed with [EXAMPLE], and you should use them to inform your responses only in format. The actual opening "
+            "description of the adventure that you're running for this session: "
         ),
     },
 ]
@@ -75,7 +76,7 @@ init_messages = [
     {
         "role": "user",
         "content": (
-            f"{loc_json_0000}"
+            f"[EXAMPLE] {loc_json_0000}"
             "I'm a player that controls a party of six characters (adventurers) in your Dungeons & Dragons adventure. "
             "I'm exploring a dungeon in an adventure you've created, and I rely on your descriptions of the locations in "
             "the game to understand what my characters see and experience through their five senses so I can form a detailed "
@@ -87,7 +88,7 @@ init_messages = [
     {
         "role": "assistant",
         "content": (
-            "A heavy wooden door opens to reveal a dark, dimly lit room. The musty scent of mold and decay fills your nostrils, "
+            "[EXAMPLE] A heavy wooden door opens to reveal a dark, dimly lit room. The musty scent of mold and decay fills your nostrils, "
             "and the sound of the creaking door hinges echoes off the stone walls. The room is a forgotten basement of an abandoned "
             "inn, long abandoned and left to decay in this desolate countryside. Cobwebs hang in the corners, and dust covers every "
             "surface. The air feels heavy, as if it carries the weight of the stories that haunt this place. To the east, you see an "
@@ -98,7 +99,7 @@ init_messages = [
     {
         "role": "assistant",
         "content": (
-            "This is a narrow hallway, about 20 feet long. The wooden floorboards groan beneath your weight, some of them broken "
+            "[EXAMPLE] This is a narrow hallway, about 20 feet long. The wooden floorboards groan beneath your weight, some of them broken "
             "and uneven. The walls, covered in faded wallpaper, lean slightly inward as if the weight of the years have taken their "
             "toll. The air is stale and filled with the scent of dampness. To the west, you can catch a glimpse of the dimly lit "
             "room you just left, while to the east, the hallway stretches further into darkness."
@@ -108,7 +109,7 @@ init_messages = [
     {
         "role": "assistant",
         "content": (
-            "You enter a small chamber, measuring about 10 feet by 10 feet. The floor is made of cold, hard stone, and there is a "
+            "[EXAMPLE] You enter a small chamber, measuring about 10 feet by 10 feet. The floor is made of cold, hard stone, and there is a "
             "rusty floor grate in the center. Broken shackles hang from the walls, evidence of past captivity. The entry door is shattered, "
             "its remains scattered across the chamber floor. The air carries a faint metallic tang, a reminder of the iron that once bound "
             "prisoners here. The only exit is to the west, leading back into the hallway you came from."
@@ -128,8 +129,11 @@ class DungeonMaster:
 
     def start_session(self):
         if not self.started:
-            chat_completion = openai.ChatCompletion.create(
+            completion = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=self.messages
             )
-        gm.logger.info(chat_completion)
+            self.messages.append(completion.choices[0].message)
+            self.started = True
+
+            return completion.choices[0].message['content']

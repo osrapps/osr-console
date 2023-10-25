@@ -18,10 +18,13 @@ def test_dungeon_master_start_session(mocker):
     adventure = Adventure("Test Adventure")
     dm = DungeonMaster(adventure)
 
-    mocker.patch('openai.ChatCompletion.create', return_value=mocker.Mock())
+    mock_completion = mocker.MagicMock()
+    mock_completion.choices = [mocker.MagicMock()]
+    mock_completion.choices[0].message = {'content': 'some_content'}
+    mocker.patch('openai.ChatCompletion.create', return_value=mock_completion)
+
     mocker.patch('osrlib.game_manager.logger.info')
+    result = dm.start_session()
 
-    dm.start_session()
-
+    assert result == 'some_content'
     openai.ChatCompletion.create.assert_called_once()
-    gm.logger.info.assert_called_once()
