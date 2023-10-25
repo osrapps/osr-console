@@ -60,5 +60,5 @@ class GameManager:
         warnings.warn("Game LOAD is not yet implemented.", UserWarning)
 
 
-#game_manager = GameManager()
+game_manager = GameManager()
 """This module-level variable is the main API entry point for the game - use it instead of instantiating a new GameManager."""

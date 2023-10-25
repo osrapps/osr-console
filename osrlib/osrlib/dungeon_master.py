@@ -121,7 +121,7 @@ class DungeonMaster:
     def __init__(self, adventure: Adventure):
         self.adventure = adventure
         self.system_message = system_message
-        self.system_message[0]['content'] += adventure.description
+        self.system_message[0]['content'] += adventure.long_description
         self.init_messages = init_messages
         self.messages = self.system_message + self.init_messages
         self.started = False
