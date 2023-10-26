@@ -177,29 +177,52 @@ class Dungeon:
         return True
 
     def validate_no_island_locations(self) -> bool:
-        """Checks that no locations are isolated.
+        """Checks that no locations are isolated or are one-way dead ends by using Depth-First Search (DFS).
+
+        Each location must be part of a larger interconnected graph where it's
+        possible to reach a location from at least one other location, and between
+        which the reverse connection exists. That is, every location can be reached
+        by some path, and every path can be traveled in reverse.
 
         Returns:
             bool: True if no locations are islands, False otherwise.
         """
-        if len(self.locations) == 1:
-            return True  # Single location is valid
 
+        # Single location dungeons are valid by default.
+        if len(self.locations) == 1:
+            return True
+
+        # Collect all location IDs.
         location_ids = {loc.id for loc in self.locations}
+
+        # Iterate through each location to perform DFS.
         for loc_id in location_ids:
+            # Set to keep track of accessible locations from the current 'loc_id'.
             accessible = {loc_id}
+
+            # Stack for DFS traversal, initialized with the current 'loc_id'.
             to_visit = [loc_id]
+
             while to_visit:
+                # Pop a location from stack.
                 current_loc = to_visit.pop()
-                for exit in [loc.exits for loc in self.locations if loc.id == current_loc][0]:
+
+                # Find exits for the current location.
+                current_exits = [loc.exits for loc in self.locations if loc.id == current_loc][0]
+
+                for exit in current_exits:
+                    # If the destination is not yet accessible, mark it and queue it for visit.
                     if exit.destination not in accessible:
                         accessible.add(exit.destination)
                         to_visit.append(exit.destination)
 
+            # If some locations are not accessible from 'loc_id', it's an island.
             if accessible != location_ids:
                 gm.logger.critical(f"Dungeon validation FAILED: Location ID {loc_id} is an island.")
                 return False
+
         return True
+
 
     def validate_dungeon(self) -> bool:
         """Runs all validation methods and logs any failures.

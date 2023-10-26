@@ -71,6 +71,14 @@ def test_no_island_locations():
     dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3])
     assert dungeon.validate_no_island_locations()
 
+def test_no_island_locations_2():
+    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
+    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1), Exit(Direction.EAST, 3)])
+    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 4), Exit(Direction.WEST, 2)])
+    loc4 = Location(4, 10, 10, [Exit(Direction.SOUTH, 3)])
+    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
+    assert dungeon.validate_no_island_locations()
+
 # --- FAILURE conditions
 def test_locations_have_exits_failure():
     loc1 = Location(1, 10, 10, [])
