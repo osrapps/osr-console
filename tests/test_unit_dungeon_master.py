@@ -1,4 +1,3 @@
-import pytest
 import openai
 from osrlib.dungeon_master import DungeonMaster
 from osrlib.adventure import Adventure
