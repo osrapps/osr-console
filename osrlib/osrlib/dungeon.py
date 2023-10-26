@@ -46,6 +46,17 @@ class Exit:
         """Unlocks the exit."""
         self.locked = False
 
+    def to_dict(self):
+        return {
+            'direction': self.direction.value,
+            'destination': self.destination,
+            'locked': self.locked
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(Direction(data['direction']), data['destination'], data['locked'])
+
 
 class Location:
     """Represents a location of importance within a ``Dungeon``.
@@ -86,6 +97,25 @@ class Location:
         self.keywords = keywords
         self.encounter = encounter
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'dimensions': self.dimensions,
+            'exits': [exit.to_dict() for exit in self.exits],
+            'keywords': self.keywords,
+            'encounter': self.encounter.to_dict() if self.encounter else None
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['id'],
+            data['dimensions']['width'],
+            data['dimensions']['length'],
+            [Exit.from_dict(exit_data) for exit_data in data['exits']],
+            data['keywords'],
+            Encounter.from_dict(data['encounter']) if data['encounter'] else None
+        )
 
 class Dungeon:
     """Contains a collection of interconnected locations. Validates the integrity of these connections.
@@ -115,6 +145,7 @@ class Dungeon:
         """
         for loc in self.locations:
             if len(loc.exits) == 0:
+                gm.logger.critical(f"Dungeon validation FAILED: Location with ID {loc.id} has no exits.")
                 return False
         return True
 
@@ -128,6 +159,7 @@ class Dungeon:
         for loc in self.locations:
             for exit in loc.exits:
                 if exit.destination not in location_ids:
+                    gm.logger.critical(f"Dungeon validation FAILED: Exit from location ID {loc.id} has an invalid destination ID {exit.destination}.")
                     return False
         return True
 
@@ -140,6 +172,7 @@ class Dungeon:
         for loc in self.locations:
             directions = [exit.direction for exit in loc.exits]
             if len(directions) != len(set(directions)):
+                gm.logger.critical(f"Dungeon validation FAILED: Location ID {loc.id} has duplicate exit directions.")
                 return False
         return True
 
@@ -164,6 +197,7 @@ class Dungeon:
                         to_visit.append(exit.destination)
 
             if accessible != location_ids:
+                gm.logger.critical(f"Dungeon validation FAILED: Location ID {loc_id} is an island.")
                 return False
         return True
 
@@ -174,14 +208,29 @@ class Dungeon:
             bool: True if all validations pass, False otherwise.
         """
         validations = [
-            ("Locations have exits", self.validate_locations_have_exits),
-            ("Exits have valid destinations", self.validate_exits_have_valid_destinations),
-            ("Unique exit directions", self.validate_unique_exit_directions),
-            ("No island locations", self.validate_no_island_locations)
+            ("Not all locations have exits.", self.validate_locations_have_exits),
+            ("Not all exits have valid destinations.", self.validate_exits_have_valid_destinations),
+            ("Two or more exits are in same direction.", self.validate_unique_exit_directions),
+            ("One or more locations are islands.", self.validate_no_island_locations)
         ]
 
         for description, method in validations:
             if not method():
-                gm.logger.critical(f"Dungeon validation failed: {description}")
+                gm.logger.critical(f"Dungeon validation FAILED: {description}")
                 return False
         return True
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'description': self.description,
+            'locations': [location.to_dict() for location in self.locations]
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data['name'],
+            data['description'],
+            [Location.from_dict(location_data) for location_data in data['locations']]
+        )

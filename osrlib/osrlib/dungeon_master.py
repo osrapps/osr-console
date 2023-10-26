@@ -135,5 +135,5 @@ class DungeonMaster:
             )
             self.messages.append(completion.choices[0].message)
             self.started = True
-
+            gm.logger.debug(completion)
             return completion.choices[0].message['content']

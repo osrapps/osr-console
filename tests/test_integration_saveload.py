@@ -9,7 +9,6 @@ from osrlib import (
     character_classes,
     party,
     game_manager as gm,
-    DungeonMaster
 )
 from osrlib.ability import (
     Strength,
@@ -18,6 +17,12 @@ from osrlib.ability import (
     Dexterity,
     Constitution,
     Charisma,
+)
+from osrlib.dungeon import (
+    Dungeon,
+    Location,
+    Exit,
+    Direction,
 )
 from osrlib.combat import ModifierType
 
@@ -594,3 +599,39 @@ def test_party_saveload(db):
     # Test party health after load - KILL 'EM ALL
     for pc in pc_party.characters:
         pc.character_class.hp = 0
+
+    assert not pc_party.is_alive
+
+# Test case for Exit class
+def test_exit_save_load(db):
+    exit = Exit(Direction.NORTH, 2)
+    data = exit.to_dict()
+    db.insert(data)
+    loaded_data = db.all()[0]
+    loaded_exit = Exit.from_dict(loaded_data)
+    assert exit.direction == loaded_exit.direction
+    assert exit.destination == loaded_exit.destination
+    assert exit.locked == loaded_exit.locked
+
+# Test case for Location class
+def test_location_save_load(db):
+    location = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
+    data = location.to_dict()
+    db.insert(data)
+    loaded_data = db.all()[0]
+    loaded_location = Location.from_dict(loaded_data)
+    assert location.id == loaded_location.id
+    assert location.dimensions == loaded_location.dimensions
+    assert len(location.exits) == len(loaded_location.exits)
+
+# Test case for Dungeon class
+def test_dungeon_save_load(db):
+    location = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
+    dungeon = Dungeon("TestDungeon", "An example dungeon.", [location])
+    data = dungeon.to_dict()
+    db.insert(data)
+    loaded_data = db.all()[0]
+    loaded_dungeon = Dungeon.from_dict(loaded_data)
+    assert dungeon.name == loaded_dungeon.name
+    assert dungeon.description == loaded_dungeon.description
+    assert len(dungeon.locations) == len(loaded_dungeon.locations)
