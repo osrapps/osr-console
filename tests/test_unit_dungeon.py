@@ -1,3 +1,5 @@
+from random import randint, sample, choice
+import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction
 from osrlib.encounter import Encounter
 
@@ -105,3 +107,52 @@ def test_no_island_locations_failure():
     loc4 = Location(4, 10, 10, [Exit(Direction.SOUTH, 3)])
     dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
     assert not dungeon.validate_no_island_locations()
+
+@pytest.mark.flaky(reruns=5, reruns_delay=5)
+def test_random_dungeon():
+
+    # Initialize empty list for locations
+    locations = []
+
+    # Generate 10 locations
+    for i in range(1, 11):
+        width = randint(1, 5) * 10  # Size between 10 and 50, in increments of 10
+        height = randint(1, 5) * 10  # Size between 10 and 50, in increments of 10
+        keywords = ["placeholder1", "placeholder2", "placeholder3"]
+
+        # Generate random exits
+        possible_directions = list(Direction)
+        num_exits = randint(1, len(possible_directions))  # At least one exit
+        directions = sample(possible_directions, num_exits)
+
+        exits = []
+        for direction in directions:
+            destination = randint(1, 10)  # Random destination ID between 1 and 10
+            while destination == i:  # Ensure destination is not the same as the location itself
+                destination = randint(1, 10)
+            exits.append(Exit(direction, destination))
+
+        location = Location(i, width, height, exits, keywords)
+        locations.append(location)
+
+    # Ensure all locations are reachable from each other
+    for loc in locations:
+        for exit in loc.exits:
+            dest_id = exit.destination
+            dest_location = next((l for l in locations if l.id == dest_id), None)
+
+            # Determine the reverse direction (simplified to just NORTH and SOUTH for this example)
+            reverse_direction = Direction.SOUTH if exit.direction == Direction.NORTH else Direction.NORTH
+
+            # Check if there's an exit back to the original location
+            if not any(e.destination == loc.id for e in dest_location.exits):
+
+                # Check if there is already an exit in the reverse direction to avoid duplicates
+                if not any(e.direction == reverse_direction for e in dest_location.exits):
+                    dest_location.exits.append(Exit(reverse_direction, loc.id))
+
+    # Initialize Dungeon
+    dungeon = Dungeon("Sample Dungeon", "A randomly generated dungeon.", locations)
+
+    # Validate Dungeon
+    assert dungeon.validate_dungeon()

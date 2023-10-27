@@ -25,6 +25,7 @@ class Exit:
         direction (Direction): The direction of the exit. Each location can have only one exit per direction.
         destination (int): The ID of the destination location. Must exist within the dungeon.
         locked (bool): Indicates if the exit is locked or not.
+        opposite_direction (Direction): The direction directly opposite this exit's direction. There is no contract that there is an exit in that direction.
 
     Example:
         >>> exit1 = Exit(Direction.NORTH, 2)
@@ -37,6 +38,21 @@ class Exit:
         self.direction = direction
         self.destination = destination
         self.locked = locked
+        self.opposite_direction = self.set_opposite_direction(self.direction)
+
+    def set_opposite_direction(self, direction) -> Direction:
+        if direction == Direction.NORTH:
+            return Direction.SOUTH
+        elif direction == Direction.SOUTH:
+            return Direction.NORTH
+        elif direction == Direction.EAST:
+            return Direction.WEST
+        elif direction == Direction.WEST:
+            return Direction.EAST
+        elif direction == Direction.UP:
+            return Direction.DOWN
+        elif direction == Direction.DOWN:
+            return Direction.UP
 
     def lock(self):
         """Locks the exit."""
