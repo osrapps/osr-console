@@ -108,7 +108,7 @@ def test_no_island_locations_failure():
     dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
     assert not dungeon.validate_no_island_locations()
 
-@pytest.mark.flaky(reruns=5, reruns_delay=5)
+@pytest.mark.flaky(reruns=5)
 def test_random_dungeon():
 
     # Initialize empty list for locations
@@ -141,15 +141,12 @@ def test_random_dungeon():
             dest_id = exit.destination
             dest_location = next((l for l in locations if l.id == dest_id), None)
 
-            # Determine the reverse direction (simplified to just NORTH and SOUTH for this example)
-            reverse_direction = Direction.SOUTH if exit.direction == Direction.NORTH else Direction.NORTH
-
             # Check if there's an exit back to the original location
             if not any(e.destination == loc.id for e in dest_location.exits):
 
                 # Check if there is already an exit in the reverse direction to avoid duplicates
-                if not any(e.direction == reverse_direction for e in dest_location.exits):
-                    dest_location.exits.append(Exit(reverse_direction, loc.id))
+                if not any(e.direction == exit.opposite_direction for e in dest_location.exits):
+                    dest_location.exits.append(Exit(exit.opposite_direction, loc.id))
 
     # Initialize Dungeon
     dungeon = Dungeon("Sample Dungeon", "A randomly generated dungeon.", locations)
