@@ -10,6 +10,7 @@ If you want contribute code to the `osrlib` package itself, read on to learn how
 
 - Python 3.11+
 - Poetry 1.6+
+- [OpenAI API key](https://platform.openai.com/docs/quickstart/account-setup)
 
 ## Installation
 

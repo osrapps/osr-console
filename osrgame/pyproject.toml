@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "osrgame"
-version = "0.1.0"
+version = "0.1.1"
 description = "Text user interface (TUI) for OSR Console, a turn-based dungeon crawler RPG in the old-school renaissance style."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"
@@ -10,6 +10,7 @@ readme = "README.md"
 python = "^3.11"
 textual = "^0.40.0"
 osrlib = { path = "../osrlib" }
+textual-dev = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
