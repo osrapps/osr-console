@@ -10,6 +10,7 @@ class Direction(Enum):
     Attributes:
         NORTH, SOUTH, EAST, WEST, UP, DOWN: Cardinal directions and vertical movements.
     """
+
     NORTH = "N"
     SOUTH = "S"
     EAST = "E"
@@ -64,14 +65,14 @@ class Exit:
 
     def to_dict(self):
         return {
-            'direction': self.direction.value,
-            'destination': self.destination,
-            'locked': self.locked
+            "direction": self.direction.value,
+            "destination": self.destination,
+            "locked": self.locked,
         }
 
     @classmethod
     def from_dict(cls, data):
-        return cls(Direction(data['direction']), data['destination'], data['locked'])
+        return cls(Direction(data["direction"]), data["destination"], data["locked"])
 
 
 class Location:
@@ -88,14 +89,11 @@ class Location:
         >>> exit1 = Exit(Direction.NORTH, 2)
         >>> exit2 = Exit(Direction.SOUTH, 1)
         >>> location1 = Location(1, 10, 10, [exit1])
-        >>> location2 = Location(2, 8, 8, [exit2], keywords=["treasure", "armory"])
+        >>> location2 = Location(2, 8, 8, [exit2], keywords=["rust", "armory"])
         >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
-
         >>> # Validate the dungeon before proceeding with the game logic
-        >>> if dungeon.validate_dungeon():
-        >>>     print("Dungeon is valid.")
-        >>> else:
-        >>>     print("Dungeon is invalid.")
+        >>> dungeon.validate_dungeon()
+        True
     """
 
     def __init__(
@@ -113,25 +111,35 @@ class Location:
         self.keywords = keywords
         self.encounter = encounter
 
+    def __str__(self):
+        return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: {self.exits} Keywords: {self.keywords}"
+
     def to_dict(self):
         return {
-            'id': self.id,
-            'dimensions': self.dimensions,
-            'exits': [exit.to_dict() for exit in self.exits],
-            'keywords': self.keywords,
-            'encounter': self.encounter.to_dict() if self.encounter else None
+            "id": self.id,
+            "dimensions": self.dimensions,
+            "exits": [exit.to_dict() for exit in self.exits],
+            "keywords": self.keywords,
+            "encounter": self.encounter.to_dict() if self.encounter else None,
         }
 
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['id'],
-            data['dimensions']['width'],
-            data['dimensions']['length'],
-            [Exit.from_dict(exit_data) for exit_data in data['exits']],
-            data['keywords'],
-            Encounter.from_dict(data['encounter']) if data['encounter'] else None
+            data["id"],
+            data["dimensions"]["width"],
+            data["dimensions"]["length"],
+            [Exit.from_dict(exit_data) for exit_data in data["exits"]],
+            data["keywords"],
+            Encounter.from_dict(data["encounter"]) if data["encounter"] else None,
         )
+
+
+class LocationNotFoundError(Exception):
+    """Raised when a location cannot be found in a dungeon."""
+
+    pass
+
 
 class Dungeon:
     """Contains a collection of interconnected locations. Validates the integrity of these connections.
@@ -142,16 +150,88 @@ class Dungeon:
         locations (List[Location]): List of locations within the dungeon. A location must have at least one exit, and all exits must have valid destinations within the dungeon. No locations should be islands unless the dungeon only contains that single location.
 
     Example:
-        >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location])
-        >>> dungeon.validate_dungeon()
+        >>> location1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)], keywords=["rust", "armory"])
+        >>> location2 = Location(2, 3, 40, [Exit(Direction.SOUTH, 1)], keywords=["cold", "corridor", "narrow"])
+        >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
+        >>> if dungeon.validate_dungeon():
+        ...     start_location = dungeon.set_start_location(1)
+        ...     new_location = dungeon.move(Direction.NORTH)
+        ...     new_location.id
+        2
     """
 
     def __init__(
-        self, name: str = None, description: str = None, locations: List[Location] = []
+        self,
+        name: str = None,
+        description: str = None,
+        locations: List[Location] = [],
+        start_location_id: int = None,
     ) -> None:
         self.name = name
         self.description = description
         self.locations = locations
+        if start_location_id:
+            self.set_start_location(start_location_id)
+        else:
+            self.current_location = None
+
+    def set_start_location(self, location_id: int) -> Location:
+        """Sets the starting location for the dungeon.
+
+        Args:
+            location_id (int): The ID of the location to set as the starting location.
+
+        Returns:
+            Location: The starting location.
+
+        Raises:
+            LocationNotFoundError: If the location ID does not exist in the dungeon.
+        """
+        gm.logger.debug(f"Setting starting location to location with ID {location_id}.")
+        start_location = [loc for loc in self.locations if loc.id == location_id][0]
+        if start_location:
+            self.current_location = start_location
+            gm.logger.debug(f"Starting location location set to {start_location}.")
+            return start_location
+        else:
+            gm.logger.exception(
+                f"Location with ID {location_id} does not exist in the dungeon."
+            )
+            raise LocationNotFoundError(
+                f"Location with ID {location_id} does not exist in the dungeon."
+            )
+
+    def move(self, direction: Direction) -> Location:
+        """Moves the party to the location in the specified direction if there's an exit in that direction.
+
+        Example:
+            >>> exit1 = Exit(Direction.NORTH, 2)
+            >>> exit2 = Exit(Direction.SOUTH, 1)
+            >>> location1 = Location(1, 10, 10, [exit1])
+            >>> location2 = Location(2, 10, 10, [exit2], keywords=["rust", "armory"])
+            >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
+            >>> start_location = dungeon.set_start_location(1)
+            >>> new_location = dungeon.move(Direction.NORTH)
+            >>> dungeon.current_location.id == location2.id
+            True
+
+        Args:
+            direction (Direction): The direction of the exit the party should move through.
+
+        Returns:
+            Location: The location the party moved to, or None if there is no exit in the specified direction.
+        """
+        gm.logger.debug(f"Moving party {direction.name} from {self.current_location}.")
+        exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
+        if exit:
+            self.current_location = [loc for loc in self.locations if loc.id == exit.destination][0]
+            gm.logger.debug(f"Party moved to {self.current_location}.")
+            return self.current_location
+        else:
+            gm.logger.debug(
+                f"No exit to the {direction.name} from {self.current_location}. The only exits are {self.current_location.exits}."
+            )
+            return None
 
     def validate_locations_have_exits(self) -> bool:
         """Checks if every location in the dungeon has at least one exit.
@@ -161,7 +241,9 @@ class Dungeon:
         """
         for loc in self.locations:
             if len(loc.exits) == 0:
-                gm.logger.critical(f"Dungeon validation FAILED: Location with ID {loc.id} has no exits.")
+                gm.logger.critical(
+                    f"Dungeon validation FAILED: Location with ID {loc.id} has no exits."
+                )
                 return False
         return True
 
@@ -175,7 +257,9 @@ class Dungeon:
         for loc in self.locations:
             for exit in loc.exits:
                 if exit.destination not in location_ids:
-                    gm.logger.critical(f"Dungeon validation FAILED: Exit from location ID {loc.id} has an invalid destination ID {exit.destination}.")
+                    gm.logger.critical(
+                        f"Dungeon validation FAILED: Exit from location ID {loc.id} has an invalid destination ID {exit.destination}."
+                    )
                     return False
         return True
 
@@ -188,7 +272,9 @@ class Dungeon:
         for loc in self.locations:
             directions = [exit.direction for exit in loc.exits]
             if len(directions) != len(set(directions)):
-                gm.logger.critical(f"Dungeon validation FAILED: Location ID {loc.id} has duplicate exit directions.")
+                gm.logger.critical(
+                    f"Dungeon validation FAILED: Location ID {loc.id} has duplicate exit directions."
+                )
                 return False
         return True
 
@@ -224,7 +310,9 @@ class Dungeon:
                 current_loc = to_visit.pop()
 
                 # Find exits for the current location.
-                current_exits = [loc.exits for loc in self.locations if loc.id == current_loc][0]
+                current_exits = [
+                    loc.exits for loc in self.locations if loc.id == current_loc
+                ][0]
 
                 for exit in current_exits:
                     # If the destination is not yet accessible, mark it and queue it for visit.
@@ -234,11 +322,12 @@ class Dungeon:
 
             # If some locations are not accessible from 'loc_id', it's an island.
             if accessible != location_ids:
-                gm.logger.critical(f"Dungeon validation FAILED: Location ID {loc_id} is an island.")
+                gm.logger.critical(
+                    f"Dungeon validation FAILED: Location ID {loc_id} is an island."
+                )
                 return False
 
         return True
-
 
     def validate_dungeon(self) -> bool:
         """Runs all validation methods and logs any failures.
@@ -248,9 +337,15 @@ class Dungeon:
         """
         validations = [
             ("Not all locations have exits.", self.validate_locations_have_exits),
-            ("Not all exits have valid destinations.", self.validate_exits_have_valid_destinations),
-            ("Two or more exits are in same direction.", self.validate_unique_exit_directions),
-            ("One or more locations are islands.", self.validate_no_island_locations)
+            (
+                "Not all exits have valid destinations.",
+                self.validate_exits_have_valid_destinations,
+            ),
+            (
+                "Two or more exits are in same direction.",
+                self.validate_unique_exit_directions,
+            ),
+            ("One or more locations are islands.", self.validate_no_island_locations),
         ]
 
         for description, method in validations:
@@ -261,15 +356,15 @@ class Dungeon:
 
     def to_dict(self):
         return {
-            'name': self.name,
-            'description': self.description,
-            'locations': [location.to_dict() for location in self.locations]
+            "name": self.name,
+            "description": self.description,
+            "locations": [location.to_dict() for location in self.locations],
         }
 
     @classmethod
     def from_dict(cls, data):
         return cls(
-            data['name'],
-            data['description'],
-            [Location.from_dict(location_data) for location_data in data['locations']]
+            data["name"],
+            data["description"],
+            [Location.from_dict(location_data) for location_data in data["locations"]],
         )
