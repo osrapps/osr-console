@@ -35,8 +35,8 @@ def test_dungeon_master_move_party():
 
     loc0 = Location(9999, 10, 10, [Exit(Direction.NORTH, 1)], ["inn", "town"], None)
     loc1 = Location(1, 40, 30, [Exit(Direction.SOUTH, 0), Exit(Direction.NORTH, 2)], ["just outside", "dwarven mines", "ancient", "entrance", "cold wind", "dragon rumors"], None)
-    loc2 = Location(2, 20, 20, [Exit(Direction.SOUTH, 1), Exit(Direction.NORTH, 3)], ["vestibule", "large entry doors", "dirty stone", "carvings"], None)
-    loc3 = Location(3, 10, 10, [Exit(Direction.SOUTH, 2)], ["guard station", "broken weapons", "bat droppings"], None)
+    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1), Exit(Direction.NORTH, 3)], ["vestibule", "large entry doors", "dirty stone", "carvings"], None)
+    loc3 = Location(3, 5, 5, [Exit(Direction.SOUTH, 2)], ["guard station", "broken weapons", "bat droppings"], None)
     dungeon = Dungeon("Dungeon of Bread", "An ancient lost dwarven mine.", [loc0, loc1, loc2, loc3], 9999)
     adventure.add_dungeon(dungeon)
     adventure.set_active_dungeon(dungeon)

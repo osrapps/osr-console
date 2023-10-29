@@ -112,6 +112,7 @@ class Location:
         self.exits = exits
         self.keywords = keywords
         self.encounter = encounter
+        # TODO: Add support for a has_been_visited flag to indicate if the party has already visited this location.
 
     def __str__(self):
         return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: {self.exits} Keywords: {self.keywords}"
