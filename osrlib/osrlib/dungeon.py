@@ -1,3 +1,4 @@
+from random import randint, sample
 from typing import List
 from enum import Enum
 import json
@@ -381,3 +382,47 @@ class Dungeon:
             data["description"],
             [Location.from_dict(location_data) for location_data in data["locations"]],
         )
+
+def get_random_dungeon():
+    # Initialize empty list for locations
+    locations = []
+
+    # Generate 10 locations
+    for i in range(1, 11):
+        width = randint(1, 5) * 10  # Size between 10 and 50, in increments of 10
+        height = randint(1, 5) * 10  # Size between 10 and 50, in increments of 10
+        keywords = ["placeholder1", "placeholder2", "placeholder3"]
+
+        # Generate random exits
+        possible_directions = list(Direction)
+        num_exits = randint(1, len(possible_directions))  # At least one exit
+        directions = sample(possible_directions, num_exits)
+
+        exits = []
+        for direction in directions:
+            destination = randint(1, 10)  # Random destination ID between 1 and 10
+            while (
+                destination == i
+            ):  # Ensure destination is not the same as the location itself
+                destination = randint(1, 10)
+            exits.append(Exit(direction, destination))
+
+        location = Location(i, width, height, exits, keywords)
+        locations.append(location)
+
+    # Ensure all locations are reachable from each other
+    for loc in locations:
+        for exit in loc.exits:
+            dest_id = exit.destination
+            dest_location = next((l for l in locations if l.id == dest_id), None)
+
+            # Check if there's an exit back to the original location
+            if not any(e.destination == loc.id for e in dest_location.exits):
+                # Check if there is already an exit in the reverse direction to avoid duplicates
+                if not any(
+                    e.direction == exit.opposite_direction for e in dest_location.exits
+                ):
+                    dest_location.exits.append(Exit(exit.opposite_direction, loc.id))
+
+    # Initialize Dungeon
+    return Dungeon("Random Dungeon", f"A randomly generated dungeon with {len(locations)} locations.", locations)

@@ -20,7 +20,7 @@ load_dotenv()
 @pytest.mark.integration
 def test_dungeon_master_start_session_real_api():
     adventure = Adventure("Test Adventure")
-    adventure.long_description = "In a land shrouded by mist and haunted by forgotten gods, your party stands before the gaping maw of Darkfang Cavern. Rumors abound of an ancient artifact of terrible power hidden deep within, guarded by spectral knights and nightmarish beasts. Will you claim the artifact and ascend to untold glory, or fall like so many before you, your names etched into the cavern's endless walls of sorrow? The choice is yours, brave adventurers. Venture forth!"
+    adventure.introduction = "In a land shrouded by mist and haunted by forgotten gods, your party stands before the gaping maw of Darkfang Cavern. Rumors abound of an ancient artifact of terrible power hidden deep within, guarded by spectral knights and nightmarish beasts. Will you claim the artifact and ascend to untold glory, or fall like so many before you, your names etched into the cavern's endless walls of sorrow? The choice is yours, brave adventurers. Venture forth!"
     dm = DungeonMaster(adventure)
 
     message = dm.start_session()
@@ -33,10 +33,11 @@ def test_dungeon_master_move_party():
     adventure = Adventure("Test Adventure")
     adventure.introduction = "Deep within the heart of the Ironclad Mountains lies the long-forgotten mine of Dwurin's Hold, a once-prosperous dwarven establishment now reduced to whispered rumors and tavern tales. Legend holds that a fearsome dragon named Ebonflame has claimed the labyrinthine tunnels as its lair, its fiery breath illuminating the darkened corridors once chiseled with dwarven precision. The beleaguered town of Stonehearth has suffered a series of devastating raids, livestock and treasure vanishing in plumes of smoke and flame. Mayor Thoric Ironfist, desperate and out of options, has commissioned your party to delve into the mine, confirm the presence of the mythical beast, and eliminate the threat that hangs like a dark cloud over the land."
 
-    loc1 = Location(1, 40, 30, [Exit(Direction.NORTH, 2)], ["just outside", "dwarven mines", "ancient", "entrance", "cold wind", "dragon rumors"], None)
-    loc2 = Location(2, 20, 20, [Exit(Direction.SOUTH, 1), Exit(Direction.NORTH, 3)], ["inside entrance", "dirty stone", "carvings"], None)
+    loc0 = Location(9999, 10, 10, [Exit(Direction.NORTH, 1)], ["inn", "town"], None)
+    loc1 = Location(1, 40, 30, [Exit(Direction.SOUTH, 0), Exit(Direction.NORTH, 2)], ["just outside", "dwarven mines", "ancient", "entrance", "cold wind", "dragon rumors"], None)
+    loc2 = Location(2, 20, 20, [Exit(Direction.SOUTH, 1), Exit(Direction.NORTH, 3)], ["vestibule", "large entry doors", "dirty stone", "carvings"], None)
     loc3 = Location(3, 10, 10, [Exit(Direction.SOUTH, 2)], ["guard station", "broken weapons", "bat droppings"], None)
-    dungeon = Dungeon("Dungeon of Bread", "An ancient lost dwarven mine.", [loc1, loc2, loc3], 1)
+    dungeon = Dungeon("Dungeon of Bread", "An ancient lost dwarven mine.", [loc0, loc1, loc2, loc3], 9999)
     adventure.add_dungeon(dungeon)
     adventure.set_active_dungeon(dungeon)
 
@@ -45,10 +46,18 @@ def test_dungeon_master_move_party():
     gm.logger.info(message)
     assert len(message) > 0
 
-    location_description1 = dm.move_party(Direction.NORTH)
-    gm.logger.info(location_description1)
-    assert len(location_description1) > 0
+    loc_desc = dm.move_party(Direction.NORTH)
+    gm.logger.info(loc_desc)
+    assert len(loc_desc) > 0
 
-    location_description2 = dm.move_party(Direction.NORTH)
-    gm.logger.info(location_description2)
-    assert len(location_description2) > 0
+    loc_desc = dm.move_party(Direction.NORTH)
+    gm.logger.info(loc_desc)
+    assert len(loc_desc) > 0
+
+    loc_desc = dm.move_party(Direction.NORTH)
+    gm.logger.info(loc_desc)
+    assert len(loc_desc) > 0
+
+    loc_desc = dm.move_party(Direction.SOUTH)
+    gm.logger.info(loc_desc)
+    assert len(loc_desc) > 0
