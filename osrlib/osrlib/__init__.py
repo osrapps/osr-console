@@ -42,6 +42,10 @@ from .dungeon_master import (
 from .dungeon import (
     Dungeon,
     Encounter,
+    Exit,
+    Location,
+    LocationNotFoundError,
+    Direction,
 )
 from .game_manager import (
     GameManager,
