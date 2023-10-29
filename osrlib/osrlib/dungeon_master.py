@@ -66,8 +66,11 @@ system_message = [
             "information for every visit. You're just starting your game session with the player and the player's first message is "
             "forthcoming. A final reminder: You never tell the player they perform any actions, nor do you ever ask them any "
             "questions. You only describe the locations. The next few messages after this one are examples of gameplay and are "
-            "prefixed with [EXAMPLE], and you should use them to inform your responses only in format. The actual opening "
-            "description of the adventure that you're running for this session: "
+            "prefixed with [EXAMPLE]. The [EXAMPLE] messages are not part of the game session you are about to start and you "
+            "should use them only to inform the format of your responses. The first message you receive after the [EXAMPLE] "
+            "messages will be the description of the adventure you're running for this session and JSON representing the party's "
+            "starting location. You should respond with that same description, followed by the description of the party's starting "
+            "location that you derive from the JSON and taking into account the [EXAMPLE] messages' format."
         ),
     },
 ]
@@ -122,18 +125,54 @@ class DungeonMaster:
     def __init__(self, adventure: Adventure):
         self.adventure = adventure
         self.system_message = system_message
-        self.system_message[0]['content'] += adventure.long_description
+        self.system_message[0]["content"] += adventure.introduction
         self.init_messages = init_messages
         self.messages = self.system_message + self.init_messages
-        self.started = False
+
+    def format_user_message(self, message_string: str) -> dict:
+        """Format the given string as an OpenAI user message.
+
+        The provided string is formatted as a dict in the format expected by the
+        OpenAI API. This message is then appended to the list of messages that
+        will be sent to the OpenAI API as in a ChatCompletion request.
+
+        .. code-block:: python
+
+                {
+                    "role": "user",
+                    "content": "The string to format as an OpenAI user message."
+                }
+
+        Args:
+            message_string (str): The string to format as an OpenAI user message. It must be a regular string and not a JSON string.
+
+        Returns:
+            dict: _description_
+        """
+        return {"role": "user", "content": str(message_string)}
 
     def start_session(self):
-        if not self.started:
+        if not self.adventure.is_started:
+            self.adventure.start_adventure()
+
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo", messages=self.messages
+        )
+        self.messages.append(completion.choices[0].message)
+        self.started = True
+        gm.logger.debug(completion)
+        return completion.choices[0].message["content"]
+
+    def player_message(self, message):
+        if self.started:
+            self.messages.append(self.format_user_message(message))
             completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=self.messages
+                model="gpt-3.5-turbo", messages=self.messages
             )
             self.messages.append(completion.choices[0].message)
-            self.started = True
             gm.logger.debug(completion)
-            return completion.choices[0].message['content']
+            return completion.choices[0].message["content"]
+
+    def move_party(self, direction) -> str:
+        new_location = self.adventure.active_dungeon.move(direction)
+        return self.player_message(new_location.to_dict())

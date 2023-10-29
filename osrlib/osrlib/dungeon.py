@@ -1,5 +1,6 @@
 from typing import List
 from enum import Enum
+import json
 from osrlib import game_manager as gm
 from osrlib.encounter import Encounter
 
@@ -114,6 +115,14 @@ class Location:
     def __str__(self):
         return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: {self.exits} Keywords: {self.keywords}"
 
+    @property
+    def json(self):
+        """Returns a JSON representation of the location."""
+        #json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, indent=4)
+        json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, separators=(',', ':'))
+        gm.logger.debug(f"Location JSON:\n{json_location}")
+        return json_location
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -188,18 +197,20 @@ class Dungeon:
             LocationNotFoundError: If the location ID does not exist in the dungeon.
         """
         gm.logger.debug(f"Setting starting location to location with ID {location_id}.")
-        start_location = [loc for loc in self.locations if loc.id == location_id][0]
-        if start_location:
-            self.current_location = start_location
-            gm.logger.debug(f"Starting location location set to {start_location}.")
-            return start_location
-        else:
+        try:
+            start_location = [loc for loc in self.locations if loc.id == location_id][0]
+        except IndexError:
             gm.logger.exception(
                 f"Location with ID {location_id} does not exist in the dungeon."
             )
             raise LocationNotFoundError(
                 f"Location with ID {location_id} does not exist in the dungeon."
             )
+
+        self.current_location = start_location
+        gm.logger.debug(f"Starting location set to {start_location}.")
+
+        return start_location
 
     def move(self, direction: Direction) -> Location:
         """Moves the party to the location in the specified direction if there's an exit in that direction.
@@ -222,16 +233,18 @@ class Dungeon:
             Location: The location the party moved to, or None if there is no exit in the specified direction.
         """
         gm.logger.debug(f"Moving party {direction.name} from {self.current_location}.")
-        exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
-        if exit:
-            self.current_location = [loc for loc in self.locations if loc.id == exit.destination][0]
-            gm.logger.debug(f"Party moved to {self.current_location}.")
-            return self.current_location
-        else:
+        try:
+            exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
+        except IndexError:
             gm.logger.debug(
                 f"No exit to the {direction.name} from {self.current_location}. The only exits are {self.current_location.exits}."
             )
             return None
+
+        self.current_location = [loc for loc in self.locations if loc.id == exit.destination][0]
+        gm.logger.debug(f"Party moved to {self.current_location}.")
+
+        return self.current_location
 
     def validate_locations_have_exits(self) -> bool:
         """Checks if every location in the dungeon has at least one exit.
