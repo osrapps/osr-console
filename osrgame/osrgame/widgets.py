@@ -4,7 +4,7 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
-from textual.widgets import Button, DataTable, Static
+from textual.widgets import Button, DataTable, Log, Static
 
 from osrlib import Item, ItemType
 from osrlib.utils import format_modifiers
@@ -136,3 +136,16 @@ class ItemTable(Container):
                 Text(str(item.gp_value), justify="center"),
             ]
             table.add_row(*row_data, key=item.name)
+
+
+class ExploreLogs(Container):
+    """A container for the DM and player logs."""
+
+    def compose(self) -> ComposeResult:
+        yield Log(id="dm_log", auto_scroll=True, classes="box")
+        yield Log(id="player_log", auto_scroll=True, classes="box")
+
+    def on_mount(self) -> None:
+        """Perform actions when the widget is mounted."""
+        self.query_one("#dm_log", Log).border_title = "DM LOG"
+        self.query_one("#player_log", Log).border_subtitle = "PLAYER LOG"

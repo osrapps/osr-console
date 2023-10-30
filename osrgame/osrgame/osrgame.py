@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 
 from osrlib import CharacterClassType, PlayerCharacter, Armor, Item, Weapon
-from screen import CharacterScreen, WelcomeScreen
+from screen import CharacterScreen, WelcomeScreen, ExploreScreen
 
 
 class OSRConsole(App):
@@ -9,6 +9,7 @@ class OSRConsole(App):
 
     BINDINGS = [
         ("c", "character", "Character"),
+        ("e", "explore", "Explore"),
         ("q", "quit", "Quit"),
     ]
 
@@ -34,7 +35,9 @@ class OSRConsole(App):
     player_character.inventory.add_item(iron_rations)
     player_character.inventory.add_item(torch)
 
-    SCREENS = {"scr_character": CharacterScreen()}
+    SCREENS = {"scr_character": CharacterScreen(),
+               "scr_welcome": WelcomeScreen(),
+               "scr_explore": ExploreScreen()}
 
     def compose(self) -> ComposeResult:
         yield WelcomeScreen()
@@ -46,6 +49,10 @@ class OSRConsole(App):
     def action_character(self) -> None:
         """Show the character screen."""
         self.push_screen("scr_character")
+
+    def action_explore(self) -> None:
+        """Show the explore screen."""
+        self.push_screen("scr_explore")
 
     def action_quit(self) -> None:
         """Quit the application."""

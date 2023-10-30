@@ -4,7 +4,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
 from osrlib import CharacterClassType, Armor, Weapon
-from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
+from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons, ExploreLogs
 
 
 ####################
@@ -57,8 +57,6 @@ class MainScreen(Screen):
 
 ####################
 # Character Screen
-
-
 class CharacterScreen(Screen):
     BINDINGS = [
         ("k", "clear_log", "Clear log"),
@@ -162,24 +160,61 @@ class ModuleScreen(Screen):
 # Explore Screen
 class ExploreScreen(Screen):
     BINDINGS = [
-        ("escape", "app.pop_screen", "Pop screen"),
-        ("q", "quit", "Quit"),
+        ("k", "clear_logs", "Clear logs"),
+        ("n", "move_north", "North"),
+        ("s", "move_south", "South"),
+        ("e", "move_east", "East"),
+        ("w", "move_west", "West"),
+        ("u", "move_up", "Up"),
+        ("d", "move_down", "Down"),
+        # ("escape", "app.pop_screen", "Pop screen"),
+        # ("q", "quit", "Quit"),
     ]
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, id="header")
-        yield Placeholder("Explore")
+        yield Header(show_clock=True)
+        yield Log(id="dm_log", auto_scroll=True, classes="box")
+        yield Log(id="player_log", auto_scroll=True, classes="box")
         yield Footer()
 
-    def on_mount(self) -> None:
-        pass
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        pass
-
     def action_quit(self) -> None:
-        """An action to quit the application."""
-        self.exit()
+        """Quit the application."""
+        self.app.exit()
+
+    def action_move_north(self) -> None:
+        """Move the party north."""
+        self.query_one("#player_log").write_line("Direction.NORTH")
+        self.query_one("#dm_log").write_line("The party moves north.")
+
+    def action_move_south(self) -> None:
+        """Move the party south."""
+        self.query_one("#player_log").write_line("Direction.SOUTH")
+        self.query_one("#dm_log").write_line("The party moves south.")
+
+    def action_move_east(self) -> None:
+        """Move the party east."""
+        self.query_one("#player_log").write_line("Direction.EAST")
+        self.query_one("#dm_log").write_line("The party moves east.")
+
+    def action_move_west(self) -> None:
+        """Move the party west."""
+        self.query_one("#player_log").write_line("Direction.WEST")
+        self.query_one("#dm_log").write_line("The party moves west.")
+
+    def action_move_up(self) -> None:
+        """Move the party up."""
+        self.query_one("#player_log").write_line("Direction.UP")
+        self.query_one("#dm_log").write_line("The party moves up one dungeon level.")
+
+    def action_move_down(self) -> None:
+        """Move the party down."""
+        self.query_one("#player_log").write_line("Direction.DOWN")
+        self.query_one("#dm_log").write_line("The party moves down one dungeon level.")
+
+    def action_clear_logs(self) -> None:
+        """An action to clear the logs."""
+        self.query_one("#player_log").clear()
+        self.query_one("#dm_log").clear()
 
 
 ####################
