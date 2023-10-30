@@ -3,7 +3,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
-from osrlib import CharacterClassType, Armor, Weapon
+from osrlib.dungeon import Direction
 from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons, ExploreLogs
 
 
@@ -160,13 +160,14 @@ class ModuleScreen(Screen):
 # Explore Screen
 class ExploreScreen(Screen):
     BINDINGS = [
-        ("k", "clear_logs", "Clear logs"),
+        ("b", "start_session", "Begin session"),
         ("n", "move_north", "North"),
         ("s", "move_south", "South"),
         ("e", "move_east", "East"),
         ("w", "move_west", "West"),
         ("u", "move_up", "Up"),
         ("d", "move_down", "Down"),
+        ("k", "clear_logs", "Clear logs"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -178,40 +179,56 @@ class ExploreScreen(Screen):
     def on_mount(self) -> None:
         self.query_one("#player_log", Log).border_title = "COMMAND LOG"
         self.query_one("#dm_log", Log).border_subtitle = "ADVENTURE LOG"
+        self.query_one("#player_log", Log).write_line("Press 'b' to begin a new session.")
+
+    def action_start_session(self) -> None:
+        """Start a new session."""
+        dm_response = self.app.dungeon_master.start_session()
+
+        # TODO: Need to do this automatically (move the party to the first "real" location)
+        dm_response = self.app.dungeon_master.move_party(Direction.NORTH)
+
+        self.query_one("#player_log").clear()
+        self.query_one("#player_log").write_line("The party stands ready.")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line(dm_response)
+        self.query_one("#dm_log").write_line("---")
 
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
 
+    def perform_move_action(self, direction: Direction, log_message: str) -> None:
+        """Perform a move action in a given direction."""
+        self.query_one("#player_log").write_line(log_message)
+        self.query_one("#player_log").write_line("---")
+        dm_response = self.app.dungeon_master.move_party(direction)
+        self.query_one("#dm_log").write_line(dm_response)
+        self.query_one("#dm_log").write_line("---")
+
     def action_move_north(self) -> None:
         """Move the party north."""
-        self.query_one("#player_log").write_line("Direction.NORTH")
-        self.query_one("#dm_log").write_line("The party moves north.")
+        self.perform_move_action(Direction.NORTH, "Moving north...")
 
     def action_move_south(self) -> None:
         """Move the party south."""
-        self.query_one("#player_log").write_line("Direction.SOUTH")
-        self.query_one("#dm_log").write_line("The party moves south.")
+        self.perform_move_action(Direction.SOUTH, "Moving south...")
 
     def action_move_east(self) -> None:
         """Move the party east."""
-        self.query_one("#player_log").write_line("Direction.EAST")
-        self.query_one("#dm_log").write_line("The party moves east.")
+        self.perform_move_action(Direction.EAST, "Moving east...")
 
     def action_move_west(self) -> None:
         """Move the party west."""
-        self.query_one("#player_log").write_line("Direction.WEST")
-        self.query_one("#dm_log").write_line("The party moves west.")
+        self.perform_move_action(Direction.WEST, "Moving west...")
 
     def action_move_up(self) -> None:
         """Move the party up."""
-        self.query_one("#player_log").write_line("Direction.UP")
-        self.query_one("#dm_log").write_line("The party moves up one dungeon level.")
+        self.perform_move_action(Direction.UP, "Climbing up the stairs...")
 
     def action_move_down(self) -> None:
         """Move the party down."""
-        self.query_one("#player_log").write_line("Direction.DOWN")
-        self.query_one("#dm_log").write_line("The party moves down one dungeon level.")
+        self.perform_move_action(Direction.DOWN, "Descending the stairs...")
 
     def action_clear_logs(self) -> None:
         """An action to clear the logs."""

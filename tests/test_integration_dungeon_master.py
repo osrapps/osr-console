@@ -40,8 +40,8 @@ def test_dungeon_master_move_party():
     dungeon = Dungeon("Dungeon of Bread", "An ancient lost dwarven mine.", [loc0, loc1, loc2, loc3], 9999)
     adventure.add_dungeon(dungeon)
     adventure.set_active_dungeon(dungeon)
-
     dm = DungeonMaster(adventure)
+
     message = dm.start_session()
     gm.logger.info(message)
     assert len(message) > 0
