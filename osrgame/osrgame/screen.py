@@ -167,15 +167,17 @@ class ExploreScreen(Screen):
         ("w", "move_west", "West"),
         ("u", "move_up", "Up"),
         ("d", "move_down", "Down"),
-        # ("escape", "app.pop_screen", "Pop screen"),
-        # ("q", "quit", "Quit"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Log(id="dm_log", auto_scroll=True, classes="box")
         yield Log(id="player_log", auto_scroll=True, classes="box")
+        yield Log(id="dm_log", auto_scroll=True, classes="box")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.query_one("#player_log", Log).border_title = "COMMAND LOG"
+        self.query_one("#dm_log", Log).border_subtitle = "ADVENTURE LOG"
 
     def action_quit(self) -> None:
         """Quit the application."""
