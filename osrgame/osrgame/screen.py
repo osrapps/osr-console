@@ -3,8 +3,8 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
-from osrlib import CharacterClassType, Armor, Weapon
-from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
+from osrlib.dungeon import Direction
+from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons, ExploreLogs
 
 
 ####################
@@ -57,8 +57,6 @@ class MainScreen(Screen):
 
 ####################
 # Character Screen
-
-
 class CharacterScreen(Screen):
     BINDINGS = [
         ("k", "clear_log", "Clear log"),
@@ -162,24 +160,80 @@ class ModuleScreen(Screen):
 # Explore Screen
 class ExploreScreen(Screen):
     BINDINGS = [
-        ("escape", "app.pop_screen", "Pop screen"),
-        ("q", "quit", "Quit"),
+        ("b", "start_session", "Begin session"),
+        ("n", "move_north", "North"),
+        ("s", "move_south", "South"),
+        ("e", "move_east", "East"),
+        ("w", "move_west", "West"),
+        ("u", "move_up", "Up"),
+        ("d", "move_down", "Down"),
+        ("k", "clear_logs", "Clear logs"),
     ]
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, id="header")
-        yield Placeholder("Explore")
+        yield Header(show_clock=True)
+        yield Log(id="player_log", auto_scroll=True, classes="box")
+        yield Log(id="dm_log", auto_scroll=True, classes="box")
         yield Footer()
 
     def on_mount(self) -> None:
-        pass
+        self.query_one("#player_log", Log).border_title = "COMMAND LOG"
+        self.query_one("#dm_log", Log).border_subtitle = "ADVENTURE LOG"
+        self.query_one("#player_log", Log).write_line("Press 'b' to begin a new session.")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        pass
+    def action_start_session(self) -> None:
+        """Start a new session."""
+        dm_response = self.app.dungeon_master.start_session()
+
+        # TODO: Need to do this automatically (move the party to the first "real" location)
+        dm_response = self.app.dungeon_master.move_party(Direction.NORTH)
+
+        self.query_one("#player_log").clear()
+        self.query_one("#player_log").write_line("The party stands ready.")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line(dm_response)
+        self.query_one("#dm_log").write_line("---")
 
     def action_quit(self) -> None:
-        """An action to quit the application."""
-        self.exit()
+        """Quit the application."""
+        self.app.exit()
+
+    def perform_move_action(self, direction: Direction, log_message: str) -> None:
+        """Perform a move action in a given direction."""
+        self.query_one("#player_log").write_line(log_message)
+        self.query_one("#player_log").write_line("---")
+        dm_response = self.app.dungeon_master.move_party(direction)
+        self.query_one("#dm_log").write_line(dm_response)
+        self.query_one("#dm_log").write_line("---")
+
+    def action_move_north(self) -> None:
+        """Move the party north."""
+        self.perform_move_action(Direction.NORTH, "Moving north...")
+
+    def action_move_south(self) -> None:
+        """Move the party south."""
+        self.perform_move_action(Direction.SOUTH, "Moving south...")
+
+    def action_move_east(self) -> None:
+        """Move the party east."""
+        self.perform_move_action(Direction.EAST, "Moving east...")
+
+    def action_move_west(self) -> None:
+        """Move the party west."""
+        self.perform_move_action(Direction.WEST, "Moving west...")
+
+    def action_move_up(self) -> None:
+        """Move the party up."""
+        self.perform_move_action(Direction.UP, "Climbing up the stairs...")
+
+    def action_move_down(self) -> None:
+        """Move the party down."""
+        self.perform_move_action(Direction.DOWN, "Descending the stairs...")
+
+    def action_clear_logs(self) -> None:
+        """An action to clear the logs."""
+        self.query_one("#player_log").clear()
+        self.query_one("#dm_log").clear()
 
 
 ####################
