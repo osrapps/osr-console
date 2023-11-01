@@ -34,25 +34,33 @@ equipment_data = {
         }
 
 weapon_data = {
-        "Torch": {"damage": "1d4", "gp_value": 1, "usable_by": _all_classes},
-        "Dagger": {"damage": "1d4", "gp_value": 3, "usable_by": _combat_classes | {CharacterClassType.MAGIC_USER}},
-        "Silver Dagger": {"damage": "1d4", "gp_value": 30, "usable_by": _combat_classes | {CharacterClassType.MAGIC_USER}},
-        "Club": {"damage": "1d4", "gp_value": 3, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
-        "Sling stone": {"damage": "1d4", "gp_value": 2, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
-        "Arrow": {"damage": "1d6", "gp_value": 5, "usable_by": _combat_classes},
-        "Hand Axe": {"damage": "1d6", "gp_value": 4, "usable_by": _combat_classes},
         "Battle Axe": {"damage": "1d8", "gp_value": 7, "usable_by": _combat_classes},
-        "Mace": {"damage": "1d6", "gp_value": 5, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
+        "Club": {"damage": "1d4", "gp_value": 3, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
         "Crossbow": {"damage": "1d4", "gp_value": 30, "usable_by": _combat_classes},
+        "Dagger": {"damage": "1d4", "gp_value": 3, "usable_by": _combat_classes | {CharacterClassType.MAGIC_USER}},
+        "Hand Axe": {"damage": "1d6", "gp_value": 4, "usable_by": _combat_classes},
         "Long Bow": {"damage": "1d6", "gp_value": 40, "usable_by": {CharacterClassType.FIGHTER, CharacterClassType.ELF}},
-        "Short Bow": {"damage": "1d6", "gp_value": 25, "usable_by": _combat_classes},
-        "Sword": {"damage": "1d8", "gp_value": 10, "usable_by": _combat_classes},
-        "Short Sword": {"damage": "1d6", "gp_value": 7, "usable_by": _combat_classes},
-        "Two-handed Sword": {"damage": "1d10", "gp_value": 15, "usable_by": {CharacterClassType.FIGHTER, CharacterClassType.ELF}},
+        "Mace": {"damage": "1d6", "gp_value": 5, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
         "Pole Arm": {"damage": "1d10", "gp_value": 7, "usable_by": {CharacterClassType.FIGHTER, CharacterClassType.ELF, CharacterClassType.DWARF}},
+        "Short Bow": {"damage": "1d6", "gp_value": 25, "usable_by": _combat_classes},
+        "Short Sword": {"damage": "1d6", "gp_value": 7, "usable_by": _combat_classes},
+        "Silver Dagger": {"damage": "1d4", "gp_value": 30, "usable_by": _combat_classes | {CharacterClassType.MAGIC_USER}},
+        "Sling": {"damage": "1d4", "gp_value": 2, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
         "Spear": {"damage": "1d6", "gp_value": 3, "usable_by": _combat_classes | {CharacterClassType.CLERIC}},
+        "Sword": {"damage": "1d8", "gp_value": 10, "usable_by": _combat_classes},
+        "Torch": {"damage": "1d4", "gp_value": 1, "usable_by": _all_classes},
+        "Two-handed Sword": {"damage": "1d10", "gp_value": 15, "usable_by": {CharacterClassType.FIGHTER, CharacterClassType.ELF}},
         "War Hammer": {"damage": "1d6", "gp_value": 5, "usable_by": _combat_classes | {CharacterClassType.CLERIC}}
     }
+
+class ItemDataNotFoundError(Exception):
+    """Raised when item data is not found."""
+
+    def __init__(self, item_name):
+        self.item_name = item_name
+
+    def __str__(self):
+        return f"No data available for item: {self.item_name}"
 
 class EquipmentFactory:
     """Factory class to create equipment items."""
@@ -69,24 +77,24 @@ class EquipmentFactory:
                 gp_value=equipment_data[item_name]
             )
         else:
-            raise ValueError(f"No data available for item: {item_name}")
+            raise ItemDataNotFoundError(item_name)
 
 class WeaponFactory:
     """Factory class to create items of type ``Weapon``."""
 
     @staticmethod
-    def create_weapon(name: str):
-        weapon_info = weapon_data.get(name)
+    def create_weapon(weapon_name: str):
+        weapon_info = weapon_data.get(weapon_name)
         if weapon_info:
             return Weapon(
-                name=name,
+                name=weapon_name,
                 to_hit_damage_die=weapon_info['damage'],
                 gp_value=weapon_info['gp_value'],
                 usable_by_classes=weapon_info['usable_by']
             )
 
         else:
-            raise ValueError(f"Weapon '{name}' not found in weapons data.")
+            raise ItemDataNotFoundError(weapon_name)
 
 
 # Usage example:

@@ -71,6 +71,7 @@ from .item_factories import (
     EquipmentFactory,
     weapon_data,
     WeaponFactory,
+    ItemDataNotFoundError,
 )
 from .monster import (
         Monster,
