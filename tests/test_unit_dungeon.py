@@ -197,4 +197,4 @@ def test_random_dungeon():
     dungeon = get_random_dungeon()
 
     # Validate Dungeon
-    assert dungeon.validate_dungeon()
+    assert dungeon.validate_location_connections()

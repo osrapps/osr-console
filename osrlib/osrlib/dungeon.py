@@ -43,6 +43,9 @@ class Exit:
         self.locked = locked
         self.opposite_direction = self.set_opposite_direction(self.direction)
 
+    def __str__(self):
+        return f"{self.direction.name}:{self.destination}{(':locked' if self.locked else '')}"
+
     def set_opposite_direction(self, direction) -> Direction:
         if direction == Direction.NORTH:
             return Direction.SOUTH
@@ -125,6 +128,17 @@ class Location:
         gm.logger.debug(f"Location JSON:\n{json_location}")
         return json_location
 
+    def get_exit(self, direction: Direction):
+        """Returns the exit in the specified direction, if it exists.
+
+        Args:
+            direction (Direction): The direction of the exit to return.
+
+        Returns:
+            Exit: The exit in the specified direction, or None if there is no exit in that direction.
+        """
+        return next((exit for exit in self.exits if exit.direction == direction), None)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -151,6 +165,15 @@ class LocationNotFoundError(Exception):
 
     pass
 
+class DestinationLocationNotFoundError(Exception):
+    """Raised when a destination ``Location`` of an ``Exit`` doesn't exist in the ``Dungeon``."""
+
+    pass
+
+class ReturnConnectionNotFoundError(Exception):
+    """Raised when an ``Exit`` in a ``Location`` leads to a destination ``Location`` that doesn't have a corresponding ``Exit`` back to the source ``Location``."""
+
+    pass
 
 class LocationAlreadyExistsError(Exception):
     """Raised when trying to add a location to the dungeon's locations collection, but a location with the same ID already exists."""
@@ -235,6 +258,17 @@ class Dungeon:
             gm.logger.exception(exception)
             raise exception
 
+    def get_location(self, location_id: int) -> Location:
+        """Returns the location with the specified ID.
+
+        Args:
+            location_id (int): The ID of the location to return.
+
+        Returns:
+            Location: The location with the specified ID, otherwise None if the location with that ID doesn't exist.
+        """
+        return next((loc for loc in self.locations if loc.id == location_id), None)
+
     def move(self, direction: Direction) -> Location:
         """Moves the party to the location in the specified direction if there's an exit in that direction.
 
@@ -268,6 +302,53 @@ class Dungeon:
         gm.logger.debug(f"Party moved to {self.current_location}.")
 
         return self.current_location
+
+    def validate_location_connections(self) -> bool:
+        """Verifies whether every location in the dungeon is connected to at least one other location and that a connection in the opposite direction exists. For example, if location A has an exit EAST to location B, then location B must have an exit WEST to location A.
+
+        Every location in a dungeon must be part of an interconnected graph where each "source" location has at least one
+        exit leading a "destination" location in the dungeon. Each destination location must also have a corresponding
+        exit in the opposite direction whose destination is the source location.
+
+        Empty dungeons and those with only one location are considered valid.
+
+        Returns:
+            bool: True if all locations in the dungeon are connected by at least one bi-directional exit to another location, otherwise False.
+        """
+        # Empty dungeons and those with only one location are considered valid
+        if len(self.locations) <= 1:
+            return True
+
+        validation_errors = []
+
+        for src_loc in self.locations:
+            for src_exit in src_loc.exits:
+
+                # Exit must lead to existing destination Location
+                dst_loc = self.get_location(src_exit.destination)
+                if not dst_loc:
+                    validation_error = DestinationLocationNotFoundError(
+                        f"Exit {src_exit} in location {src_loc.id} leads to non-existent location {src_exit.destination}."
+                    )
+                    gm.logger.error(validation_error)
+                    validation_errors.append(validation_error)
+
+                # Destination location must have corresponding Exit whose destination is this Location
+                return_exit = dst_loc.get_exit(src_exit.opposite_direction)
+                if not return_exit:
+                    validation_error = DestinationLocationNotFoundError(
+                        f"Exit {src_exit} in source location {src_loc.id} leads to destination location {dst_loc.id}, but the destination lacks an exit back to source location {src_loc.id}."
+                    )
+                    gm.logger.error(validation_error)
+                    validation_errors.append(validation_error)
+                elif return_exit.destination != src_loc.id:
+                    validation_error = ReturnConnectionNotFoundError(
+                        f"Exit {src_exit} in location {src_loc.id} leads to destination location {dst_loc.id}, but the corresponding exit in the destination leads to location {return_exit.destination} instead of source location {src_loc.id}."
+                    )
+                    gm.logger.error(validation_error)
+                    validation_errors.append(validation_error)
+
+        return len(validation_errors) == 0
 
     def validate_locations_have_exits(self) -> bool:
         """Checks if every location in the dungeon has at least one exit.
