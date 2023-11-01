@@ -254,6 +254,7 @@ class Armor(Item):
         """
         super().__init__(name, ItemType.ARMOR, **kwargs)
         self.ac_modifier = ac_modifier
+        self.max_equipped = kwargs.get("max_equipped", 1) # Armor is typically 1 per PC
 
     def __str__(self):
         """Get a string representation of the armor item.
@@ -318,6 +319,7 @@ class Weapon(Item):
             to_hit_damage_die  # format like "1d8", "1d6+1", "1d4-1" etc.
         )
         self.range = range  # in feet (None for melee weapons)
+        self.max_equipped = kwargs.get("max_equipped", 1) # Weapons are typically 1 per PC
 
     def __str__(self):
         return f"{self.name} (Damage: {self.to_hit_damage_die}, Range: {self.range})"

@@ -558,10 +558,6 @@ def test_party_saveload(db):
     elf.inventory.equip_item(armor)
     elf.inventory.equip_item(weapon)
 
-    # Test party health after load - KILL 'EM ALL
-    for pc in pc_party.characters:
-        pc.character_class.hp = 0
-
     # SAVE the party
     gm.logger.info(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."

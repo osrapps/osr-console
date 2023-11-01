@@ -5,6 +5,7 @@ from typing import List
 
 from osrlib import player_character, game_manager as gm
 from osrlib.character_classes import CharacterClassType
+from osrlib.item_factories import equip_party
 
 
 class PartyAtCapacityError(Exception):
@@ -425,4 +426,7 @@ def get_default_party():  # pragma: no cover
     party.create_character("Slick", CharacterClassType.THIEF, 1)
     party.create_character("Dimp Beefeeder", CharacterClassType.HALFLING, 1)
     party.create_character("Merlin", CharacterClassType.MAGIC_USER, 1)
+
+    equip_party(party)
+
     return party

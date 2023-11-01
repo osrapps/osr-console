@@ -22,10 +22,11 @@ _all_classes = _weapon_combat_classes | {
 }
 
 armor_data = {
-    "Chain Mail Armor": {"ac": -4, "gp_value": 40, "usable_by": _armor_combat_classes},
+    "Chain Mail": {"ac": -4, "gp_value": 40, "usable_by": _armor_combat_classes},
     "Leather Armor": {"ac": -2, "gp_value": 20, "usable_by": _armor_combat_classes | {CharacterClassType.THIEF}},
-    "Plate Mail Armor": {"ac": -6, "gp_value": 60, "usable_by": _armor_combat_classes},
+    "Plate Mail": {"ac": -6, "gp_value": 60, "usable_by": _armor_combat_classes},
     "Shield": {"ac": -1, "gp_value": 10, "usable_by": _armor_combat_classes},
+    "Robe": {"ac": 0, "gp_value": 1, "usable_by": {CharacterClassType.MAGIC_USER}},
 }
 
 equipment_data = {
@@ -41,6 +42,7 @@ equipment_data = {
     "Standard Rations": 1, # (unpreserved food for 1 person/1 week)
     "Rope (50')": 1,
     "Small Sack": 1,
+    "Spell Book": 50,
     "Large Sack": 2,
     "Thieves' Tools": 25,
     "Tinder Box": 3, # (flint & steel)
@@ -133,6 +135,127 @@ class WeaponFactory:
         else:
             raise ItemDataNotFoundError(weapon_name)
 
+def equip_fighter(character: "PlayerCharacter"):
+    """Equip a Fighter character with starting gear."""
+    sword = WeaponFactory.create_weapon("Sword")
+    shield = ArmorFactory.create_armor("Shield")
+    chain_mail = ArmorFactory.create_armor("Chain Mail")
+    backpack = EquipmentFactory.create_item("Backpack")
+
+    character.inventory.add_item(sword)
+    character.inventory.add_item(shield)
+    character.inventory.add_item(chain_mail)
+    character.inventory.add_item(backpack)
+
+    character.inventory.equip_item(sword)
+    character.inventory.equip_item(shield)
+    character.inventory.equip_item(chain_mail)
+
+def equip_elf(character: "PlayerCharacter"):
+    """Equip an Elf character with starting gear."""
+    longsword = WeaponFactory.create_weapon("Sword")
+    longbow = WeaponFactory.create_weapon("Long Bow")
+    leather_armor = ArmorFactory.create_armor("Leather Armor")
+    backpack = EquipmentFactory.create_item("Backpack")
+
+    character.inventory.add_item(longsword)
+    character.inventory.add_item(longbow)
+    character.inventory.add_item(leather_armor)
+    character.inventory.add_item(backpack)
+
+    character.inventory.equip_item(longsword)
+    character.inventory.equip_item(leather_armor)
+
+def equip_cleric(character: "PlayerCharacter"):
+    """Equip a Cleric character with starting gear."""
+    mace = WeaponFactory.create_weapon("Mace")
+    shield = ArmorFactory.create_armor("Shield")
+    chain_mail = ArmorFactory.create_armor("Chain Mail")
+    backpack = EquipmentFactory.create_item("Backpack")
+    holy_symbol = EquipmentFactory.create_item("Holy Symbol")
+
+    character.inventory.add_item(mace)
+    character.inventory.add_item(shield)
+    character.inventory.add_item(chain_mail)
+    character.inventory.add_item(backpack)
+    character.inventory.add_item(holy_symbol)
+
+    character.inventory.equip_item(mace)
+    character.inventory.equip_item(shield)
+    character.inventory.equip_item(chain_mail)
+
+def equip_dwarf(character: "PlayerCharacter"):
+    """Equip a Dwarf character with starting gear."""
+    battleaxe = WeaponFactory.create_weapon("Battle Axe")
+    chain_mail = ArmorFactory.create_armor("Chain Mail")
+    backpack = EquipmentFactory.create_item("Backpack")
+
+    character.inventory.add_item(battleaxe)
+    character.inventory.add_item(chain_mail)
+    character.inventory.add_item(backpack)
+
+    character.inventory.equip_item(battleaxe)
+    character.inventory.equip_item(chain_mail)
+
+def equip_thief(character: "PlayerCharacter"):
+    """Equip a Thief character with starting gear."""
+    dagger = WeaponFactory.create_weapon("Dagger")
+    leather_armor = ArmorFactory.create_armor("Leather Armor")
+    backpack = EquipmentFactory.create_item("Backpack")
+    thieves_tools = EquipmentFactory.create_item("Thieves' Tools")
+
+    character.inventory.add_item(dagger)
+    character.inventory.add_item(leather_armor)
+    character.inventory.add_item(backpack)
+    character.inventory.add_item(thieves_tools)
+
+    character.inventory.equip_item(dagger)
+    character.inventory.equip_item(leather_armor)
+
+def equip_halfling(character: "PlayerCharacter"):
+    """Equip a Halfling character with starting gear."""
+    sling = WeaponFactory.create_weapon("Sling")
+    leather_armor = ArmorFactory.create_armor("Leather Armor")
+    backpack = EquipmentFactory.create_item("Backpack")
+
+    character.inventory.add_item(sling)
+    character.inventory.add_item(leather_armor)
+    character.inventory.add_item(backpack)
+
+    character.inventory.equip_item(sling)
+    character.inventory.equip_item(leather_armor)
+
+def equip_magic_user(character: "PlayerCharacter"):
+    """Equip a Magic User character with starting gear."""
+    dagger = WeaponFactory.create_weapon("Dagger")
+    robe = ArmorFactory.create_armor("Robe")
+    backpack = EquipmentFactory.create_item("Backpack")
+    spellbook = EquipmentFactory.create_item("Spell Book")
+
+    character.inventory.add_item(dagger)
+    character.inventory.add_item(robe)
+    character.inventory.add_item(backpack)
+    character.inventory.add_item(spellbook)
+
+    character.inventory.equip_item(dagger)
+
+def equip_party(party: "Party"):
+    """Equip a party with default starting gear based on their character classes."""
+    for character in party.characters:
+        if character.character_class.class_type == CharacterClassType.FIGHTER:
+            equip_fighter(character)
+        elif character.character_class.class_type == CharacterClassType.ELF:
+            equip_elf(character)
+        elif character.character_class.class_type == CharacterClassType.CLERIC:
+            equip_cleric(character)
+        elif character.character_class.class_type == CharacterClassType.DWARF:
+            equip_dwarf(character)
+        elif character.character_class.class_type == CharacterClassType.THIEF:
+            equip_thief(character)
+        elif character.character_class.class_type == CharacterClassType.HALFLING:
+            equip_halfling(character)
+        elif character.character_class.class_type == CharacterClassType.MAGIC_USER:
+            equip_magic_user(character)
 
 # Usage example:
 try:
