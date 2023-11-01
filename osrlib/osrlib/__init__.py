@@ -67,6 +67,8 @@ from .item import (
     ItemNotUsableError,
 )
 from .item_factories import (
+    armor_data,
+    ArmorFactory,
     equipment_data,
     EquipmentFactory,
     weapon_data,
