@@ -152,6 +152,12 @@ class LocationNotFoundError(Exception):
     pass
 
 
+class LocationAlreadyExistsError(Exception):
+    """Raised when trying to add a location to the dungeon's locations collection, but a location with the same ID already exists."""
+
+    pass
+
+
 class Dungeon:
     """Contains a collection of interconnected locations. Validates the integrity of these connections.
 
@@ -213,6 +219,21 @@ class Dungeon:
         gm.logger.debug(f"Starting location set to {start_location}.")
 
         return start_location
+
+    def add_location(self, location: Location) -> None:
+        """Adds a location to the dungeon.
+
+        Args:
+            location (Location): The location to add to the dungeon.
+        """
+        if location.id not in [loc.id for loc in self.locations]:
+            self.locations.append(location)
+        else:
+            exception = LocationAlreadyExistsError(
+                f"Location with ID {location.id} already exists in the dungeon."
+            )
+            gm.logger.exception(exception)
+            raise exception
 
     def move(self, direction: Direction) -> Location:
         """Moves the party to the location in the specified direction if there's an exit in that direction.
@@ -294,7 +315,7 @@ class Dungeon:
         return True
 
     def validate_no_island_locations(self) -> bool:
-        """Checks that no locations are isolated or are one-way dead ends by using Depth-First Search (DFS).
+        """Checks that no locations are isolated or are one-way dead ends.
 
         Each location must be part of a larger interconnected graph where it's
         possible to reach a location from at least one other location, and between
@@ -305,40 +326,35 @@ class Dungeon:
             bool: True if no locations are islands, False otherwise.
         """
 
-        # Single location dungeons are valid by default.
-        if len(self.locations) == 1:
+        # Empty dungeons and those with only one location are valid.
+        if len(self.locations) == 0 or len(self.locations) == 1:
             return True
 
-        # Collect all location IDs.
-        location_ids = {loc.id for loc in self.locations}
+        # Dictionary to store all exit-destination pairs for validation.
+        exit_destinations = {}
+        for loc in self.locations:
+            for exit in loc.exits:
+                exit_destinations[(loc.id, exit.direction)] = exit.destination
 
-        # Iterate through each location to perform DFS.
-        for loc_id in location_ids:
-            # Set to keep track of accessible locations from the current 'loc_id'.
-            accessible = {loc_id}
+        # Now check for each location if it has a reverse exit.
+        for (src_id, direction), dest_id in exit_destinations.items():
+            reverse_exit_direction = {
+                Direction.NORTH: Direction.SOUTH,
+                Direction.SOUTH: Direction.NORTH,
+                Direction.EAST: Direction.WEST,
+                Direction.WEST: Direction.EAST
+            }[direction]
 
-            # Stack for DFS traversal, initialized with the current 'loc_id'.
-            to_visit = [loc_id]
-
-            while to_visit:
-                # Pop a location from stack.
-                current_loc = to_visit.pop()
-
-                # Find exits for the current location.
-                current_exits = [
-                    loc.exits for loc in self.locations if loc.id == current_loc
-                ][0]
-
-                for exit in current_exits:
-                    # If the destination is not yet accessible, mark it and queue it for visit.
-                    if exit.destination not in accessible:
-                        accessible.add(exit.destination)
-                        to_visit.append(exit.destination)
-
-            # If some locations are not accessible from 'loc_id', it's an island.
-            if accessible != location_ids:
+            dest_location = next((loc for loc in self.locations if loc.id == dest_id), None)
+            if not dest_location:
                 gm.logger.critical(
-                    f"Dungeon validation FAILED: Location ID {loc_id} is an island."
+                    f"Dungeon validation FAILED: Location with ID {dest_id} not found."
+                )
+                return False
+
+            if reverse_exit_direction not in [exit.direction for exit in dest_location.exits]:
+                gm.logger.critical(
+                    f"Dungeon validation FAILED: Location ID {dest_id} does not have a reverse exit pointing to location ID {src_id}."
                 )
                 return False
 

@@ -3,8 +3,11 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
+from osrlib import DungeonMaster
 from osrlib.dungeon import Direction
-from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons, ExploreLogs
+from osrlib.utils import wrap_text
+from example_adventure import adventure
+from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
 
 
 ####################
@@ -165,10 +168,11 @@ class ExploreScreen(Screen):
         ("s", "move_south", "South"),
         ("e", "move_east", "East"),
         ("w", "move_west", "West"),
-        ("u", "move_up", "Up"),
-        ("d", "move_down", "Down"),
         ("k", "clear_logs", "Clear logs"),
+        ("?", "summarize", "Summarize session"),
     ]
+
+    dungeon_master = DungeonMaster(adventure)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -183,15 +187,16 @@ class ExploreScreen(Screen):
 
     def action_start_session(self) -> None:
         """Start a new session."""
-        dm_response = self.app.dungeon_master.start_session()
+
+        dm_response = self.dungeon_master.start_session()
 
         # TODO: Need to do this automatically (move the party to the first "real" location)
-        dm_response = self.app.dungeon_master.move_party(Direction.NORTH)
+        dm_response = self.dungeon_master.move_party(Direction.NORTH)
 
         self.query_one("#player_log").clear()
         self.query_one("#player_log").write_line("The party stands ready.")
         self.query_one("#player_log").write_line("---")
-        self.query_one("#dm_log").write_line(dm_response)
+        self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")
 
     def action_quit(self) -> None:
@@ -202,8 +207,8 @@ class ExploreScreen(Screen):
         """Perform a move action in a given direction."""
         self.query_one("#player_log").write_line(log_message)
         self.query_one("#player_log").write_line("---")
-        dm_response = self.app.dungeon_master.move_party(direction)
-        self.query_one("#dm_log").write_line(dm_response)
+        dm_response = self.dungeon_master.move_party(direction)
+        self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")
 
     def action_move_north(self) -> None:
@@ -234,6 +239,15 @@ class ExploreScreen(Screen):
         """An action to clear the logs."""
         self.query_one("#player_log").clear()
         self.query_one("#dm_log").clear()
+
+    def action_summarize(self) -> None:
+        """An action to summarize the session."""
+        self.query_one("#player_log").write_line("Summarizing session...")
+        self.query_one("#player_log").write_line("===")
+        formatted_message = self.dungeon_master.format_user_message("Please summarize the game session thus far. Include only what the players would know.")
+        dm_response = self.dungeon_master.player_message(formatted_message)
+        self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.query_one("#dm_log").write_line("===")
 
 
 ####################

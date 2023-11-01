@@ -1,4 +1,5 @@
 from osrlib import ModifierType
+import textwrap
 
 
 def format_modifiers(modifiers: dict[ModifierType, int]) -> str:
@@ -19,3 +20,7 @@ def format_modifiers(modifiers: dict[ModifierType, int]) -> str:
         A comma-delimited string representation of the modifiers.
     """
     return ", ".join(f"{mod.value}: {'+' if val > 0 else ''}{val}" for mod, val in modifiers.items())
+
+
+def wrap_text(text, width=100):
+    return textwrap.fill(text, width)

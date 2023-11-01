@@ -320,7 +320,7 @@ class Weapon(Item):
         self.range = range  # in feet (None for melee weapons)
 
     def __str__(self):
-        return f"{self.name} (Damage: {self.to_hit_damage_die}, Range: {self.range}')"
+        return f"{self.name} (Damage: {self.to_hit_damage_die}, Range: {self.range})"
 
     def to_dict(self) -> dict:
         weapon_dict = super().to_dict()

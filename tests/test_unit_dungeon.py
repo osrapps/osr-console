@@ -184,8 +184,8 @@ def test_unique_exit_directions_failure():
 def test_no_island_locations_failure():
     # Location ID 2 is an island - there are exits TO it, but not FROM it.
     loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 3)])  # No exit back to ID 1
-    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 4)])  # No exit back to ID 2
+    loc2 = Location(2, 10, 10, [Exit(Direction.NORTH, 3)])  # No exit back to 1
+    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 4)])  # No exit to ID 2
     loc4 = Location(4, 10, 10, [Exit(Direction.SOUTH, 3)])
     dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
     assert not dungeon.validate_no_island_locations()

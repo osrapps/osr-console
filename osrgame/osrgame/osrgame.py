@@ -49,7 +49,7 @@ class OSRConsole(App):
     adventure.set_active_dungeon(dungeon)
 
     # Initialize the Dungeon Master
-    dungeon_master = DungeonMaster(adventure)
+    #dungeon_master = DungeonMaster(adventure)
 
     SCREENS = {"scr_character": CharacterScreen(),
                "scr_welcome": WelcomeScreen(),
