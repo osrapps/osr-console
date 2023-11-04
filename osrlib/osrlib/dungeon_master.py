@@ -5,6 +5,18 @@ from osrlib import Adventure, game_manager as gm
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_model = "gpt-4"
+
+# Error returned by the OpenAI API when access to the model is denied:
+#
+# data = {
+#         'error': {
+#         'message': 'The model `gpt-4` does not exist or you do not have access to it. Learn more: https://help.openai.com/en/articles/7102672-how-can-i-access-gpt-4.',
+#         'type': 'invalid_request_error',
+#         'param': None,
+#         'code': 'model_not_found'
+#     }
+# }
 
 dm_init_message = (
     "You're a skilled Dungeon Master with years of experience leading groups of Dungeons & Dragons players through exciting "
@@ -125,7 +137,7 @@ class DungeonMaster:
             self.adventure.start_adventure()
 
         completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", messages=self.session_messages
+            model=openai_model, messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
         self.started = True
@@ -136,7 +148,7 @@ class DungeonMaster:
         if self.started:
             self.session_messages.append(message)
             completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo", messages=self.session_messages
+                model=openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
             gm.logger.debug(completion)

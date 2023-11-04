@@ -104,3 +104,11 @@ class Adventure:
         """
         self.is_started = True
         logger.debug(f"Started adventure {self.name}.")
+
+    def end_adventure(self):
+        """End the adventure.
+
+        Call this method when the adventure is over.
+        """
+        self.is_started = False
+        logger.debug(f"Ended adventure {self.name}.")

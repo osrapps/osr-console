@@ -151,7 +151,7 @@ def test_item_saveload(db):
     retrieved_item_dict = item_table.search(ItemQuery.name == "50' rope")[0]
     retrieved_item = item.Item.from_dict(retrieved_item_dict)
 
-    # Assertions to check if deserialization was correct
+    # Assertions to check whether deserialization was correct
     assert original_item.name == retrieved_item.name
     assert original_item.item_type == retrieved_item.item_type
     assert original_item.usable_by_classes == retrieved_item.usable_by_classes
@@ -180,7 +180,7 @@ def test_armor_saveload(db):
     retrieved_item_dict = item_table.search(ItemQuery.name == "Chain Mail")[0]
     retrieved_item = item.Armor.from_dict(retrieved_item_dict)
 
-    # Assertions to check if deserialization was correct
+    # Assertions to check whether deserialization was correct
     assert retrieved_item.item_type == item.ItemType.ARMOR
     assert original_item.name == retrieved_item.name
     assert original_item.item_type == retrieved_item.item_type
@@ -215,7 +215,7 @@ def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
     retrieved_sword_dict = item_table.search(ItemQuery.name == "Sword")[0]
     retrieved_sword = item.Weapon.from_dict(retrieved_sword_dict)
 
-    # Assertions to check if deserialization was correct
+    # Assertions to check whether deserialization was correct
     assert retrieved_sword.item_type == item.ItemType.WEAPON
     assert original_sword.name == retrieved_sword.name
     assert original_sword.item_type == retrieved_sword.item_type
@@ -275,7 +275,7 @@ def test_spell_saveload(db, test_fighter, test_magic_user):
     retrieved_spell_dict = item_table.search(ItemQuery.name == "Fireball")[0]
     retrieved_spell = item.Spell.from_dict(retrieved_spell_dict)
 
-    # Assertions to check if deserialization was correct
+    # Assertions to check whether deserialization was correct
     assert retrieved_spell.item_type == item.ItemType.SPELL
     assert original_spell.name == retrieved_spell.name
     assert original_spell.item_type == retrieved_spell.item_type
@@ -558,10 +558,6 @@ def test_party_saveload(db):
     elf.inventory.equip_item(armor)
     elf.inventory.equip_item(weapon)
 
-    # Test party health after load - KILL 'EM ALL
-    for pc in pc_party.characters:
-        pc.character_class.hp = 0
-
     # SAVE the party
     gm.logger.info(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
@@ -583,11 +579,10 @@ def test_party_saveload(db):
     loaded_party = Party.from_dict(fetched_party_dict)
     gm.logger.info(f"Loaded party:\n{loaded_party}")
 
-    # Verify if the loaded Party is the same as the original one
+    # Verify that the loaded Party is the same as the original
     assert loaded_party.name == pc_party.name
     assert len(loaded_party.characters) == len(pc_party.characters)
     assert str(loaded_party) == str(pc_party)
-    assert not loaded_party.is_alive
 
     for loaded_character, original_member in zip(
         loaded_party.characters, pc_party.characters
@@ -596,11 +591,38 @@ def test_party_saveload(db):
         assert loaded_character.level
         assert loaded_character.level == original_member.level
 
-    # Test party health after load - KILL 'EM ALL
-    for pc in pc_party.characters:
-        pc.character_class.hp = 0
 
-    assert not pc_party.is_alive
+# Test weather a "dead" party stays dead after saving and loading
+def test_party_saveload_dead(db):
+    pc_party = party.get_default_party()
+
+    # Kill the party
+    for character in pc_party.characters:
+        character.character_class.hp = 0 # TODO: This should call an apply_damage() method instead
+
+    # Write the party to storage
+    gm.logger.info(
+        f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
+    )
+    party_table = db.table("player_characters")
+    party_dict = pc_party.to_dict()
+    doc_id = party_table.insert(party_dict)
+
+    assert doc_id == 1
+
+    # LOAD the party from storage
+    gm.logger.info(f"Loading party {pc_party.name}...")
+    PartyQuery = Query()
+    fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
+    assert len(fetched_party_dicts) == 1
+    fetched_party_dict = fetched_party_dicts[0]
+
+    # Deserialize and create a Party object from the fetched dictionary
+    loaded_party = Party.from_dict(fetched_party_dict)
+    gm.logger.info(f"Loaded party:\n{loaded_party}")
+
+    # Verify that the loaded Party is still dead (all party members have 0 HP)
+    assert not loaded_party.is_alive
 
 # Test case for Exit class
 def test_exit_save_load(db):

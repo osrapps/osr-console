@@ -24,7 +24,6 @@ CLASSES_THAT_CAN_USE_ALL_WEAPONS = {
     CharacterClassType.HALFLING,
 }
 
-
 def create_weapon(name, damage_die, classes_that_can_use_it, max_equipped, gp_value, range=0):
     return Weapon(
         name,
@@ -34,7 +33,6 @@ def create_weapon(name, damage_die, classes_that_can_use_it, max_equipped, gp_va
         gp_value=gp_value,
         range=range,
     )
-
 
 def generate_test_params():
     sword = create_weapon("sword", "1d6", CLASSES_THAT_CAN_USE_ALL_WEAPONS, 1, 40)

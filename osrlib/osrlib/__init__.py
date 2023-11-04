@@ -66,6 +66,16 @@ from .item import (
     ItemNotInInventoryError,
     ItemNotUsableError,
 )
+from .item_factories import (
+    armor_data,
+    ArmorFactory,
+    equipment_data,
+    EquipmentFactory,
+    weapon_data,
+    WeaponFactory,
+    ItemDataNotFoundError,
+    equip_party,
+)
 from .monster import (
         Monster,
 )
