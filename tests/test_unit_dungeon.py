@@ -121,3 +121,24 @@ def test_random_dungeon():
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()
+
+
+def test_dungeon_graph_integrity():
+    dungeon = Dungeon.get_random_dungeon(num_locations=20)
+
+    def dfs(location_id, visited):
+        if location_id not in visited:
+            visited.add(location_id)
+            location = dungeon.get_location(location_id)
+            for exit in location.exits:
+                dfs(exit.destination, visited)
+
+    all_locations_reachable = True
+    for location in dungeon.locations:
+        visited = set()
+        dfs(location.id, visited)
+        if len(visited) != len(dungeon.locations):
+            all_locations_reachable = False
+            break  # If one fails, no need to continue testing others
+
+    assert all_locations_reachable, "Not all locations are reachable from every other location."

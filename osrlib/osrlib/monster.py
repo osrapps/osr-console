@@ -42,7 +42,7 @@ class Monster:
         damage = self.weapon.attack()
         return damage
 
-    def damage(self, hit_points_damage: int):
+    def apply_damage(self, hit_points_damage: int):
         """Apply damage from an attack.
 
         Args:
@@ -57,5 +57,3 @@ class Monster:
             hit_points_healed (int): The amount of hit points to restore.
         """
         self.hit_points += hit_points_healed
-
-    pass
