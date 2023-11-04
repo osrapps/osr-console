@@ -1,7 +1,7 @@
 from random import randint, sample, choice
 import json
 import pytest
-from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError, get_random_dungeon
+from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
 from osrlib.encounter import Encounter
 
 # --- Test Exit class ---
@@ -36,6 +36,7 @@ def test_location_initialization():
     assert location.keywords == ["keyword1"]
     assert location.encounter == encounter
 
+
 def test_location_json():
     # Create an Exit object
     exit1 = Exit(Direction.NORTH, 2)
@@ -43,11 +44,7 @@ def test_location_json():
 
     # Create a Location object
     location = Location(
-        id=1,
-        width=10,
-        length=10,
-        exits=[exit1, exit2],
-        keywords=["test", "location"]
+        id=1, width=10, length=10, exits=[exit1, exit2], keywords=["test", "location"]
     )
 
     # Get the JSON representation
@@ -70,6 +67,7 @@ def test_location_json():
 
     # Validate that 'encounter' is None
     assert location_dict["encounter"] is None
+
 
 # --- Test Dungeon class ---
 
@@ -117,84 +115,9 @@ def test_move():
     assert dungeon.move(Direction.EAST) is None
 
 
-# --- Test Dungeon integrity ---
-
-
-# --- SUCCESS conditions
-def test_locations_have_exits():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2])
-    assert dungeon.validate_locations_have_exits()
-
-
-def test_exits_have_valid_destinations():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2])
-    assert dungeon.validate_exits_have_valid_destinations()
-
-
-def test_unique_exit_directions():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2), Exit(Direction.SOUTH, 3)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1)])
-    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 1)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3])
-    assert dungeon.validate_unique_exit_directions()
-
-
-def test_no_island_locations():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1), Exit(Direction.EAST, 3)])
-    loc3 = Location(3, 10, 10, [Exit(Direction.WEST, 2)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3])
-    assert dungeon.validate_no_island_locations()
-
-
-def test_no_island_locations_2():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1), Exit(Direction.EAST, 3)])
-    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 4), Exit(Direction.WEST, 2)])
-    loc4 = Location(4, 10, 10, [Exit(Direction.SOUTH, 3)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
-    assert dungeon.validate_no_island_locations()
-
-
-# --- FAILURE conditions
-def test_locations_have_exits_failure():
-    loc1 = Location(1, 10, 10, [])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1])
-    assert not dungeon.validate_locations_have_exits()
-
-
-def test_exits_have_valid_destinations_failure():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 999)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1])
-    assert not dungeon.validate_exits_have_valid_destinations()
-
-
-def test_unique_exit_directions_failure():
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2), Exit(Direction.NORTH, 3)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.SOUTH, 1)])
-    loc3 = Location(3, 10, 10, [Exit(Direction.SOUTH, 1)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3])
-    assert not dungeon.validate_unique_exit_directions()
-
-
-def test_no_island_locations_failure():
-    # Location ID 2 is an island - there are exits TO it, but not FROM it.
-    loc1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
-    loc2 = Location(2, 10, 10, [Exit(Direction.NORTH, 3)])  # No exit back to 1
-    loc3 = Location(3, 10, 10, [Exit(Direction.NORTH, 4)])  # No exit to ID 2
-    loc4 = Location(4, 10, 10, [Exit(Direction.SOUTH, 3)])
-    dungeon = Dungeon("Test Dungeon", "A test description", [loc1, loc2, loc3, loc4])
-    assert not dungeon.validate_no_island_locations()
-
-
-@pytest.mark.flaky(reruns=5)
 def test_random_dungeon():
     # Create a random dungeon
-    dungeon = get_random_dungeon()
+    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
 
     # Validate Dungeon
-    assert dungeon.validate_location_connections()
+    assert random_dungeon.validate_location_connections()

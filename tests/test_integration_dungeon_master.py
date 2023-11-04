@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-
-@pytest.mark.flaky(reruns=5, reruns_delay=5)
+@pytest.mark.optin
+@pytest.mark.flaky(reruns=0, reruns_delay=0)
 @pytest.mark.integration
 def test_dungeon_master_start_session_real_api():
     adventure = Adventure("Test Adventure")
@@ -27,7 +27,8 @@ def test_dungeon_master_start_session_real_api():
     gm.logger.info(message)
     assert len(message) > 0
 
-#@pytest.mark.flaky(reruns=5, reruns_delay=5)
+@pytest.mark.optin
+@pytest.mark.flaky(reruns=0, reruns_delay=0)
 @pytest.mark.integration
 def test_dungeon_master_move_party():
     adventure = Adventure("Test Adventure")

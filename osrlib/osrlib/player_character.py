@@ -40,7 +40,7 @@ class PlayerCharacter:
         """Initialize a new PlayerCharacter (PC) instance."""
         self.name = name
         self.abilities = {}
-        self.roll_abilities()
+        self.roll_abilities() # TODO: Should NOT roll abilities when loading a saved character
         self.character_class = None
         self.set_character_class(character_class_type, level)
 
