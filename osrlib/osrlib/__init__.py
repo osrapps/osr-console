@@ -87,6 +87,6 @@ from .party import (
     CharacterAlreadyInPartyError,
     get_default_party,
 )
-from .player_character import PlayerCharacter
+from .player_character import PlayerCharacter, Alignment
 from .quest import Quest
 from .utils import format_modifiers

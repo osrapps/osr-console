@@ -1,4 +1,5 @@
 """This module contains the PlayerCharacter class."""
+from enum import Enum
 import osrlib.ability
 from osrlib.ability import (
     AbilityType,
@@ -10,15 +11,24 @@ from osrlib.ability import (
     Strength,
     Wisdom,
 )
-from osrlib import (
-    dice_roller,
+from osrlib.character_classes import (
     CharacterClass,
     CharacterClassType,
     ClassLevel,
-    Inventory,
-    Item,
+)
+from osrlib.inventory import Inventory
+from osrlib import (
+    dice_roller,
     game_manager as gm,
 )
+
+
+class Alignment(Enum):
+    """Represents the alignment of a player character (PC) or monster."""
+
+    CHAOTIC = "Chaotic"
+    NEUTRAL = "Neutral"
+    LAWFUL = "Lawful"
 
 
 class PlayerCharacter:
@@ -40,7 +50,7 @@ class PlayerCharacter:
         """Initialize a new PlayerCharacter (PC) instance."""
         self.name = name
         self.abilities = {}
-        self.roll_abilities() # TODO: Should NOT roll abilities when loading a saved character
+        self.roll_abilities()  # TODO: Should NOT roll abilities when loading a saved character
         self.character_class = None
         self.set_character_class(character_class_type, level)
 
@@ -105,6 +115,14 @@ class PlayerCharacter:
         """Rolls a 4d6 and returns the sum of the three highest rolls."""
         roll = dice_roller.roll_dice("4d6", drop_lowest=True)
         return roll.total
+
+    def get_initiative_roll(self):
+        """Rolls a 1d6, adds the character's Dexterity modifier, and returns the total."""
+        modifier_value = self.abilities[AbilityType.DEXTERITY].modifiers[
+            ModifierType.INITIATIVE
+        ]
+        roll = dice_roller.roll_dice("1d6", modifier_value=modifier_value)
+        return roll.total_with_modifier
 
     def set_character_class(
         self, character_class_type: CharacterClassType, level: int = 1
