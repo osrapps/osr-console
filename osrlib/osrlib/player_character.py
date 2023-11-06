@@ -26,9 +26,9 @@ from osrlib import (
 class Alignment(Enum):
     """Represents the alignment of a player character (PC) or monster."""
 
-    CHAOTIC = "Chaotic"
-    NEUTRAL = "Neutral"
     LAWFUL = "Lawful"
+    NEUTRAL = "Neutral"
+    CHAOTIC = "Chaotic"
 
 
 class PlayerCharacter:
