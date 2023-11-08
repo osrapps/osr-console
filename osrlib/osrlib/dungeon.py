@@ -1,4 +1,3 @@
-from random import randint, sample
 from typing import List
 from enum import Enum
 import random
@@ -126,7 +125,9 @@ class Location:
         self.is_visited = is_visited
 
     def __str__(self):
-        return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: {self.exits} Keywords: {self.keywords}"
+        exits_str = ", ".join(str(exit) for exit in self.exits)
+        return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: [{exits_str}] Keywords: {self.keywords}"
+
 
     @property
     def json(self):
@@ -329,7 +330,8 @@ class Dungeon:
             exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
         except IndexError:
             gm.logger.debug(
-                f"No exit to the {direction.name} from {self.current_location}. The only exits are {self.current_location.exits}."
+                f"No exit to the {direction.name} from {self.current_location}. The only exits are: "
+                + ", ".join(str(exit) for exit in self.current_location.exits) + "."
             )
             return None
 

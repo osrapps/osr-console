@@ -47,6 +47,9 @@ from .dungeon import (
     LocationNotFoundError,
     Direction,
 )
+from .enums import (
+    CharacterClassType,
+)
 from .game_manager import (
     GameManager,
     StorageType,
@@ -87,6 +90,7 @@ from .party import (
     CharacterAlreadyInPartyError,
     get_default_party,
 )
-from .player_character import PlayerCharacter
+from .player_character import PlayerCharacter, Alignment
 from .quest import Quest
+from .saving_throws import saving_throws
 from .utils import format_modifiers

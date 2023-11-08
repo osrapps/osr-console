@@ -2,7 +2,7 @@
 from enum import Enum
 from typing import Optional, Set
 
-from osrlib import CharacterClassType
+from osrlib.enums import CharacterClassType
 
 
 class ItemType(Enum):
