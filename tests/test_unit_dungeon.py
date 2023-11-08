@@ -1,4 +1,3 @@
-from random import randint, sample, choice
 import json
 import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
@@ -27,7 +26,7 @@ def test_exit_lock_unlock():
 
 def test_location_initialization():
     exit_north = Exit(Direction.NORTH, 1)
-    encounter = Encounter()  # TODO: Set this up with real encounter
+    encounter = Encounter("Test Encounter", "A test encounter in a test location in a test dungeon.")
     location = Location(1, 10, 10, [exit_north], ["keyword1"], encounter)
 
     assert location.id == 1
@@ -75,8 +74,8 @@ def test_location_json():
 def test_dungeon_initialization():
     exit_north = Exit(Direction.NORTH, 1)
     encounter = (
-        Encounter()
-    )  # You would set this up properly according to your Encounter class
+        Encounter("Test Encounter", "A test encounter in a test location in a test dungeon.")
+    )
     location1 = Location(1, 10, 10, [exit_north], ["keyword1"], encounter)
     location2 = Location(2, 6, 6, [], ["keyword2"], None)
     dungeon = Dungeon("Test Dungeon", "A test dungeon.", [location1, location2])

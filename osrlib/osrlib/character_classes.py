@@ -3,7 +3,7 @@ from typing import List, Tuple, Union
 
 from osrlib.dice_roller import DiceRoll, roll_dice
 from osrlib.enums import CharacterClassType
-from osrlib.saving_throws import saving_throws
+from osrlib.saving_throws import get_saving_throws_for_class_and_level
 
 
 class ClassLevel:
@@ -53,10 +53,13 @@ class CharacterClass:
     def __init__(self, character_class_type: CharacterClassType, level: int = 1, constitution_modifier: int = 0):
         """Initialize a CharacterClass instance."""
         self.class_type = character_class_type
-        self.class_saving_throws = saving_throws[self.class_type]
         self.levels = class_levels[self.class_type]
         self.current_level = self.levels[level]
         self.hit_die = self.levels[1].hit_dice  # hit die is always first-level (1dn)
+
+        # TODO: Instead of populating a saving_throws property, maybe we call
+        # a function in saving_throws when we need to make the saving throw check?
+        self.saving_throws = get_saving_throws_for_class_and_level(self.class_type, self.current_level.level_num)
 
         # If the character is not first level, roll hit points for the character using the hit dice for that level
         if level > 1:
@@ -69,16 +72,6 @@ class CharacterClass:
     def __str__(self) -> str:
         """Return a string representation of the CharacterClass instance."""
         return self.class_type.value
-
-    @property
-    def saving_throws(self) -> List[int]:
-        """Return the saving throws for the character at their current class level."""
-        for level_range in self.class_saving_throws:
-            if self.current_level in level_range:
-                return self.class_saving_throws[level_range]
-
-        raise ValueError(f"No saving throws available for {self.class_type.value} at level {self.current_level}")
-
 
     def roll_hp(self, hp_modifier: int = 0) -> DiceRoll:
         """Roll hit points for the character.

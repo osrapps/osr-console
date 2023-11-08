@@ -1,7 +1,9 @@
+from typing import List
 from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.enums import CharacterClassType
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
+from osrlib.saving_throws import get_saving_throws_for_class_and_level
 
 monster_xp = {
     "Under 1": {"base": 5, "bonus": 1},  # Not handling the "under 1" hit dice case
@@ -27,7 +29,7 @@ monster_xp = {
 }
 
 
-class MonsterStatBlock:
+class MonsterStatsBlock:
     """Specifies the statistics of the monsters in a monster party.
 
     Pass a MonsterStatBlock instance to the MonsterParty constructor to create a new
@@ -37,7 +39,7 @@ class MonsterStatBlock:
         name (str): The name of the monster.
         description (str): The monster's description.
         armor_class (int): The monster's armor class (AC). Lower is better.
-        hit_dice (str): The monster's hit dice in "nd8" or "nd8+n" format, for example '1d8', '1d8+2', '3d8'). Monster hit die are always a d8. Default is '1d8'.
+        hit_dice (str): The monster's hit dice in "nd8" or "nd8+n" format, for example '1d8', '1d8+2', '3d8'). Default is '1d8'.
         movement (int): The monster's movement rate in feet per round. Default is 120.
         num_special_abilities (int): The special ability count of the monster; this value corresponds to the number of asterisks after the monster's hit dice in the Basic and Expert rule books. Default is 0.
         attacks_per_round (int): The number of attacks the monster can make per round. Default is 1.
@@ -84,7 +86,7 @@ class MonsterStatBlock:
 class Monster:
     """A Monster is a creature the party can encounter in a dungeon and defeat to obtain experience points and optionally treasure and quest pieces."""
 
-    def __init__(self, monster_stats: MonsterStatBlock):
+    def __init__(self, monster_stats: MonsterStatsBlock):
         """Initialize a new Monster instance."""
         self.name = monster_stats.name
         self.description = monster_stats.description
@@ -97,8 +99,10 @@ class Monster:
         self.movement = monster_stats.movement
         self.attacks_per_round = monster_stats.attacks_per_round
         self.damage_per_attack = monster_stats.damage_per_attack
-        self.save_as_class = monster_stats.save_as_class # TODO: Populate a saving throw table for the monster based on the save_as_class and save_as_level
-        self.save_as_level = monster_stats.save_as_level # TODO: Populate a saving throw table for the monster based on the save_as_class and save_as_level
+        self.saving_throws = get_saving_throws_for_class_and_level(
+            monster_stats.save_as_class,
+            monster_stats.save_as_level
+        ) # TODO: Instead of populating a saving_throws property, maybe we call a function in saving_throws to make the saving throw check?
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
 
@@ -115,11 +119,21 @@ class Monster:
         """
         base_xp = 0
         plus = ""
+
+        # Handle monsters with less than 1 hit die
+        if hp_roll.num_sides < 8:
+            base_xp = monster_xp["Under 1"]["base"]
+            bonus = monster_xp["Under 1"]["bonus"]
+            return base_xp + bonus * num_special_abilities
+
+        # Handle monsters with 1 hit die and up
         if hp_roll.count <= 8:
+            # XP values for monsters with 1-8 hit dice have single values
             if hp_roll.modifier > 0:
                 plus = "+"
             base_xp = monster_xp[f"{hp_roll.count}{plus}"]["base"]
             bonus = monster_xp[f"{hp_roll.count}{plus}"]["bonus"]
+        # XP values for monsters with 9+ hit dice use a single value for a range of hit dice
         elif hp_roll.count >= 9 and hp_roll.count <= 10:
             base_xp = monster_xp["9 to 10+"]["base"]
             bonus = monster_xp["9 to 10+"]["bonus"]
@@ -183,7 +197,7 @@ class MonsterParty:
         is_alive (bool): True if at least one monster in the monster party is alive, otherwise False.
     """
 
-    def __init__(self, monster_stat_block: MonsterStatBlock):
+    def __init__(self, monster_stat_block: MonsterStatsBlock):
         """Initialize a new MonsterParty instance.
 
         The number of monsters that comprise the monster party, as well as hit points, armor class, and other
@@ -269,3 +283,14 @@ class MonsterParty:
             int: True if the monster party has more than 0 hit points, otherwise False.
         """
         return any(monster.is_alive for monster in self.monsters)
+
+    @property
+    def xp_value(self):
+        """Get the total XP value of the monster party.
+
+        Returns:
+            int: The total XP value of the monster party.
+        """
+        monster_xp = sum(monster.xp_value for monster in self.monsters)
+        treasure_xp = 0 # TODO: sum(item.xp_value for item in self.treasure)
+        return monster_xp + treasure_xp

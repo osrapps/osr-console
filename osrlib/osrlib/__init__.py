@@ -15,6 +15,8 @@ from .character_classes import (
     CharacterClass,
     CharacterClassType,
     ClassLevel,
+    all_character_classes,
+    class_levels,
     cleric_levels,
     commoner_levels,
     dwarf_levels,
@@ -22,11 +24,7 @@ from .character_classes import (
     fighter_levels,
     halfling_levels,
     magic_user_levels,
-    saving_throws,
     thief_levels,
-    class_levels,
-    saving_throws,
-    all_character_classes,
 )
 from .combat import (
     AttackType,
@@ -71,10 +69,12 @@ from .item import (
 )
 from .item_factories import (
     armor_data,
+    magic_armor_data,
     ArmorFactory,
     equipment_data,
     EquipmentFactory,
     weapon_data,
+    magic_weapon_data,
     WeaponFactory,
     ItemDataNotFoundError,
     equip_party,
