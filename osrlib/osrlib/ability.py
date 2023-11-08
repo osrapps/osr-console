@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 from osrlib.combat import ModifierType
 
 

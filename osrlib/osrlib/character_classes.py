@@ -1,22 +1,9 @@
 """Defines character classes for player characters."""
-from enum import Enum
 from typing import List, Tuple, Union
 
-from osrlib.combat import AttackType
 from osrlib.dice_roller import DiceRoll, roll_dice
-
-
-class CharacterClassType(Enum):
-    """Enum representing the types of character classes."""
-
-    CLERIC = "Cleric"
-    DWARF = "Dwarf"
-    ELF = "Elf"
-    FIGHTER = "Fighter"
-    HALFLING = "Halfling"
-    MAGIC_USER = "Magic User"
-    THIEF = "Thief"
-    COMMONER = "Commoner"
+from osrlib.enums import CharacterClassType
+from osrlib.saving_throws import saving_throws
 
 
 class ClassLevel:
@@ -66,7 +53,7 @@ class CharacterClass:
     def __init__(self, character_class_type: CharacterClassType, level: int = 1, constitution_modifier: int = 0):
         """Initialize a CharacterClass instance."""
         self.class_type = character_class_type
-        self.saving_throws = saving_throws[self.class_type]
+        self.class_saving_throws = saving_throws[self.class_type]
         self.levels = class_levels[self.class_type]
         self.current_level = self.levels[level]
         self.hit_die = self.levels[1].hit_dice  # hit die is always first-level (1dn)
@@ -82,6 +69,16 @@ class CharacterClass:
     def __str__(self) -> str:
         """Return a string representation of the CharacterClass instance."""
         return self.class_type.value
+
+    @property
+    def saving_throws(self) -> List[int]:
+        """Return the saving throws for the character at their current class level."""
+        for level_range in self.class_saving_throws:
+            if self.current_level in level_range:
+                return self.class_saving_throws[level_range]
+
+        raise ValueError(f"No saving throws available for {self.class_type.value} at level {self.current_level}")
+
 
     def roll_hp(self, hp_modifier: int = 0) -> DiceRoll:
         """Roll hit points for the character.
@@ -285,65 +282,6 @@ class_levels = {
     CharacterClassType.COMMONER: commoner_levels,
 }
 
-
-saving_throws = {
-    CharacterClassType.CLERIC: {
-        AttackType.DEATH_RAY_POISON: 11,
-        AttackType.MAGIC_WANDS: 12,
-        AttackType.PARALYSIS_TURN_TO_STONE: 14,
-        AttackType.DRAGON_BREATH: 16,
-        AttackType.RODS_STAVES_SPELLS: 15,
-    },
-    CharacterClassType.DWARF: {
-        AttackType.DEATH_RAY_POISON: 10,
-        AttackType.MAGIC_WANDS: 11,
-        AttackType.PARALYSIS_TURN_TO_STONE: 12,
-        AttackType.DRAGON_BREATH: 13,
-        AttackType.RODS_STAVES_SPELLS: 14,
-    },
-    CharacterClassType.ELF: {
-        AttackType.DEATH_RAY_POISON: 12,
-        AttackType.MAGIC_WANDS: 13,
-        AttackType.PARALYSIS_TURN_TO_STONE: 13,
-        AttackType.DRAGON_BREATH: 15,
-        AttackType.RODS_STAVES_SPELLS: 15,
-    },
-    CharacterClassType.FIGHTER: {
-        AttackType.DEATH_RAY_POISON: 12,
-        AttackType.MAGIC_WANDS: 13,
-        AttackType.PARALYSIS_TURN_TO_STONE: 14,
-        AttackType.DRAGON_BREATH: 15,
-        AttackType.RODS_STAVES_SPELLS: 16,
-    },
-    CharacterClassType.HALFLING: {
-        AttackType.DEATH_RAY_POISON: 10,
-        AttackType.MAGIC_WANDS: 11,
-        AttackType.PARALYSIS_TURN_TO_STONE: 12,
-        AttackType.DRAGON_BREATH: 13,
-        AttackType.RODS_STAVES_SPELLS: 14,
-    },
-    CharacterClassType.MAGIC_USER: {
-        AttackType.DEATH_RAY_POISON: 13,
-        AttackType.MAGIC_WANDS: 14,
-        AttackType.PARALYSIS_TURN_TO_STONE: 13,
-        AttackType.DRAGON_BREATH: 16,
-        AttackType.RODS_STAVES_SPELLS: 15,
-    },
-    CharacterClassType.THIEF: {
-        AttackType.DEATH_RAY_POISON: 13,
-        AttackType.MAGIC_WANDS: 14,
-        AttackType.PARALYSIS_TURN_TO_STONE: 13,
-        AttackType.DRAGON_BREATH: 16,
-        AttackType.RODS_STAVES_SPELLS: 15,
-    },
-    CharacterClassType.COMMONER: {
-        AttackType.DEATH_RAY_POISON: 20,
-        AttackType.MAGIC_WANDS: 20,
-        AttackType.PARALYSIS_TURN_TO_STONE: 20,
-        AttackType.DRAGON_BREATH: 20,
-        AttackType.RODS_STAVES_SPELLS: 20,
-    },
-}
 
 
 all_character_classes = [

@@ -2,7 +2,8 @@ import logging
 
 import pytest
 
-from osrlib.character_classes import CharacterClassType, class_levels
+from osrlib.enums import CharacterClassType
+from osrlib.character_classes import class_levels
 from osrlib.player_character import PlayerCharacter
 
 logger = logging.getLogger(__name__)

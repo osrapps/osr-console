@@ -1,5 +1,5 @@
 from osrlib.dice_roller import roll_dice, DiceRoll
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
 

@@ -4,7 +4,7 @@ of type PlayerCharacter)."""
 from typing import List
 
 from osrlib import player_character, game_manager as gm
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 from osrlib.item_factories import equip_party
 
 

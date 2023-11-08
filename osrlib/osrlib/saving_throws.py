@@ -1,4 +1,4 @@
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 from osrlib.combat import AttackType
 
 saving_throws = {
@@ -185,3 +185,9 @@ saving_throws = {
 }
 
 saving_throws[CharacterClassType.HALFLING] = saving_throws[CharacterClassType.DWARF].copy()
+
+saving_throws[CharacterClassType.COMMONER] = {
+    level_range: {save: val + 2 for save, val in values.items()}
+    for level_range, values in saving_throws[CharacterClassType.FIGHTER].items()
+    if level_range.stop <= 11
+}

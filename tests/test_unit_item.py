@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 from osrlib.item import (
     ItemAlreadyHasOwnerError,
     ItemAlreadyInInventoryError,

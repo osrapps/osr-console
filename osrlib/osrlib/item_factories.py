@@ -1,5 +1,5 @@
 from osrlib.item import Armor, Item, ItemType, Weapon
-from osrlib.character_classes import CharacterClassType
+from osrlib.enums import CharacterClassType
 
 _armor_combat_classes = {
     CharacterClassType.FIGHTER,
