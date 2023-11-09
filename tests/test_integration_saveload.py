@@ -581,11 +581,11 @@ def test_party_saveload(db):
 
     # Verify that the loaded Party is the same as the original
     assert loaded_party.name == pc_party.name
-    assert len(loaded_party.characters) == len(pc_party.characters)
+    assert len(loaded_party.members) == len(pc_party.members)
     assert str(loaded_party) == str(pc_party)
 
     for loaded_character, original_member in zip(
-        loaded_party.characters, pc_party.characters
+        loaded_party.members, pc_party.members
     ):
         assert loaded_character.name == original_member.name
         assert loaded_character.level
@@ -597,7 +597,7 @@ def test_party_saveload_dead(db):
     pc_party = party.get_default_party()
 
     # Kill the party
-    for character in pc_party.characters:
+    for character in pc_party.members:
         character.character_class.hp = 0 # TODO: This should call an apply_damage() method instead
 
     # Write the party to storage

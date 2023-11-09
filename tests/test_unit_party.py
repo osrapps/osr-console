@@ -14,7 +14,7 @@ def setup_party():
 def test_add_firstcharacter(setup_party):
     test_party, character1, _, _ = setup_party
     test_party.add_character(character1)
-    assert character1 in test_party.characters
+    assert character1 in test_party.members
 
 
 def test_add_character_at_capacity(setup_party):
@@ -40,7 +40,7 @@ def test_remove_character(setup_party):
     test_party, character1, _, _ = setup_party
     test_party.add_character(character1)
     test_party.remove_character(character1)
-    assert character1 not in test_party.characters
+    assert character1 not in test_party.members
 
 
 def test_remove_character_not_in_party(setup_party):
@@ -119,4 +119,4 @@ def test_clear_party(setup_party):
     test_party.add_character(character2)
     test_party.add_character(character3)
     test_party.clear_party()
-    assert len(test_party.characters) == 0
+    assert len(test_party.members) == 0

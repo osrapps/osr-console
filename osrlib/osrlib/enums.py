@@ -1,7 +1,7 @@
 from enum import Enum
 
 class CharacterClassType(Enum):
-    """Enum representing the types of character classes."""
+    """Specifies the class, or profession, of a player character or NPC."""
 
     CLERIC = "Cleric"
     DWARF = "Dwarf"
@@ -11,3 +11,11 @@ class CharacterClassType(Enum):
     MAGIC_USER = "Magic User"
     THIEF = "Thief"
     COMMONER = "Commoner"
+
+class PartyReaction(Enum):
+    """Specifies the reaction of a PC or monster party at the start of an encounter."""
+
+    FIGHT = "Fight"
+    RUN = "Run"
+    TALK = "Talk"
+    PASS = "Pass"

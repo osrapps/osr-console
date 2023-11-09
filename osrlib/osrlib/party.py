@@ -80,9 +80,10 @@ class Party:
         """Initialize a new Party instance."""
         self.name = name
         self.max_party_members = max_party_members
-        self.characters = characters if characters is not None else []
+        self.members = characters if characters is not None else []
         self.active_character = None
         self.current_adventure = None
+        # TODO: Marching order (two or three abreast)
 
     def __str__(self):
         """Get a string representation of the Party instance, including its name and members.
@@ -90,7 +91,7 @@ class Party:
         Returns:
             str: A string representation of the Party instance.
         """
-        character_strs = [str(character) for character in self.characters]
+        character_strs = [str(character) for character in self.members]
         character_list_str = '\n\t'.join(character_strs)
 
         return f"Party: {self.name}\nMembers:\n\t[{character_list_str}]"
@@ -102,7 +103,7 @@ class Party:
         Returns:
             int: The number of characters in the party.
         """
-        return len(self.characters)
+        return len(self.members)
 
     @property
     def is_adventuring(self) -> bool:
@@ -120,7 +121,7 @@ class Party:
         Returns:
             bool: True if any character in the party is alive.
         """
-        return any(character.is_alive for character in self.characters)
+        return any(character.is_alive for character in self.members)
 
     def create_character(
         self, name: str, character_class: CharacterClassType, level: int = 1
@@ -190,23 +191,23 @@ class Party:
                 f"Can't add '{character.name}' to the party because the party is already adventuring."
             )
 
-        if len(self.characters) >= self.max_party_members:
+        if len(self.members) >= self.max_party_members:
             raise PartyAtCapacityError(
                 f"Party cannot have more than {self.max_party_members} characters."
             )
 
-        if character in self.characters:
+        if character in self.members:
             raise CharacterAlreadyInPartyError(
                 f"Character '{character.name}' already in party."
             )
 
-        if character.name in (character.name for character in self.characters):
+        if character.name in (character.name for character in self.members):
             raise CharacterAlreadyInPartyError(
                 f"A character with that name ('{character.name}') is already in party."
             )
 
         gm.logger.info(f"Adding '{character.name}' to party '{self.name}'...")
-        self.characters.append(character)
+        self.members.append(character)
 
         if set_as_active_character:
             gm.logger.info(
@@ -235,7 +236,7 @@ class Party:
         Returns:
             bool: True if the character is in the party, False otherwise.
         """
-        return character in self.characters
+        return character in self.members
 
     def set_active_character(self, character: player_character.PlayerCharacter):
         """Sets the given character as the active, or "selected," character in the party.
@@ -272,7 +273,7 @@ class Party:
             character (player_character.PlayerCharacter): The PC to remove from the party.
         """
         if self.is_member(character):
-            self.characters.remove(character)
+            self.members.remove(character)
         else:
             raise CharacterNotInPartyError(
                 f"Character '{character.name}' not in party."
@@ -295,7 +296,7 @@ class Party:
             player_character.PlayerCharacter: The character with the given name or None if the character is not in the party.
         """
         return next(
-            (character for character in self.characters if character.name == name),
+            (character for character in self.members if character.name == name),
             None,
         )
 
@@ -305,7 +306,7 @@ class Party:
         Example:
 
             .. code-block:: python
-                if len(party.characters) > 0:
+                if len(party.members) > 0:
                     # Get the first character in the party
                     first_character = party.get_character_by_index(0)
 
@@ -319,7 +320,7 @@ class Party:
             player_character.PlayerCharacter: The character with the given index, or None if the index is out of range.
         """
         try:
-            return self.characters[index]
+            return self.members[index]
         except IndexError:
             return None
 
@@ -351,7 +352,7 @@ class Party:
                 f"Character '{character.name}' not in party."
             )
 
-        return self.characters.index(character)
+        return self.members.index(character)
 
     def move_character_to_index(
         self, character: player_character.PlayerCharacter, index: int
@@ -381,7 +382,7 @@ class Party:
                 f"Can't move '{character.name}' because they're not in the party."
             )
 
-        if index >= len(self.characters):
+        if index >= len(self.members):
             raise IndexError(
                 f"Can't move '{character.name}' to index {index} because it's out of range."
             )
@@ -390,16 +391,16 @@ class Party:
         if index == self.get_character_index(character):
             return
 
-        self.characters.remove(character)
-        self.characters.insert(index, character)
+        self.members.remove(character)
+        self.members.insert(index, character)
 
     def clear_party(self):
         """Removes all characters from the party."""
-        self.characters.clear()
+        self.members.clear()
 
     def to_dict(self):
         party_dict = {
-            "characters": [character.to_dict() for character in self.characters],
+            "characters": [character.to_dict() for character in self.members],
             "name": self.name,
         }
         return party_dict

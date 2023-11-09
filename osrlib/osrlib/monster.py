@@ -164,6 +164,11 @@ class Monster:
         """
         return self.hit_points > 0
 
+    def get_initiative_roll(self):
+        """Rolls a 1d6 and returns the total for the monster's initiative."""
+        roll = roll_dice("1d6")
+        return roll.total_with_modifier
+
     def apply_damage(self, hit_points_damage: int):
         """Apply damage to the monster by reducing the monster's hit points by the given amount, down to a minimum of 0.
 
@@ -294,3 +299,8 @@ class MonsterParty:
         monster_xp = sum(monster.xp_value for monster in self.monsters)
         treasure_xp = 0 # TODO: sum(item.xp_value for item in self.treasure)
         return monster_xp + treasure_xp
+
+    def get_reaction_check(self):
+        """Rolls a 2d6 and returns the total for the monster party's reaction check."""
+        roll = roll_dice("2d6")
+        return roll.total_with_modifier
