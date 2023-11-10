@@ -38,6 +38,9 @@ class ClassLevel:
         """Return a string representation of the ClassLevel instance."""
         return f"{self.level_num} ({self.title})"
 
+    def get_to_hit_target_ac(self, target_ac: int):
+        """Get the to-hit roll required for a character of this class and level to hit a target that has the given AC."""
+        return self.thac0 - target_ac
 
 class CharacterClass:
     """Defines a character class for a player character.
@@ -276,7 +279,6 @@ class_levels = {
     CharacterClassType.THIEF: thief_levels,
     CharacterClassType.COMMONER: commoner_levels,
 }
-
 
 
 all_character_classes = [
