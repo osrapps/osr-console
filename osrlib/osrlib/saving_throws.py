@@ -1,5 +1,6 @@
 from osrlib.enums import CharacterClassType
 from osrlib.combat import AttackType
+from osrlib.game_manager import logger
 
 saving_throws = {
     CharacterClassType.CLERIC: {
@@ -191,3 +192,13 @@ saving_throws[CharacterClassType.COMMONER] = {
     for level_range, values in saving_throws[CharacterClassType.FIGHTER].items()
     if level_range.stop <= 11
 }
+
+def get_saving_throws_for_class_and_level(character_class: CharacterClassType, level: int):
+    """Returns the saving throws for a given character class and level."""
+    for level_range, saving_throw_values in saving_throws[character_class].items():
+        if level in level_range:
+            saving_throws_str = "\n".join(
+                f"{attack_type.name}: {value}"
+                for attack_type, value in saving_throw_values.items()
+            )
+            return saving_throw_values

@@ -302,7 +302,7 @@ def equip_magic_user(character: "PlayerCharacter"):
 
 def equip_party(party: "Party"):
     """Equip a party with default starting gear based on their character classes."""
-    for character in party.characters:
+    for character in party.members:
         if character.character_class.class_type == CharacterClassType.FIGHTER:
             equip_fighter(character)
         elif character.character_class.class_type == CharacterClassType.ELF:
