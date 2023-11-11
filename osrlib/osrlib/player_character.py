@@ -166,25 +166,23 @@ class PlayerCharacter:
 
         return self.character_class
 
-    def grant_xp(self, xp: int) -> ClassLevel:
+    def grant_xp(self, xp: int) -> bool:
         """Grants XP to the character, taking into account their Constitution ability modifier, if any.
 
         If the the character's new XP total is enough to level up, the character's level and associated statistics
         (including a new "XP neeeded for next level" value) are increased appropriately.
         """
 
-        # Adjust awarded XP based on prime requisite scores
-        logger.debug(f"[{self.name}] Raw XP: {xp} | Adjustment: {self.xp_adjustment_percentage}% | Total: {int(xp * (1 + self.xp_adjustment_percentage / 100))}")
-        xp = int(xp * (1 + self.xp_adjustment_percentage / 100))
+        xp_before = self.character_class.xp
 
-        self.character_class.xp += xp
-        try:
+        # Adjust awarded XP based on prime requisite scores (if applicable)
+        adjusted_xp = int(xp * (1 + self.xp_adjustment_percentage / 100))
+        self.character_class.xp += adjusted_xp
+
+        return self.character_class.level_up(
             # Need to pass the character's Constitution modifier all the way down to the roll_hp method
-            return self.character_class.level_up(
-                self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
-            )
-        except ValueError as e:
-            print(e)
+            self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
+        )
 
     def roll_abilities(self):
         """Rolls the ability scores of the character."""

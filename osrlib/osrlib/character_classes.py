@@ -4,6 +4,7 @@ from typing import List, Tuple, Union
 from osrlib.dice_roller import DiceRoll, roll_dice
 from osrlib.enums import CharacterClassType
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
+from osrlib.game_manager import logger
 
 
 class ClassLevel:
@@ -89,7 +90,7 @@ class CharacterClass:
         """
         return roll_dice(self.hit_die, hp_modifier)
 
-    def level_up(self, hp_modifier: int = 0) -> ClassLevel:
+    def level_up(self, hp_modifier: int = 0) -> bool:
         """Level up the character if possible.
 
         If the character's current XP meets the next level's requirement, the character's
@@ -110,28 +111,23 @@ class CharacterClass:
             hp_modifier (int): Hit point bonus or penalty to apply to the HP roll when leveling.
 
         Returns:
-            ClassLevel: New level of the character.
+            bool: True if the character leveled up, otherwise False.
 
         Raises:
             ValueError: Raised if leveling up is not possible due to insufficient XP or maximum level reached.
         """
+        level_num_before = self.current_level.level_num
         xp_needed_for_next_level = self.levels[self.current_level.level_num + 1].xp_required_for_level
         if self.xp >= xp_needed_for_next_level:
             if self.current_level.level_num < len(self.levels) - 1:
                 self.current_level = self.levels[self.current_level.level_num + 1]
                 self.hp += max(self.roll_hp(hp_modifier).total_with_modifier, 1)
-                return self.current_level
             else:
-                error_msg = (
-                    f"Cannot level up. {self.class_type.name} is already at max level {self.current_level.level_num}."
-                )
-                raise ValueError(error_msg)
+                logger.info(f"[{self.class_type.name}] Can't level up: already at max level {self.current_level.level_num}.")
         else:
-            error_msg = (
-                f"Cannot level up. {self.xp} XP is less than {self.current_level.xp_required_for_level} required XP."
-            )
-            raise ValueError(error_msg)
+            logger.info(f"[{self.class_type.name}] Can't level up: {self.xp} XP is less than {xp_needed_for_next_level} XP needed for next level.")
 
+        return self.current_level.level_num > level_num_before
 
 cleric_levels = [
     ClassLevel(0, "Cleric (NPC)", 0, "1d4", 20),

@@ -54,12 +54,11 @@ class Encounter:
         # self.npc = npc # TODO: Implement NPC class
         self.treasure = treasure
         self.pc_party = None
+        self.turn_order = deque()
 
     def __str__(self):
         """Return a string representation of the encounter."""
         return f"{self.name}: {self.description}"
-
-        self.turn_order = deque()
 
     def start_encounter(self, party: Party):
         self.pc_party = party
@@ -76,9 +75,7 @@ class Encounter:
         # Populate the turn order deque
         self.turn_order.extend(combined_initiative)
 
-    def next_turn(self):
-        # Rotate the deque to get the next combatant
-        current_combatant, _ = self.turn_order.popleft()
-        return current_combatant
+        # Get the current combatant and their initiative
+        current_combatant, initiative = self.turn_order.popleft()
 
-    # TODO: Implement combat methods
+        # TODO: Implement combat methods
