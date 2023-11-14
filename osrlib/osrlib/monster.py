@@ -4,6 +4,7 @@ from osrlib.enums import CharacterClassType
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
+from osrlib.game_manager import logger
 
 monster_xp = {
     "Under 1": {"base": 5, "bonus": 1},  # Not handling the "under 1" hit dice case
@@ -112,7 +113,7 @@ class Monster:
         """Get the total XP value of the monster. The XP value is based on the monster's hit dice and number of special abilities.
 
         Args:
-            hp_roll (DiceRoll): The roll of the monster's hit dice.
+            hp_roll (DiceRoll): The dice roll used to determine the monster's hit points. The number of hit dice is used to determine the XP value.
 
         Returns:
             int: The total XP value of the monster.
@@ -127,26 +128,26 @@ class Monster:
             return base_xp + bonus * num_special_abilities
 
         # Handle monsters with 1 hit die and up
-        if hp_roll.count <= 8:
+        if hp_roll.num_dice <= 8:
             # XP values for monsters with 1-8 hit dice have single values
             if hp_roll.modifier > 0:
                 plus = "+"
-            base_xp = monster_xp[f"{hp_roll.count}{plus}"]["base"]
-            bonus = monster_xp[f"{hp_roll.count}{plus}"]["bonus"]
+            base_xp = monster_xp[f"{hp_roll.num_dice}{plus}"]["base"]
+            bonus = monster_xp[f"{hp_roll.num_dice}{plus}"]["bonus"]
         # XP values for monsters with 9+ hit dice use a single value for a range of hit dice
-        elif hp_roll.count >= 9 and hp_roll.count <= 10:
+        elif hp_roll.num_dice >= 9 and hp_roll.num_dice <= 10:
             base_xp = monster_xp["9 to 10+"]["base"]
             bonus = monster_xp["9 to 10+"]["bonus"]
-        elif hp_roll.count >= 11 and hp_roll.count <= 12:
+        elif hp_roll.num_dice >= 11 and hp_roll.num_dice <= 12:
             base_xp = monster_xp["11 to 12+"]["base"]
             bonus = monster_xp["11 to 12+"]["bonus"]
-        elif hp_roll.count >= 13 and hp_roll.count <= 16:
+        elif hp_roll.num_dice >= 13 and hp_roll.num_dice <= 16:
             base_xp = monster_xp["13 to 16+"]["base"]
             bonus = monster_xp["13 to 16+"]["bonus"]
-        elif hp_roll.count >= 17 and hp_roll.count <= 20:
+        elif hp_roll.num_dice >= 17 and hp_roll.num_dice <= 20:
             base_xp = monster_xp["17 to 20+"]["base"]
             bonus = monster_xp["17 to 20+"]["bonus"]
-        elif hp_roll.count >= 21:
+        elif hp_roll.num_dice >= 21:
             base_xp = monster_xp["21+"]["base"]
             bonus = monster_xp["21+"]["bonus"]
 
@@ -167,6 +168,7 @@ class Monster:
     def get_initiative_roll(self):
         """Rolls a 1d6 and returns the total for the monster's initiative."""
         roll = roll_dice("1d6")
+        logger.debug(f"{self.name} rolled {roll} for initiative and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
 
     def apply_damage(self, hit_points_damage: int):
@@ -198,7 +200,7 @@ class MonsterParty:
     """A group of monsters the party can encounter in a dungeon location.
 
     Attributes:
-        monsters (list): A list of the monsters in the monster party.
+        members (list): A list of the monsters in the monster party.
         is_alive (bool): True if at least one monster in the monster party is alive, otherwise False.
     """
 
@@ -211,7 +213,7 @@ class MonsterParty:
         Args:
             monster_stat_block (MonsterStatBlock): The stat block for the monsters in the party.
         """
-        self.monsters = [
+        self.members = [
             Monster(monster_stat_block)
             for _ in range(
                 roll_dice(monster_stat_block.num_appearing).total_with_modifier
@@ -287,7 +289,7 @@ class MonsterParty:
         Returns:
             int: True if the monster party has more than 0 hit points, otherwise False.
         """
-        return any(monster.is_alive for monster in self.monsters)
+        return any(monster.is_alive for monster in self.members)
 
     @property
     def xp_value(self):
@@ -296,11 +298,12 @@ class MonsterParty:
         Returns:
             int: The total XP value of the monster party.
         """
-        monster_xp = sum(monster.xp_value for monster in self.monsters)
+        monster_xp = sum(monster.xp_value for monster in self.members)
         treasure_xp = 0 # TODO: sum(item.xp_value for item in self.treasure)
         return monster_xp + treasure_xp
 
-    def get_reaction_check(self):
-        """Rolls a 2d6 and returns the total for the monster party's reaction check."""
-        roll = roll_dice("2d6")
+    def get_surprise_roll(self) -> int:
+        """Rolls a 1d6 and returns the total for the monster party's surprise roll."""
+        roll = roll_dice("1d6")
+        logger.debug(f"Monster party rolled {roll} for surprise and got {roll.total_with_modifier}.")
         return roll.total_with_modifier

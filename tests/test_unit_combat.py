@@ -51,7 +51,7 @@ def pc_party():
 def goblin_party():
     stats = MonsterStatsBlock(
         name="Goblin",
-        description="A small incredibly ugly humanoid with pale earthy color skin, like a chalky tan or livid gray.",
+        description="A small and incredibly ugly humanoid with pale earthy color skin, like a chalky tan or livid gray.",
         armor_class=6,
         hit_dice="1d8-1",
         num_appearing="2d4",
@@ -110,6 +110,10 @@ def kobold_party():
     monster_party = MonsterParty(stats)
     yield monster_party
 
+@pytest.fixture
+def goblin_encounter(goblin_party):
+    yield Encounter("Goblin Ambush", "A group of goblins ambush the party.", goblin_party)
+
 def get_thac0_for_class_for_level(char_class_type, level):
     for level_range, thac0 in class_thac0[char_class_type].items():
         if level_range[0] <= level <= level_range[1]:
@@ -135,3 +139,35 @@ def test_thac0_for_classes_and_levels(pc_party):
                 logger.error(f"[{pc.character_class.class_type.value}] Expected THAC0 {expected_thac0} != Actual THAC0 {actual_thac0} for level {level.level_num}!")
 
             assert expected_thac0 == actual_thac0
+
+def test_encounter_start(pc_party, goblin_encounter):
+    encounter = goblin_encounter
+    encounter.start_encounter(pc_party)
+    assert encounter.is_started == True
+
+def test_encounter_start_combat(pc_party, goblin_encounter):
+    encounter = goblin_encounter
+    encounter.start_encounter(pc_party)
+    encounter.start_combat()
+    assert encounter.is_started == True
+    assert encounter.is_ended == False
+
+def test_encounter_end(pc_party, goblin_encounter):
+    encounter = goblin_encounter
+    encounter.start_encounter(pc_party)
+    encounter.start_combat()
+    encounter.end_encounter()
+    assert encounter.is_started == False
+    assert encounter.is_ended == True
+
+def test_encounter_combat_queue(pc_party, goblin_encounter):
+    encounter = goblin_encounter
+    encounter.start_encounter(pc_party)
+    encounter.start_combat()
+    assert len(encounter.combat_queue) == len(encounter.pc_party.members) + len(encounter.monster_party.members)
+
+def test_execute_combat_rount(pc_party, goblin_encounter):
+    encounter = goblin_encounter
+    encounter.start_encounter(pc_party)
+    encounter.start_combat()
+    encounter.execute_combat_round()

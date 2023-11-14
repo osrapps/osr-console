@@ -14,12 +14,9 @@ from osrlib.ability import (
 from osrlib.character_classes import (
     CharacterClass,
     CharacterClassType,
-    ClassLevel,
 )
 from osrlib.inventory import Inventory
-from osrlib import (
-    dice_roller,
-)
+from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.game_manager import logger
 
 
@@ -116,15 +113,16 @@ class PlayerCharacter:
 
     def get_ability_roll(self):
         """Rolls a 4d6 and returns the sum of the three highest rolls."""
-        roll = dice_roller.roll_dice("4d6", drop_lowest=True)
+        roll = roll_dice("4d6", drop_lowest=True)
         return roll.total
 
-    def get_initiative_roll(self):
+    def get_initiative_roll(self) -> int:
         """Rolls a 1d6, adds the character's Dexterity modifier, and returns the total."""
         modifier_value = self.abilities[AbilityType.DEXTERITY].modifiers[
             ModifierType.INITIATIVE
         ]
-        roll = dice_roller.roll_dice("1d6", modifier_value=modifier_value)
+        roll = roll_dice("1d6", modifier_value)
+        logger.debug(f"{self.name} ({self.character_class.class_type.value}) rolled {roll} for initiative and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
 
     def _set_prime_requisite_xp_adjustment(self):
@@ -203,7 +201,7 @@ class PlayerCharacter:
                 f"{self.name} rolled {ability_instance.ability_type.name}:{roll}"
             )
 
-    def roll_hp(self) -> dice_roller.DiceRoll:
+    def roll_hp(self) -> DiceRoll:
         """Rolls the character's hit points, taking into account their Constitution modifier, if any.
 
         The total value of the roll with modifier can be negative after if the roll was low and the character has a

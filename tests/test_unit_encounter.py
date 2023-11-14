@@ -77,5 +77,5 @@ def test_encounter_initialization(kobold_party):
     assert encounter.monster_party == kobold_party
 
     # TODO: These should probably move to a test for MonsterParty
-    assert len(encounter.monster_party.monsters) >= 4 and len(encounter.monster_party.monsters) <= 16
-    assert encounter.monster_party.xp_value == len(kobold_party.monsters) * 5 # Under 1 HD = 5 XP
+    assert len(encounter.monster_party.members) >= 4 and len(encounter.monster_party.members) <= 16
+    assert encounter.monster_party.xp_value == len(kobold_party.members) * 5 # Under 1 HD = 5 XP
