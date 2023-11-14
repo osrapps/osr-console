@@ -7,6 +7,7 @@ from osrlib.player_character import PlayerCharacter
 from osrlib.game_manager import logger
 from osrlib.enums import CharacterClassType
 from osrlib.item_factories import equip_party
+from osrlib.dice_roller import roll_dice
 
 
 class PartyAtCapacityError(Exception):
@@ -398,6 +399,12 @@ class Party:
     def clear_party(self):
         """Removes all characters from the party."""
         self.members.clear()
+
+    def get_surprise_roll(self) -> int:
+        """Rolls a 1d6 and returns the result for the party's surprise roll."""
+        roll = roll_dice("1d6")
+        logger.debug(f"Player party rolled {roll} for surprise and got {roll.total_with_modifier}.")
+        return roll.total_with_modifier
 
     def to_dict(self):
         party_dict = {
