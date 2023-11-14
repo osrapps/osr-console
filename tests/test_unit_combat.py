@@ -140,34 +140,13 @@ def test_thac0_for_classes_and_levels(pc_party):
 
             assert expected_thac0 == actual_thac0
 
-def test_encounter_start(pc_party, goblin_encounter):
+def test_encounter_start_and_end(pc_party, goblin_encounter):
     encounter = goblin_encounter
-    encounter.start_encounter(pc_party)
-    assert encounter.is_started == True
-
-def test_encounter_start_combat(pc_party, goblin_encounter):
-    encounter = goblin_encounter
-    encounter.start_encounter(pc_party)
-    encounter.start_combat()
-    assert encounter.is_started == True
-    assert encounter.is_ended == False
-
-def test_encounter_end(pc_party, goblin_encounter):
-    encounter = goblin_encounter
-    encounter.start_encounter(pc_party)
-    encounter.start_combat()
-    encounter.end_encounter()
     assert encounter.is_started == False
+    encounter.start_encounter(pc_party)
     assert encounter.is_ended == True
 
 def test_encounter_combat_queue(pc_party, goblin_encounter):
     encounter = goblin_encounter
     encounter.start_encounter(pc_party)
-    encounter.start_combat()
     assert len(encounter.combat_queue) == len(encounter.pc_party.members) + len(encounter.monster_party.members)
-
-def test_execute_combat_rount(pc_party, goblin_encounter):
-    encounter = goblin_encounter
-    encounter.start_encounter(pc_party)
-    encounter.start_combat()
-    encounter.execute_combat_round()

@@ -171,6 +171,21 @@ class Monster:
         logger.debug(f"{self.name} rolled {roll} for initiative and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
 
+    def get_attack_rolls(self) -> List[DiceRoll]:
+        """Roll a 1d20 for each attack this monster has per round and return the collection of rolls."""
+        attack_rolls = []
+
+        for _ in range(self.attacks_per_round):
+            attack_rolls.append(roll_dice("1d20"))
+
+        # Return collection of attack rolls
+        return attack_rolls
+
+
+    def get_damage_roll(self) -> DiceRoll:
+        """Roll the monster's damage dice and return the total."""
+        return roll_dice(self.damage_per_attack)
+
     def apply_damage(self, hit_points_damage: int):
         """Apply damage to the monster by reducing the monster's hit points by the given amount, down to a minimum of 0.
 
@@ -220,6 +235,7 @@ class MonsterParty:
             )
         ]
         self.treasure = self._get_treasure(monster_stat_block.treasure_type)
+        self.is_surprised = False
 
     def _get_treasure(self, treasure_type: TreasureType):
         """Get the treasure for the monster party based on the treasure type.
