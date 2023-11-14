@@ -125,6 +125,48 @@ class PlayerCharacter:
         logger.debug(f"{self.name} ({self.character_class.class_type.value}) rolled {roll} for initiative and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
 
+    def get_attack_roll(self) -> DiceRoll:
+        """Roll a 1d20 to hit, add all applicable modifiers, and return the roll.
+
+        Returns:
+            DiceRoll: The result of the to hit roll.
+        """
+        # TODO: Get proper attack roll
+        # 1. TODO: Get active weapon/spell
+        # 2. TODO: Get applicable attack modifier(s)
+        #  - TODO: Melee: Strength modifier, enchanted/cursed weapon adjustment, buffs/curses
+        #  - TODO: Ranged: Dexterity modifier, enchanted/cursed weapon adjustment, buffs/curses
+
+        melee_attack_modifier = self.abilities[AbilityType.STRENGTH].modifiers[ModifierType.TO_HIT]
+        ranged_attack_modifier = self.abilities[AbilityType.DEXTERITY].modifiers[ModifierType.TO_HIT]
+        return roll_dice("1d20", melee_attack_modifier)
+
+    def get_damage_roll(self) -> DiceRoll:
+        """Roll appropriate damage die, add all applicable modifiers, and return the roll.
+
+        Returns:
+            DiceRoll: The result of the damage roll.
+        """
+        # TODO: Get proper damage roll
+        # 1. TODO: get damage die for active weapon/spell
+        # 2. TODO: get total applicable damage modifier(s)
+
+        damage_die = "1d8"
+        melee_damage_modifier = self.abilities[AbilityType.STRENGTH].modifiers[ModifierType.DAMAGE]
+        return roll_dice(damage_die, melee_damage_modifier)
+
+    def apply_damage(self, hit_points_damage: int):
+        """Apply damage to the monster by reducing the monster's hit points by the given amount, down to a minimum of 0.
+
+        This method has no affect if the monster is already dead.
+
+        Args:
+            damage (int): The amount of damage done to the monster.
+        """
+        if self.is_alive:
+            new_hp = self.character_class.hp - hit_points_damage
+            self.character_class.hp = max(new_hp, 0)
+
     def _set_prime_requisite_xp_adjustment(self):
         """Sets the character's earned XP adjustment based on the scores of their ability prime requisite(s)."""
 

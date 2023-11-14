@@ -47,7 +47,7 @@ class Encounter:
         self.combat_queue: deque = deque()
         self.is_started: bool = False
         self.is_ended: bool = False
-        self.current_round: Optional[CombatRound] = None
+        self.combat_log: list = []
 
     def __str__(self):
         """Return a string representation of the encounter."""
@@ -63,25 +63,18 @@ class Encounter:
             logger.debug(f"Encounter {self.name} has no monsters - continuing as non-combat encounter.")
             return
 
-        # 1. **Surprise check**: The DM rolls `1d6` for monster party and PC party to check for surprise.
-        #    - If monster roll is higher: party is surprised and monsters attack.
-        #    - If PC roll is higher: monsters are surprised and PCs choose their reaction (fight, run, talk, pass).
-        #    - If it's a tie: same as PC roll is higher.
         pc_party_surprise_roll = self.pc_party.get_surprise_roll()
         monster_party_surprise_roll = self.monster_party.get_surprise_roll()
 
-        if pc_party_surprise_roll > monster_party_surprise_roll:
-            logger.debug(f"Monsters are surprised! PC surprise roll: {pc_party_surprise_roll}, monster surprise roll: {monster_party_surprise_roll}")
+        if pc_party_surprise_roll > monster_party_surprise_roll or pc_party_surprise_roll == monster_party_surprise_roll:
+            logger.debug(f"Monsters are surprised!")
+            # TODO: Get player input to determine if PCs want to attack or run away, but for now, just start combat.
+            self._start_combat()
         elif monster_party_surprise_roll > pc_party_surprise_roll:
-            logger.debug(f"PCs are surprised! PC surprise roll:: {pc_party_surprise_roll}, monster surprise roll: {monster_party_surprise_roll}")
-        else:
-            logger.debug(f"PC party and monsters both rolled {pc_party_surprise_roll} for surprise.")
+            logger.debug(f"PCs are surprised!")
+            self._start_combat()
 
-        # 2. **PC reaction**:
-        #    - If PC party chooses to fight, combat begins.
-        #    - If PC party runs away, the encounter ends.
-
-    def start_combat(self):
+    def _start_combat(self):
         logger.debug(f"Starting combat in encounter '{self.name}'...")
 
         # Get initiative rolls for both parties
@@ -92,30 +85,53 @@ class Encounter:
         combatants_sorted_by_initiative = sorted(party_initiative + monster_initiative, key=lambda x: x[1], reverse=True)
 
         # Populate the combat queue
-        logger.debug(f"Populating combat queue with {len(party_initiative)} PCs and {len(monster_initiative)} monsters ({len(combatants_sorted_by_initiative)} total):")
         self.combat_queue.extend(combatants_sorted_by_initiative)
-        for combatant in self.combat_queue:
-            logger.debug(f"Initiative {combatant[1]}: {combatant[0].name}")
 
-    def execute_combat_round(self):
+        # Start combat
+        round_num = 0 # Track rounds for spell and other time-based effects
+        while self.pc_party.is_alive and self.monster_party.is_alive and round_num < 1000:
+            round_num += 1
+            self.execute_combat_round(round_num)
+
+        if self.pc_party.is_alive:
+            logger.debug(f"{self.pc_party.name} won the battle!")
+        elif self.monster_party.is_alive:
+            logger.debug("The monsters won the battle!")
+
+        # No living members in one of the parties - end the encounter
+        self.end_encounter()
+
+    def execute_combat_round(self, round_num: int):
+        logger.debug(f"Starting combat round {round_num}...")
 
         # Deque first combatant to act
         attacker = self.combat_queue.popleft()[0]
 
         # If combatant is PC, player chooses a monster to attack
-        if attacker is PlayerCharacter:
-            logger.debug(f"PC {attacker.name} (HP: {attacker.character_class.hp}) turn to act.")
-            # defender = NOT_YET_IMPLEMENTED # TODO: Player needs to be given option to select a target here - how?
-        elif attacker is Monster:
-            logger.debug(f"{attacker.name}'s ({attacker.hit_points}/{attacker.max_hit_points}) turn to act.")
-            # Choose target at random since attacker is monster
-            defender = random.choice(self.pc_party.members)
+        if attacker in self.pc_party.members:
+            # TODO: Get player input for next action, but for now, just attack a random monster
+            defender = random.choice([monster for monster in self.monster_party.members if monster.is_alive])
+            needed_to_hit = attacker.character_class.current_level.get_to_hit_target_ac(defender.armor_class)
+            attack_roll = attacker.get_attack_roll()
+            if attack_roll.total_with_modifier >= needed_to_hit:
+                damage_roll = attacker.get_damage_roll()
+                defender.apply_damage(damage_roll.total_with_modifier)
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and hit for {damage_roll.total} damage.")
+            else:
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and missed.")
+        elif attacker in self.monster_party.members:
+            defender = random.choice([pc for pc in self.pc_party.members if pc.is_alive])
+            needed_to_hit = 15 # TODO: attacker.get_to_hit_target_ac(defender.armor_class)
+            for roll in attacker.get_attack_rolls():
+                if defender.is_alive and roll.total_with_modifier >= needed_to_hit:
+                    damage_roll = attacker.get_damage_roll()
+                    defender.apply_damage(damage_roll.total_with_modifier)
+                    logger.debug(f"{attacker.name} attacked {defender.name} and hit for {damage_roll.total} damage.")
+                else:
+                    logger.debug(f"{attacker.name} attacked {defender.name} and missed.")
 
-
-        # 3. If weapon attack, roll `1d20` to hit; if PC and melee add To Hit modifier, if ranged add Dexterity modifier and other to-hit modifiers
-        #    - If weapon hits, roll damage
-        #    - Add Strength and other damage modifiers as applicable
-        # 4. If spell attack, target rolls save vs. spells
+        if not defender.is_alive:
+            logger.debug(f"{defender.name} was killed!")
 
         # Add the attacker back into the combat queue
         self.combat_queue.append((attacker, 0))
@@ -126,9 +142,3 @@ class Encounter:
 
         self.is_started = False
         self.is_ended = True
-
-
-class CombatRound:
-    """A combat round represents a single round of combat in an encounter."""
-
-    pass

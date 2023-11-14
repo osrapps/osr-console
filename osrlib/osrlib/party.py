@@ -86,6 +86,7 @@ class Party:
         self.active_character = None
         self.current_adventure = None
         # TODO: Marching order (two or three abreast)
+        self.is_surprised = False
 
     def __str__(self):
         """Get a string representation of the Party instance, including its name and members.
