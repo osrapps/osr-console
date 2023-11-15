@@ -4,7 +4,6 @@ from osrlib.monster import MonsterParty, MonsterStatsBlock
 from osrlib.character_classes import CharacterClassType
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
-from osrlib.dice_roller import roll_dice
 
 @pytest.fixture
 def goblin_party():
@@ -34,7 +33,7 @@ def hobgoblin_party():
         description="A larger and meaner relative of the goblin.",
         armor_class=6,
         hit_dice="1d8+1",
-        num_appearing=roll_dice("1d6").total_with_modifier,
+        num_appearing="1d6",
         movement=90,
         num_special_abilities=0,
         attacks_per_round=1,
@@ -56,7 +55,7 @@ def kobold_party():
         description="A small, lizard-like humanoid.",
         armor_class=7,
         hit_dice="1d4",
-        num_appearing=roll_dice("4d4").total_with_modifier,
+        num_appearing="4d4",
         movement=60,
         num_special_abilities=0,
         attacks_per_round=1,

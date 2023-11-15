@@ -84,7 +84,7 @@ class MonsterStatsBlock:
         num_special_abilities=0, # corresponds to the number of asterisks on the monster's hit dice
         attacks_per_round=1, # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
         damage_per_attack="1d4",
-        num_appearing=roll_dice("1d6").total_with_modifier,
+        num_appearing="1d6",
         save_as_class=CharacterClassType.FIGHTER,
         save_as_level=1,
         morale: int = 12, # roll 2d6, if result is higher than this, monster flees
@@ -100,7 +100,7 @@ class MonsterStatsBlock:
         self.num_special_abilities = num_special_abilities
         self.attacks_per_round = attacks_per_round
         self.damage_per_attack = damage_per_attack
-        self.num_appearing = num_appearing
+        self.num_appearing = roll_dice(num_appearing).total_with_modifier
         self.save_as_class = save_as_class
         self.save_as_level = save_as_level
         self.morale = morale
