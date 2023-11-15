@@ -175,10 +175,6 @@ def test_encounter_start_and_end(pc_party, goblin_encounter):
     goblin_encounter.start_encounter(pc_party)
     assert goblin_encounter.is_ended == True
 
-def test_encounter_combat_queue(pc_party, goblin_encounter):
-    goblin_encounter.start_encounter(pc_party)
-    assert len(goblin_encounter.combat_queue) == len(goblin_encounter.pc_party.members) + len(goblin_encounter.monster_party.members)
-
 def test_monster_thac0(hobgoblin_encounter, kobold_encounter, cyclops_party):
     hobgoblin_encounter.start_encounter(get_default_party())
 

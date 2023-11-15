@@ -2,9 +2,8 @@ from collections import deque
 from typing import Optional
 import random
 from osrlib.party import Party
-from osrlib.monster import Monster, MonsterParty
+from osrlib.monster import MonsterParty
 from osrlib.game_manager import logger
-from osrlib.player_character import PlayerCharacter
 
 
 class Encounter:
@@ -84,8 +83,8 @@ class Encounter:
         # Combine and sort the combatants by initiative roll
         combatants_sorted_by_initiative = sorted(party_initiative + monster_initiative, key=lambda x: x[1], reverse=True)
 
-        # Populate the combat queue
-        self.combat_queue.extend(combatants_sorted_by_initiative)
+        # Populate the combat queue with only the combatant objects
+        self.combat_queue.extend([combatant[0] for combatant in combatants_sorted_by_initiative])
 
         # Start combat
         round_num = 0 # Track rounds for spell and other time-based effects
@@ -100,7 +99,7 @@ class Encounter:
         logger.debug(f"Starting combat round {round_num}...")
 
         # Deque first combatant to act
-        attacker = self.combat_queue.popleft()[0]
+        attacker = self.combat_queue.popleft()
 
         # If combatant is PC, player chooses a monster to attack
         if attacker in self.pc_party.members:
@@ -127,9 +126,10 @@ class Encounter:
 
         if not defender.is_alive:
             logger.debug(f"{defender.name} was killed!")
+            self.combat_queue.remove(defender)
 
         # Add the attacker back into the combat queue
-        self.combat_queue.append((attacker, 0))
+        self.combat_queue.append(attacker)
 
     def end_encounter(self):
         logger.debug(f"Ending encounter '{self.name}'...")
