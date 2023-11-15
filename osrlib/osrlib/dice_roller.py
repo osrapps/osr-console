@@ -3,7 +3,7 @@ import random
 import re
 from collections import namedtuple
 
-
+# TODO: Change total_with_modifier to total_without_modifier and make total the total_with_modifer
 class DiceRoll(
     namedtuple(
         "RollResultBase",

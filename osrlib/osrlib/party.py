@@ -401,11 +401,38 @@ class Party:
         """Removes all characters from the party."""
         self.members.clear()
 
+    def grant_xp(self, xp: int):
+        """Divide and award experience points to the living characters in the party.
+
+        Example:
+
+            Award experience points to the living characters in the party:
+
+            .. code-block:: python
+                party.award_xp(100)
+
+        Args:
+            xp (int): The number of experience points to award to each character in the party.
+        """
+        # Divided XP evenly among all living members of the party
+        xp_per_character = xp // len(self.get_living_members())
+        for character in self.get_living_members():
+            logger.debug(f"Awarding {xp_per_character} experience points to {character.name}...")
+            character.grant_xp(xp_per_character)
+
     def get_surprise_roll(self) -> int:
         """Rolls a 1d6 and returns the result for the party's surprise roll."""
         roll = roll_dice("1d6")
         logger.debug(f"Player party rolled {roll} for surprise and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
+
+    def get_living_members(self) -> List[PlayerCharacter]:
+        """Returns a list of all living members of the party.
+
+        Returns:
+            List[PlayerCharacter]: A list of all living members of the party.
+        """
+        return [character for character in self.members if character.is_alive]
 
     def to_dict(self):
         party_dict = {
@@ -423,13 +450,13 @@ class Party:
         name = party_dict["name"]
         return cls(name, characters=characters_from_dict)
 
-def get_default_party() -> Party:  # pragma: no cover
+def get_default_party(party_name: str = "Default Party") -> Party:  # pragma: no cover
     """Get a party of six (6) first-level characters: a Fighter, Elf, Dwarf, Thief, Halfling, and Magic User.
 
     Returns:
         Party: A party with six (6) player characters at first level (zero experience points).
     """
-    party = Party("Six Player Characters")
+    party = Party(party_name)
     party.create_character("Sckricko", CharacterClassType.FIGHTER, 1)
     party.create_character("Mazpar", CharacterClassType.ELF, 1)
     party.create_character("Blarg The Destructor", CharacterClassType.DWARF, 1)

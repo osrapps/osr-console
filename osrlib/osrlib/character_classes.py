@@ -123,9 +123,9 @@ class CharacterClass:
                 self.current_level = self.levels[self.current_level.level_num + 1]
                 self.hp += max(self.roll_hp(hp_modifier).total_with_modifier, 1)
             else:
-                logger.info(f"[{self.class_type.name}] Can't level up: already at max level {self.current_level.level_num}.")
+                logger.debug(f"{self.class_type.name} Can't level up: already at max level {self.current_level.level_num}.")
         else:
-            logger.info(f"[{self.class_type.name}] Can't level up: {self.xp} XP is less than {xp_needed_for_next_level} XP needed for next level.")
+            logger.debug(f"{self.class_type.name} needs {xp_needed_for_next_level - self.xp} XP to reach level {self.current_level.level_num + 1}.")
 
         return self.current_level.level_num > level_num_before
 

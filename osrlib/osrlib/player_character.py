@@ -213,8 +213,6 @@ class PlayerCharacter:
         (including a new "XP neeeded for next level" value) are increased appropriately.
         """
 
-        xp_before = self.character_class.xp
-
         # Adjust awarded XP based on prime requisite scores (if applicable)
         adjusted_xp = int(xp * (1 + self.xp_adjustment_percentage / 100))
         self.character_class.xp += adjusted_xp

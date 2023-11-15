@@ -93,12 +93,7 @@ class Encounter:
             round_num += 1
             self.execute_combat_round(round_num)
 
-        if self.pc_party.is_alive:
-            logger.debug(f"{self.pc_party.name} won the battle!")
-        elif self.monster_party.is_alive:
-            logger.debug("The monsters won the battle!")
-
-        # No living members in one of the parties - end the encounter
+        # All members of one party killed - end the encounter
         self.end_encounter()
 
     def execute_combat_round(self, round_num: int):
@@ -116,19 +111,19 @@ class Encounter:
             if attack_roll.total_with_modifier >= needed_to_hit:
                 damage_roll = attacker.get_damage_roll()
                 defender.apply_damage(damage_roll.total_with_modifier)
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and hit for {damage_roll.total} damage.")
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage.")
             else:
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and missed.")
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
         elif attacker in self.monster_party.members:
             defender = random.choice([pc for pc in self.pc_party.members if pc.is_alive])
-            needed_to_hit = 15 # TODO: attacker.get_to_hit_target_ac(defender.armor_class)
-            for roll in attacker.get_attack_rolls():
-                if defender.is_alive and roll.total_with_modifier >= needed_to_hit:
+            needed_to_hit = attacker.get_to_hit_target_ac(defender.armor_class)
+            for attack_roll in attacker.get_attack_rolls():
+                if defender.is_alive and attack_roll.total_with_modifier >= needed_to_hit:
                     damage_roll = attacker.get_damage_roll()
                     defender.apply_damage(damage_roll.total_with_modifier)
-                    logger.debug(f"{attacker.name} attacked {defender.name} and hit for {damage_roll.total} damage.")
+                    logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage.")
                 else:
-                    logger.debug(f"{attacker.name} attacked {defender.name} and missed.")
+                    logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
 
         if not defender.is_alive:
             logger.debug(f"{defender.name} was killed!")
@@ -137,8 +132,12 @@ class Encounter:
         self.combat_queue.append((attacker, 0))
 
     def end_encounter(self):
-
-        # TODO: Award XP and treasure to PCs if monster party is defeated
+        logger.debug(f"Ending encounter '{self.name}'...")
+        if self.pc_party.is_alive and not self.monster_party.is_alive:
+            logger.debug(f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party...")
+            self.pc_party.grant_xp(self.monster_party.xp_value)
+        elif not self.pc_party.is_alive and self.monster_party.is_alive:
+            logger.debug("The monsters won the battle!")
 
         self.is_started = False
         self.is_ended = True

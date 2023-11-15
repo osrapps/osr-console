@@ -29,6 +29,30 @@ monster_xp = {
     "21+": {"base": 2500, "bonus": 2000},
 }
 
+monster_thac0 = {
+    "0+ to 1": 19,
+    "1+ to 2": 18,
+    "2+ to 3": 17,
+    "3+ to 4": 16,
+    "4+ to 5": 15,
+    "5+ to 6": 14,
+    "6+ to 7": 13,
+    "7+ to 8": 12,
+    "8+ to 9": 12,
+    "9+ to 10": 11,
+    "10+ to 11": 11,
+    "11+ to 12": 10,
+    "12+ to 13": 10,
+    "13+ to 14": 9,
+    "14+ to 15": 9,
+    "15+ to 16": 8,
+    "16+ to 17": 8,
+    "17+ to 18": 7,
+    "18+ to 19": 7,
+    "19+ to 20": 6,
+    "20+ to 21": 6,
+    "21+ or more": 5,
+}
 
 class MonsterStatsBlock:
     """Specifies the statistics of the monsters in a monster party.
@@ -45,7 +69,7 @@ class MonsterStatsBlock:
         num_special_abilities (int): The special ability count of the monster; this value corresponds to the number of asterisks after the monster's hit dice in the Basic and Expert rule books. Default is 0.
         attacks_per_round (int): The number of attacks the monster can make per round. Default is 1.
         damage_per_attack (str): The damage the monster does per attack in "ndn" or "ndn+n" format, for example '1d4', '1d4+2', '3d4'). Default is '1d4'.
-        num_appearing (str): The number of monsters that appear in the monster party in "ndn" or "ndn+n" format, for example '1d6', '1d6+2', '3d6'). Default is '1d6'.
+        num_appearing (int): The number of monsters in the monster party. Default is 1-6 (1d6).
         save_as_class (CharacterClassType): The character class type the monster saves as. Default is CharacterClassType.FIGHTER.
         save_as_level (int): The level of the character class the monster saves as. Default is 1.
     """
@@ -57,13 +81,13 @@ class MonsterStatsBlock:
         armor_class: int = 10,
         hit_dice: str = "1d8",
         movement: int = 120,
-        num_special_abilities=0,  # corresponds to the number of asterisks on the monster's hit dice
-        attacks_per_round=1,
+        num_special_abilities=0, # corresponds to the number of asterisks on the monster's hit dice
+        attacks_per_round=1, # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
         damage_per_attack="1d4",
-        num_appearing="1d6",
+        num_appearing=roll_dice("1d6").total_with_modifier,
         save_as_class=CharacterClassType.FIGHTER,
         save_as_level=1,
-        morale: int = 12,  # roll 2d6, if result is higher, monster flees
+        morale: int = 12, # roll 2d6, if result is higher than this, monster flees
         treasure_type=TreasureType.NONE,
         alignment=Alignment.NEUTRAL,
     ):
@@ -93,8 +117,8 @@ class Monster:
         self.description = monster_stats.description
         self.armor_class = monster_stats.armor_class
 
-        hp_roll = roll_dice(monster_stats.hit_dice)
-        self.hit_points = hp_roll.total_with_modifier
+        self.hp_roll = roll_dice(monster_stats.hit_dice)
+        self.hit_points = self.hp_roll.total_with_modifier
         self.max_hit_points = self.hit_points
 
         self.movement = monster_stats.movement
@@ -107,7 +131,7 @@ class Monster:
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
 
-        self.xp_value = self._calculate_xp(hp_roll, monster_stats.num_special_abilities)
+        self.xp_value = self._calculate_xp(self.hp_roll, monster_stats.num_special_abilities)
 
     def _calculate_xp(self, hp_roll: DiceRoll, num_special_abilities: int = 0):
         """Get the total XP value of the monster. The XP value is based on the monster's hit dice and number of special abilities.
@@ -171,6 +195,22 @@ class Monster:
         logger.debug(f"{self.name} rolled {roll} for initiative and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
 
+    def get_to_hit_target_ac(self, target_ac: int) -> int:
+        """Get the to-hit roll needed to hit a target with the given armor class."""
+        if self.hp_roll.modifier > 0:
+            if self.hp_roll.num_dice < 21:
+                thac0_key = f"{self.hp_roll.num_dice}+ to {self.hp_roll.num_dice + 1}"
+            else:
+                thac0_key = f"{self.hp_roll.num_dice}+ or more"
+        else:
+            thac0_key = f"{self.hp_roll.num_dice - 1}+ to {self.hp_roll.num_dice}"
+
+        thac0 = monster_thac0[thac0_key]
+        needed_to_hit = max(thac0 - target_ac, 2) # 1 always misses, so 2 is the lowest to-hit value possible
+        logger.debug(f"{self.name} THAC0: {thac0} ({thac0_key}) | To hit target AC {target_ac}: {needed_to_hit}")
+
+        return needed_to_hit
+
     def get_attack_rolls(self) -> List[DiceRoll]:
         """Roll a 1d20 for each attack this monster has per round and return the collection of rolls."""
         attack_rolls = []
@@ -180,7 +220,6 @@ class Monster:
 
         # Return collection of attack rolls
         return attack_rolls
-
 
     def get_damage_roll(self) -> DiceRoll:
         """Roll the monster's damage dice and return the total."""
@@ -231,7 +270,8 @@ class MonsterParty:
         self.members = [
             Monster(monster_stat_block)
             for _ in range(
-                roll_dice(monster_stat_block.num_appearing).total_with_modifier
+                #roll_dice(monster_stat_block.num_appearing).total_with_modifier
+                monster_stat_block.num_appearing
             )
         ]
         self.treasure = self._get_treasure(monster_stat_block.treasure_type)
