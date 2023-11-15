@@ -103,14 +103,23 @@ class Encounter:
 
         # If combatant is PC, player chooses a monster to attack
         if attacker in self.pc_party.members:
+
             # TODO: Get player input for next action, but for now, just attack a random monster
             defender = random.choice([monster for monster in self.monster_party.members if monster.is_alive])
             needed_to_hit = attacker.character_class.current_level.get_to_hit_target_ac(defender.armor_class)
             attack_roll = attacker.get_attack_roll()
-            if attack_roll.total_with_modifier >= needed_to_hit:
+
+            # Natural 20 always hits and a 1 always misses
+            if attack_roll.total == 20 or (attack_roll.total > 1 and attack_roll.total_with_modifier >= needed_to_hit):
                 damage_roll = attacker.get_damage_roll()
-                defender.apply_damage(damage_roll.total_with_modifier)
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage.")
+                damage_amount = damage_roll.total_with_modifier
+                if attack_roll.total == 20:
+                    logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) rolled a natural {attack_roll.total} for a critical hit!")
+                    damage_amount *= 2
+                defender.apply_damage(damage_amount)
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_amount} damage.")
+            elif attack_roll.total == 1:
+                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) rolled a {attack_roll.total} and critically missed!")
             else:
                 logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
         elif attacker in self.monster_party.members:

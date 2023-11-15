@@ -3,11 +3,14 @@ from enum import Enum
 import json
 import logging
 import warnings
+import logging
+import queue
+import threading
 
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s][%(module)s::%(funcName)s] %(message)s'
+    format="%(asctime)s [%(levelname)s][%(module)s::%(funcName)s] %(message)s",
 )
 
 logger = logging.getLogger(__name__)
@@ -46,7 +49,9 @@ class GameManager:
         logger.info("Initializing the GameManager...")
         self.adventures = adventures
         self.parties = parties
-        logger.info(f"GameManager initialized. There are {len(self.adventures)} adventures available.")
+        logger.info(
+            f"GameManager initialized. There are {len(self.adventures)} adventures available."
+        )
 
     def save_game(self, storage_type: StorageType = StorageType.JSON):
         """Save the game state to persistent storage in the given format.
@@ -54,7 +59,9 @@ class GameManager:
         Args:
             storage_type (StorageType): The format to use for saving the game state.
         """
-        logger.info(f"Saving the game to persistent storage in {storage_type} format...")
+        logger.info(
+            f"Saving the game to persistent storage in {storage_type} format..."
+        )
         if storage_type == StorageType.JSON:
             with open("game_manager.json", "w") as f:
                 json.dump({"parties": self.parties, "adventures": self.adventures}, f)

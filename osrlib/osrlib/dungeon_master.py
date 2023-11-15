@@ -75,6 +75,13 @@ user_move_prefix = ( user_message_prefix +
     "paper (but don't mention location IDs or the map): "
 )
 
+battle_summary_prompt = (
+    "Summarize the battle that appears in this log. Keep the summary to a single paragraph. Include highlights of the battle, "
+    "focusing on notable die rolls like high damage rolls by the player characters.Do not mention the monster's attack "
+    "roll values. Alternate between using the character's name and their class when referring to them in the summary. "
+    "Keep the summary under 90 words.Await for the next message before responding with the summary."
+)
+
 class DungeonMaster:
     """The DungeonMaster is the primary interface between the player, the game engine, and the OpenAI API.
 
