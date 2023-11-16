@@ -292,7 +292,7 @@ class Weapon(Item):
         **kwargs: Arbitrary keyword arguments inherited from the Item class.
 
     Attributes:
-        to_hit_damage_die (str): The to-hit and damage die for the weapon, formatted like '1d8', '2d4', '1d6+1', etc.
+        damage_die (str): The damage die for the weapon, formatted like '1d8', '2d4', '1d6+1', etc.
         range (Optional[int]): The range of the weapon in feet.
 
     Note:
@@ -315,18 +315,18 @@ class Weapon(Item):
         """Initialize a weapon item with the specified properties."""
         super().__init__(name, ItemType.WEAPON, **kwargs)
         self.owner = kwargs.get("owner", None)
-        self.to_hit_damage_die = (
+        self.damage_die = (
             to_hit_damage_die  # format like "1d8", "1d6+1", "1d4-1" etc.
         )
         self.range = range  # in feet (None for melee weapons)
         self.max_equipped = kwargs.get("max_equipped", 1) # Weapons are typically 1 per PC
 
     def __str__(self):
-        return f"{self.name} (Damage: {self.to_hit_damage_die}, Range: {self.range})"
+        return f"{self.name} (Damage: {self.damage_die}, Range: {self.range})"
 
     def to_dict(self) -> dict:
         weapon_dict = super().to_dict()
-        weapon_dict["to_hit_damage_die"] = self.to_hit_damage_die
+        weapon_dict["to_hit_damage_die"] = self.damage_die
         weapon_dict["range"] = self.range
         return weapon_dict
 

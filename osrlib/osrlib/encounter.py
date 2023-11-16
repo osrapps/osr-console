@@ -1,5 +1,6 @@
 from collections import deque
 from typing import Optional
+import math
 import random
 from osrlib.party import Party
 from osrlib.monster import MonsterParty
@@ -107,21 +108,22 @@ class Encounter:
             # TODO: Get player input for next action, but for now, just attack a random monster
             defender = random.choice([monster for monster in self.monster_party.members if monster.is_alive])
             needed_to_hit = attacker.character_class.current_level.get_to_hit_target_ac(defender.armor_class)
-            attack_roll = attacker.get_attack_roll()
+            attack_roll = attacker.get_attack_roll() # TODO: Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_attack_roll()
+            # TODDO: attack_item = attacker.inventory.get_equipped_item_by_type(attack_roll.attack_type)
+            weapon = attacker.inventory.get_equipped_weapon().name.lower()
 
             # Natural 20 always hits and a 1 always misses
             if attack_roll.total == 20 or (attack_roll.total > 1 and attack_roll.total_with_modifier >= needed_to_hit):
-                damage_roll = attacker.get_damage_roll()
-                damage_amount = damage_roll.total_with_modifier
-                if attack_roll.total == 20:
-                    logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) rolled a natural {attack_roll.total} for a critical hit!")
-                    damage_amount *= 2
+                damage_roll = attacker.get_damage_roll() #Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_damage_roll()
+                damage_multiplier = 1.5 if attack_roll.total == 20 else 1
+                damage_mesg_suffix = " CRITICAL HIT!" if attack_roll.total == 20 else ""
+                damage_amount = math.ceil(damage_roll.total_with_modifier * damage_multiplier)
                 defender.apply_damage(damage_amount)
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_amount} damage.")
-            elif attack_roll.total == 1:
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) rolled a {attack_roll.total} and critically missed!")
+
+                attack_mesg_suffix = f" for {damage_amount} damage.{damage_mesg_suffix}"
             else:
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
+                attack_mesg_suffix = f" and missed."
+            logger.debug(f"{attacker.name} ({attacker.character_class}) attacked {defender.name} with their {weapon} ({attack_roll.total_with_modifier} on {attack_roll}){attack_mesg_suffix}")
         elif attacker in self.monster_party.members:
             defender = random.choice([pc for pc in self.pc_party.members if pc.is_alive])
             needed_to_hit = attacker.get_to_hit_target_ac(defender.armor_class)
@@ -146,7 +148,7 @@ class Encounter:
             logger.debug(f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party...")
             self.pc_party.grant_xp(self.monster_party.xp_value)
         elif not self.pc_party.is_alive and self.monster_party.is_alive:
-            logger.debug("The monsters won the battle!")
+            logger.debug(f"{self.pc_party.name} lost the battle.")
 
         self.is_started = False
         self.is_ended = True

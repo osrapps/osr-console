@@ -67,13 +67,10 @@ class PlayerCharacter:
             for ability, attr in self.abilities.items()
         )
         return (
-            f"Name: {self.name}, "
-            f"Class: {self.character_class.class_type.name}, "
-            f"Level: {self.character_class.current_level.level_num}, "
-            f"HP: {self.character_class.hp}, "
-            f"AC: {self.armor_class}, "
-            f"XP: {self.character_class.xp}, "
-            f"{ability_str}"
+            f"{self.name} ({self.character_class} {self.level}) "
+            f"HP: {self.hit_points}/{self.character_class.max_hp} "
+            f"AC: {self.armor_class} "
+            f"XP: {self.character_class.xp}/{self.character_class.xp_needed_for_next_level}"
         )
 
     @property
@@ -147,13 +144,9 @@ class PlayerCharacter:
         Returns:
             DiceRoll: The result of the damage roll.
         """
-        # TODO: Get proper damage roll
-        # 1. TODO: get damage die for active weapon/spell
-        # 2. TODO: get total applicable damage modifier(s)
-
-        damage_die = "1d8"
+        weapon = self.inventory.get_equipped_weapon()
         melee_damage_modifier = self.abilities[AbilityType.STRENGTH].modifiers[ModifierType.DAMAGE]
-        return roll_dice(damage_die, melee_damage_modifier)
+        return roll_dice(weapon.damage_die, melee_damage_modifier)
 
     def apply_damage(self, hit_points_damage: int):
         """Apply damage to the monster by reducing the monster's hit points by the given amount, down to a minimum of 0.
@@ -264,7 +257,8 @@ class PlayerCharacter:
             "name": self.name,
             "character_class_type": self.character_class.class_type.name,
             "level": self.character_class.current_level.level_num,
-            "hit_points": self.character_class.hp,
+            "max_hp": self.character_class.max_hp,
+            "hp": self.character_class.hp,
             "experience_points": self.character_class.xp,
             "abilities": {k.value: v.to_dict() for k, v in self.abilities.items()},
             "inventory": self.inventory.to_dict(),
@@ -283,7 +277,8 @@ class PlayerCharacter:
             )(score=v["score"])
             for k, v in data_dict["abilities"].items()
         }
-        pc.character_class.hp = data_dict["hit_points"]
+        pc.character_class.max_hp = data_dict["max_hp"]
+        pc.character_class.hp = data_dict["hp"]
         pc.character_class.xp = data_dict["experience_points"]
         pc.inventory = Inventory.from_dict(data_dict["inventory"], pc)
 

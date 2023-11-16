@@ -417,8 +417,8 @@ class Party:
         # Divided XP evenly among all living members of the party
         xp_per_character = xp // len(self.get_living_members())
         for character in self.get_living_members():
-            logger.debug(f"Awarding {xp_per_character} experience points to {character.name}...")
             character.grant_xp(xp_per_character)
+            logger.debug(f"Awarded {xp_per_character} experience points to {character}.")
 
     def get_surprise_roll(self) -> int:
         """Rolls a 1d6 and returns the result for the party's surprise roll."""

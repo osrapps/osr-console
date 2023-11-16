@@ -222,7 +222,7 @@ def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
     assert original_sword.usable_by_classes == retrieved_sword.usable_by_classes
     assert original_sword.max_equipped == retrieved_sword.max_equipped
     assert original_sword.gp_value == retrieved_sword.gp_value
-    assert original_sword.to_hit_damage_die == retrieved_sword.to_hit_damage_die
+    assert original_sword.damage_die == retrieved_sword.damage_die
     assert original_sword.range == None
 
     # Add weapon to test_fighter's inventory and equip it
@@ -598,7 +598,7 @@ def test_party_saveload_dead(db):
 
     # Kill the party
     for character in pc_party.members:
-        character.character_class.hp = 0 # TODO: This should call an apply_damage() method instead
+        character.apply_damage(character.character_class.max_hp)
 
     # Write the party to storage
     gm.logger.info(
