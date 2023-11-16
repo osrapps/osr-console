@@ -69,15 +69,21 @@ class CharacterClass:
 
         # If the character is not first level, roll hit points for the character using the hit dice for that level
         if level > 1:
-            self.hp = max(roll_dice(self.levels[level].hit_dice, constitution_modifier).total_with_modifier, 1)
+            self.max_hp = max(roll_dice(self.levels[level].hit_dice, constitution_modifier).total_with_modifier, 1)
         else:
-            self.hp = max(self.roll_hp(constitution_modifier).total_with_modifier, 1)
+            self.max_hp = max(self.roll_hp(constitution_modifier).total_with_modifier, 1)
 
+        self.hp = self.max_hp
         self.xp = self.current_level.xp_required_for_level
 
     def __str__(self) -> str:
         """Return a string representation of the CharacterClass instance."""
         return self.class_type.value
+
+    @property
+    def xp_needed_for_next_level(self) -> int:
+        """Return the XP needed to reach the next level."""
+        return self.levels[self.current_level.level_num + 1].xp_required_for_level
 
     def roll_hp(self, hp_modifier: int = 0) -> DiceRoll:
         """Roll hit points for the character.
@@ -121,11 +127,13 @@ class CharacterClass:
         if self.xp >= xp_needed_for_next_level:
             if self.current_level.level_num < len(self.levels) - 1:
                 self.current_level = self.levels[self.current_level.level_num + 1]
-                self.hp += max(self.roll_hp(hp_modifier).total_with_modifier, 1)
+                self.max_hp += max(self.roll_hp(hp_modifier).total_with_modifier, 1)
+                self.hp = self.max_hp
+                logger.debug(f"{self.class_type.name} is now level {self.current_level.level_num}!")
             else:
-                logger.info(f"[{self.class_type.name}] Can't level up: already at max level {self.current_level.level_num}.")
+                logger.debug(f"{self.class_type.name} Can't level up: already at max level {self.current_level.level_num}.")
         else:
-            logger.info(f"[{self.class_type.name}] Can't level up: {self.xp} XP is less than {xp_needed_for_next_level} XP needed for next level.")
+            logger.debug(f"{self.class_type.name} needs {xp_needed_for_next_level - self.xp} XP to reach level {self.current_level.level_num + 1}.")
 
         return self.current_level.level_num > level_num_before
 

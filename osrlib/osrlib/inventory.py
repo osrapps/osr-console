@@ -200,6 +200,14 @@ class Inventory:
         """
         return self.items[ItemType.WEAPON]
 
+    def get_equipped_weapon(self) -> Weapon:
+        """Gets the first equipped weapon in the inventory.
+
+        Returns:
+            Weapon: The equipped weapon. Returns "Fists" (1 HP damage) if no other weapon is equipped.
+        """
+        return next((weapon for weapon in self.weapons if weapon.is_equipped), Weapon("Fists", "1d1"))
+
     @property
     def spells(self):
         """Gets all spell items stored in the items defaultdict inventory property.

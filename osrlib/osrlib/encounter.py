@@ -1,10 +1,10 @@
 from collections import deque
 from typing import Optional
+import math
 import random
 from osrlib.party import Party
-from osrlib.monster import Monster, MonsterParty
+from osrlib.monster import MonsterParty
 from osrlib.game_manager import logger
-from osrlib.player_character import PlayerCharacter
 
 
 class Encounter:
@@ -84,8 +84,8 @@ class Encounter:
         # Combine and sort the combatants by initiative roll
         combatants_sorted_by_initiative = sorted(party_initiative + monster_initiative, key=lambda x: x[1], reverse=True)
 
-        # Populate the combat queue
-        self.combat_queue.extend(combatants_sorted_by_initiative)
+        # Populate the combat queue with only the combatant objects
+        self.combat_queue.extend([combatant[0] for combatant in combatants_sorted_by_initiative])
 
         # Start combat
         round_num = 0 # Track rounds for spell and other time-based effects
@@ -93,52 +93,62 @@ class Encounter:
             round_num += 1
             self.execute_combat_round(round_num)
 
-        if self.pc_party.is_alive:
-            logger.debug(f"{self.pc_party.name} won the battle!")
-        elif self.monster_party.is_alive:
-            logger.debug("The monsters won the battle!")
-
-        # No living members in one of the parties - end the encounter
+        # All members of one party killed - end the encounter
         self.end_encounter()
 
     def execute_combat_round(self, round_num: int):
         logger.debug(f"Starting combat round {round_num}...")
 
         # Deque first combatant to act
-        attacker = self.combat_queue.popleft()[0]
+        attacker = self.combat_queue.popleft()
 
         # If combatant is PC, player chooses a monster to attack
         if attacker in self.pc_party.members:
+
             # TODO: Get player input for next action, but for now, just attack a random monster
             defender = random.choice([monster for monster in self.monster_party.members if monster.is_alive])
             needed_to_hit = attacker.character_class.current_level.get_to_hit_target_ac(defender.armor_class)
-            attack_roll = attacker.get_attack_roll()
-            if attack_roll.total_with_modifier >= needed_to_hit:
-                damage_roll = attacker.get_damage_roll()
-                defender.apply_damage(damage_roll.total_with_modifier)
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and hit for {damage_roll.total} damage.")
+            attack_roll = attacker.get_attack_roll() # TODO: Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_attack_roll()
+            # TODDO: attack_item = attacker.inventory.get_equipped_item_by_type(attack_roll.attack_type)
+            weapon = attacker.inventory.get_equipped_weapon().name.lower()
+
+            # Natural 20 always hits and a 1 always misses
+            if attack_roll.total == 20 or (attack_roll.total > 1 and attack_roll.total_with_modifier >= needed_to_hit):
+                damage_roll = attacker.get_damage_roll() #Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_damage_roll()
+                damage_multiplier = 1.5 if attack_roll.total == 20 else 1
+                damage_mesg_suffix = " CRITICAL HIT!" if attack_roll.total == 20 else ""
+                damage_amount = math.ceil(damage_roll.total_with_modifier * damage_multiplier)
+                defender.apply_damage(damage_amount)
+
+                attack_mesg_suffix = f" for {damage_amount} damage.{damage_mesg_suffix}"
             else:
-                logger.debug(f"{attacker.name} ({attacker.character_class.class_type.value}) attacked {defender.name} and missed.")
+                attack_mesg_suffix = f" and missed."
+            logger.debug(f"{attacker.name} ({attacker.character_class}) attacked {defender.name} with their {weapon} ({attack_roll.total_with_modifier} on {attack_roll}){attack_mesg_suffix}")
         elif attacker in self.monster_party.members:
             defender = random.choice([pc for pc in self.pc_party.members if pc.is_alive])
-            needed_to_hit = 15 # TODO: attacker.get_to_hit_target_ac(defender.armor_class)
-            for roll in attacker.get_attack_rolls():
-                if defender.is_alive and roll.total_with_modifier >= needed_to_hit:
+            needed_to_hit = attacker.get_to_hit_target_ac(defender.armor_class)
+            for attack_roll in attacker.get_attack_rolls():
+                if defender.is_alive and attack_roll.total_with_modifier >= needed_to_hit:
                     damage_roll = attacker.get_damage_roll()
                     defender.apply_damage(damage_roll.total_with_modifier)
-                    logger.debug(f"{attacker.name} attacked {defender.name} and hit for {damage_roll.total} damage.")
+                    logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage.")
                 else:
-                    logger.debug(f"{attacker.name} attacked {defender.name} and missed.")
+                    logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
 
         if not defender.is_alive:
             logger.debug(f"{defender.name} was killed!")
+            self.combat_queue.remove(defender)
 
         # Add the attacker back into the combat queue
-        self.combat_queue.append((attacker, 0))
+        self.combat_queue.append(attacker)
 
     def end_encounter(self):
-
-        # TODO: Award XP and treasure to PCs if monster party is defeated
+        logger.debug(f"Ending encounter '{self.name}'...")
+        if self.pc_party.is_alive and not self.monster_party.is_alive:
+            logger.debug(f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party...")
+            self.pc_party.grant_xp(self.monster_party.xp_value)
+        elif not self.pc_party.is_alive and self.monster_party.is_alive:
+            logger.debug(f"{self.pc_party.name} lost the battle.")
 
         self.is_started = False
         self.is_ended = True

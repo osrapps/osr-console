@@ -4,8 +4,9 @@ from osrlib.monster import MonsterParty, MonsterStatsBlock
 from osrlib.character_classes import CharacterClassType, class_levels
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
-from osrlib.party import get_default_party, Party
+from osrlib.party import get_default_party
 from osrlib.game_manager import logger
+from osrlib.dice_roller import roll_dice
 
 
 # THAC0 data for each class type
@@ -111,8 +112,37 @@ def kobold_party():
     yield monster_party
 
 @pytest.fixture
+def cyclops_party():
+    stats = MonsterStatsBlock(
+        name="Cyclops",
+        description="A rare type of giant, the cyclops is noted for its great size and single eye in the center of its forehead. Cyclops have poor depth perception due to their single eye.",
+        armor_class=5,
+        hit_dice="13d8",
+        num_appearing="d1",
+        movement=90,
+        num_special_abilities=1,
+        attacks_per_round=1, # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
+        damage_per_attack="3d10",
+        save_as_class=CharacterClassType.FIGHTER,
+        save_as_level=13,
+        morale=9,
+        treasure_type=TreasureType.E,
+        alignment=Alignment.CHAOTIC
+    )
+    monster_party = MonsterParty(stats)
+    yield monster_party
+
+@pytest.fixture
 def goblin_encounter(goblin_party):
-    yield Encounter("Goblin Ambush", "A group of goblins ambush the party.", goblin_party)
+    yield Encounter("Goblin Encounter", "A group of goblins ambush the party.", goblin_party)
+
+@pytest.fixture
+def hobgoblin_encounter(hobgoblin_party):
+    yield Encounter("Hobgoblin Encounter", "A group of hobgoblins.", hobgoblin_party)
+
+@pytest.fixture
+def kobold_encounter(kobold_party):
+    yield Encounter("Kobold Encounter", "A group of kobolds.", kobold_party)
 
 def get_thac0_for_class_for_level(char_class_type, level):
     for level_range, thac0 in class_thac0[char_class_type].items():
@@ -141,12 +171,14 @@ def test_thac0_for_classes_and_levels(pc_party):
             assert expected_thac0 == actual_thac0
 
 def test_encounter_start_and_end(pc_party, goblin_encounter):
-    encounter = goblin_encounter
-    assert encounter.is_started == False
-    encounter.start_encounter(pc_party)
-    assert encounter.is_ended == True
+    assert goblin_encounter.is_started == False
+    goblin_encounter.start_encounter(pc_party)
+    assert goblin_encounter.is_ended == True
 
-def test_encounter_combat_queue(pc_party, goblin_encounter):
-    encounter = goblin_encounter
-    encounter.start_encounter(pc_party)
-    assert len(encounter.combat_queue) == len(encounter.pc_party.members) + len(encounter.monster_party.members)
+def test_monster_thac0(hobgoblin_encounter, kobold_encounter, cyclops_party):
+    hobgoblin_encounter.start_encounter(get_default_party())
+
+    kobold_encounter.start_encounter(get_default_party())
+
+    cyclops_encounter = Encounter("Cyclops", "This thing has 13 HD and a special ability.", cyclops_party)
+    cyclops_encounter.start_encounter(get_default_party())

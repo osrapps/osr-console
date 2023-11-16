@@ -3,7 +3,7 @@ import random
 import re
 from collections import namedtuple
 
-
+# TODO: Change total_with_modifier to total_without_modifier and make total the total_with_modifer
 class DiceRoll(
     namedtuple(
         "RollResultBase",
@@ -80,8 +80,8 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
     num_sides = int(num_sides)
     modifier = int(modifier) if modifier else 0
 
-    if num_sides not in [4, 6, 8, 10, 12, 20, 100]:
-        raise ValueError("Invalid number of dice sides. Choose from 4, 6, 8, 10, 12, 20, 100.")
+    if num_sides not in [1, 2, 3, 4, 6, 8, 10, 12, 20, 100]:
+        raise ValueError("Invalid number of dice sides. Choose from 1, 2, 3, 4, 6, 8, 10, 12, 20, 100.")
 
     die_rolls = [rand_gen.randint(1, num_sides) for _ in range(num_dice)]
 

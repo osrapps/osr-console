@@ -20,7 +20,7 @@ def generate_player_character_params(starting_level: int = 1):
 def test_characters_init_sane_level_one(pc: PlayerCharacter):
     logger.info(pc)
     assert pc.character_class.current_level.level_num == 1
-    assert pc.character_class.hp > 0
+    assert pc.character_class.max_hp > 0
     assert pc.character_class.xp == 0
 
 @pytest.mark.parametrize("pc", generate_player_character_params(starting_level=0))

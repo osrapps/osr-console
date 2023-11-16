@@ -47,7 +47,7 @@ def test_create_valid_weapon():
     weapon = WeaponFactory.create_weapon(weapon_name)
 
     assert weapon.name == weapon_name
-    assert weapon.to_hit_damage_die == "1d4"
+    assert weapon.damage_die == "1d4"
     assert weapon.gp_value == 3
     assert CharacterClassType.FIGHTER in weapon.usable_by_classes
     assert CharacterClassType.MAGIC_USER in weapon.usable_by_classes
@@ -64,7 +64,7 @@ def test_create_ranged_weapon():
     weapon = WeaponFactory.create_weapon(weapon_name)
 
     assert weapon.name == weapon_name
-    assert weapon.to_hit_damage_die == "1d6"
+    assert weapon.damage_die == "1d6"
     assert weapon.gp_value == 25
     assert weapon.range == 100
     assert CharacterClassType.FIGHTER in weapon.usable_by_classes
@@ -77,7 +77,7 @@ def test_create_weapon_without_range():
     weapon = WeaponFactory.create_weapon(weapon_name)
 
     assert weapon.name == weapon_name
-    assert weapon.to_hit_damage_die == "1d8"
+    assert weapon.damage_die == "1d8"
     assert weapon.gp_value == 10
     assert weapon.range is None
     assert CharacterClassType.FIGHTER in weapon.usable_by_classes
