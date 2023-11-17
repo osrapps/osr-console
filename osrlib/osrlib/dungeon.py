@@ -407,7 +407,11 @@ class Dungeon:
         if num_locations < 1:
             raise ValueError("Dungeon must have at least one location.")
 
-        locations = [Location(id=i, exits=[]) for i in range(1, num_locations + 1)]
+        locations = []
+        for i in range(1, num_locations + 1):
+            length = random.choice([10, 20, 30, 40])
+            width = random.choice([10, 20, 30, 40])
+            locations.append(Location(id=i, exits=[], length=length, width=width))
 
         directions = [d for d in Direction if d not in (Direction.UP, Direction.DOWN)]
 
@@ -432,6 +436,10 @@ class Dungeon:
             description = f"A randomly generated dungeon with {num_locations} locations."
 
         return Dungeon(name, description, locations)
+
+    def to_json(self):
+        """Returns a JSON representation of the dungeon."""
+        return json.dumps(self.to_dict(), default=lambda o: o.__dict__)
 
     def to_dict(self):
         """Returns a dictionary representation of the dungeon. Useful as a pre-serialization step when saving to a permanent data store."""

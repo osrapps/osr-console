@@ -5,7 +5,7 @@ from osrlib import Adventure, game_manager as gm
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-openai_model = "gpt-4"
+openai_model = "gpt-4-1106-preview" #"gpt-4"
 
 # Error returned by the OpenAI API when access to the model is denied:
 #

@@ -2,6 +2,7 @@ import json
 import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
 from osrlib.encounter import Encounter
+from osrlib.game_manager import logger
 
 # --- Test Exit class ---
 
@@ -141,3 +142,14 @@ def test_dungeon_graph_integrity():
             break  # If one fails, no need to continue testing others
 
     assert all_locations_reachable, "Not all locations are reachable from every other location."
+
+def test_dungeon_json():
+    # Create a random dungeon
+    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
+
+    # Get the JSON representation
+    dungeon_json = random_dungeon.to_json()
+    logger.debug(dungeon_json)
+
+    # Parse it back to Python object
+    dungeon_dict = json.loads(dungeon_json)
