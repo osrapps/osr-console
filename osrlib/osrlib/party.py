@@ -8,7 +8,7 @@ from osrlib.game_manager import logger
 from osrlib.enums import CharacterClassType
 from osrlib.item_factories import equip_party
 from osrlib.dice_roller import roll_dice
-
+import time
 
 class PartyAtCapacityError(Exception):
     """Raised when attempting to add a player character to a party that already has the maximum number of members."""
@@ -95,9 +95,9 @@ class Party:
             str: A string representation of the Party instance.
         """
         character_strs = [str(character) for character in self.members]
-        character_list_str = '\n\t'.join(character_strs)
+        character_list_str = '\n'.join(character_strs)
 
-        return f"Party: {self.name}\nMembers:\n\t[{character_list_str}]"
+        return character_list_str
 
     @property
     def num_characters(self) -> int:
@@ -213,6 +213,7 @@ class Party:
         self.members.append(character)
 
         if set_as_active_character:
+
             logger.info(
                 f"Setting '{character.name}' as the active character in party '{self.name}'..."
             )
@@ -254,7 +255,7 @@ class Party:
         """
         if self.is_member(character):
             self.active_character = character
-            logger.info(
+            logger.debug(
                 f"Set '{character.name}' as the active character in the party."
             )
         else:

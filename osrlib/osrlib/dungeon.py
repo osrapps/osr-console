@@ -2,8 +2,9 @@ from typing import List
 from enum import Enum
 import random
 import json
-from osrlib import game_manager as gm
+from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
+from osrlib.dice_roller import roll_dice
 
 
 class Direction(Enum):
@@ -134,7 +135,7 @@ class Location:
         """Returns a JSON representation of the location."""
         #json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, indent=4)
         json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, separators=(',', ':'))
-        gm.logger.debug(f"Location JSON:\n{json_location}")
+        logger.debug(f"Location JSON:\n{json_location}")
         return json_location
 
     def get_exit(self, direction: Direction):
@@ -263,11 +264,11 @@ class Dungeon:
         Raises:
             LocationNotFoundError: If the location ID does not exist in the dungeon.
         """
-        gm.logger.debug(f"Setting starting location to location with ID {location_id}.")
+        logger.debug(f"Setting starting location to location with ID {location_id}.")
         try:
             start_location = [loc for loc in self.locations if loc.id == location_id][0]
         except IndexError:
-            gm.logger.exception(
+            logger.exception(
                 f"Location with ID {location_id} does not exist in the dungeon."
             )
             raise LocationNotFoundError(
@@ -275,7 +276,7 @@ class Dungeon:
             )
 
         self.current_location = start_location
-        gm.logger.debug(f"Starting location set to {start_location}.")
+        logger.debug(f"Starting location set to {start_location}.")
 
         return start_location
 
@@ -291,7 +292,7 @@ class Dungeon:
             exception = LocationAlreadyExistsError(
                 f"Location with ID {location.id} already exists in the dungeon."
             )
-            gm.logger.exception(exception)
+            logger.exception(exception)
             raise exception
 
     def get_location(self, location_id: int) -> Location:
@@ -325,11 +326,11 @@ class Dungeon:
         Returns:
             Location: The location the party moved to, or None if there is no exit in the specified direction.
         """
-        gm.logger.debug(f"Moving party {direction.name} from {self.current_location}.")
+        logger.debug(f"Moving party {direction.name} from {self.current_location}.")
         try:
             exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
         except IndexError:
-            gm.logger.debug(
+            logger.debug(
                 f"No exit to the {direction.name} from {self.current_location}. The only exits are: "
                 + ", ".join(str(exit) for exit in self.current_location.exits) + "."
             )
@@ -338,9 +339,9 @@ class Dungeon:
         self.current_location = [loc for loc in self.locations if loc.id == exit.destination][0]
 
         if self.current_location.is_visited:
-            gm.logger.debug(f"Party moved to previously visited location {self.current_location}.")
+            logger.debug(f"Party moved to previously visited location {self.current_location}.")
         else:
-            gm.logger.debug(f"Party moved to new location {self.current_location}.")
+            logger.debug(f"Party moved to new location {self.current_location}.")
             self.current_location.is_visited = True
 
         return self.current_location
@@ -372,7 +373,7 @@ class Dungeon:
                     validation_error = DestinationLocationNotFoundError(
                         f"[L:{src_loc.id} {src_exit}] points to [L:{src_exit.destination}] which does NOT exist."
                     )
-                    gm.logger.error(validation_error)
+                    logger.error(validation_error)
                     validation_errors.append(validation_error)
 
                 # Destination location must have corresponding Exit whose destination is this Location
@@ -381,13 +382,13 @@ class Dungeon:
                     validation_error = NoMatchingExitError(
                         f"[L:{src_loc.id} {src_exit}] return exit [L:{dst_loc.id} {src_exit.opposite_direction.name}:{src_loc.id}] does NOT exist."
                     )
-                    gm.logger.error(validation_error)
+                    logger.error(validation_error)
                     validation_errors.append(validation_error)
                 elif return_exit.destination != src_loc.id:
                     validation_error = ReturnConnectionDestinationIncorrectError(
                         f"[LOC:{src_loc.id} {src_exit}] return exit should be [L:{dst_loc.id} {src_exit.opposite_direction.name}:{src_loc.id}] not [L:{dst_loc.id} {return_exit}]."
                     )
-                    gm.logger.error(validation_error)
+                    logger.error(validation_error)
                     validation_errors.append(validation_error)
 
         return len(validation_errors) == 0
@@ -408,10 +409,20 @@ class Dungeon:
             raise ValueError("Dungeon must have at least one location.")
 
         locations = []
+        # Set a random room size
         for i in range(1, num_locations + 1):
             length = random.choice([10, 20, 30, 40])
             width = random.choice([10, 20, 30, 40])
-            locations.append(Location(id=i, exits=[], length=length, width=width))
+
+            location = Location(id=i, exits=[], length=length, width=width)
+
+            # On every third location, roll 1d6 to check for wandering monsters (2 in 6 chance)
+            if i % 3 == 0 and roll_dice("1d6").total <= 3:
+                encounter = Encounter.get_random_encounter(dungeon_level=1)
+                location.encounter = encounter
+                logger.debug(f"Added {encounter} to {location}.")
+
+            locations.append(location)
 
         directions = [d for d in Direction if d not in (Direction.UP, Direction.DOWN)]
 
@@ -426,9 +437,9 @@ class Dungeon:
                     src_exit = Exit(direction, dst.id)
                     dst_return_exit = Exit(src_exit.opposite_direction, src.id)
 
-                    gm.logger.debug(f"Adding L:{src.id} {src_exit}")
+                    logger.debug(f"Adding L:{src.id} {src_exit}")
                     src.add_exit(src_exit)
-                    gm.logger.debug(f"Adding L:{dst.id} {dst_return_exit}")
+                    logger.debug(f"Adding L:{dst.id} {dst_return_exit}")
                     dst.add_exit(dst_return_exit)
                     break
 

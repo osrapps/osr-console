@@ -7,13 +7,28 @@ import logging
 import queue
 import threading
 
+
+class LastMessageHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.last_message = None
+
+    def emit(self, record):
+        self.last_message = self.format(record)
+
+    def format(self, record):
+        # Return only the message part of the log record
+        return record.getMessage()
+
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s][%(module)s::%(funcName)s] %(message)s",
 )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+last_message_handler = LastMessageHandler()
+logger.addHandler(last_message_handler)
 
 
 class StorageType(Enum):

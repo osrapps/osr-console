@@ -4,8 +4,9 @@ import math
 import random
 from osrlib.party import Party
 from osrlib.monster import MonsterParty
-from osrlib.game_manager import logger
-
+from osrlib.monster_manual import monster_stats_blocks
+from osrlib.game_manager import logger, last_message_handler as pylog
+from osrlib.dice_roller import roll_dice
 
 class Encounter:
     """An encounter represents something the party discovers, confronts, or experiences within a location in a dungeon.
@@ -47,20 +48,30 @@ class Encounter:
         self.combat_queue: deque = deque()
         self.is_started: bool = False
         self.is_ended: bool = False
-        self.combat_log: list = []
+        self.log: list = []
 
     def __str__(self):
         """Return a string representation of the encounter."""
-        return f"{self.name}: {self.description}"
+        return f"{self.name}: {self.description} ({len(self.monster_party.members)} {self.monster_party.members[0].name if self.monster_party.members else ''})"
+
+    def log_mesg(self, message: str):
+        """Log an encounter log message."""
+        self.log.append(message)
+
+    def get_encounter_log(self) -> str:
+        """Return the encounter log as a string."""
+        return "\n".join(self.log)
 
     def start_encounter(self, party: Party):
         self.is_started = True
         logger.debug(f"Starting encounter '{self.name}'...")
+        self.log_mesg(pylog.last_message)
 
         self.pc_party = party
 
         if self.monster_party is None:
             logger.debug(f"Encounter {self.name} has no monsters - continuing as non-combat encounter.")
+            self.log_mesg(pylog.last_message)
             return
 
         pc_party_surprise_roll = self.pc_party.get_surprise_roll()
@@ -68,14 +79,17 @@ class Encounter:
 
         if pc_party_surprise_roll > monster_party_surprise_roll or pc_party_surprise_roll == monster_party_surprise_roll:
             logger.debug(f"Monsters are surprised!")
+            self.log_mesg(pylog.last_message)
             # TODO: Get player input to determine if PCs want to attack or run away, but for now, just start combat.
             self._start_combat()
         elif monster_party_surprise_roll > pc_party_surprise_roll:
             logger.debug(f"PCs are surprised!")
+            self.log_mesg(pylog.last_message)
             self._start_combat()
 
     def _start_combat(self):
         logger.debug(f"Starting combat in encounter '{self.name}'...")
+        self.log_mesg(pylog.last_message)
 
         # Get initiative rolls for both parties
         party_initiative = [(pc, pc.get_initiative_roll()) for pc in self.pc_party.members]
@@ -98,6 +112,7 @@ class Encounter:
 
     def execute_combat_round(self, round_num: int):
         logger.debug(f"Starting combat round {round_num}...")
+        self.log_mesg(pylog.last_message)
 
         # Deque first combatant to act
         attacker = self.combat_queue.popleft()
@@ -124,6 +139,7 @@ class Encounter:
             else:
                 attack_mesg_suffix = f" and missed."
             logger.debug(f"{attacker.name} ({attacker.character_class}) attacked {defender.name} with their {weapon} ({attack_roll.total_with_modifier} on {attack_roll}){attack_mesg_suffix}")
+            self.log_mesg(pylog.last_message)
         elif attacker in self.monster_party.members:
             defender = random.choice([pc for pc in self.pc_party.members if pc.is_alive])
             needed_to_hit = attacker.get_to_hit_target_ac(defender.armor_class)
@@ -132,11 +148,14 @@ class Encounter:
                     damage_roll = attacker.get_damage_roll()
                     defender.apply_damage(damage_roll.total_with_modifier)
                     logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage.")
+                    self.log_mesg(pylog.last_message)
                 else:
                     logger.debug(f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed.")
+                    self.log_mesg(pylog.last_message)
 
         if not defender.is_alive:
             logger.debug(f"{defender.name} was killed!")
+            self.log_mesg(pylog.last_message)
             self.combat_queue.remove(defender)
 
         # Add the attacker back into the combat queue
@@ -144,11 +163,54 @@ class Encounter:
 
     def end_encounter(self):
         logger.debug(f"Ending encounter '{self.name}'...")
+        self.log_mesg(pylog.last_message)
         if self.pc_party.is_alive and not self.monster_party.is_alive:
             logger.debug(f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party...")
+            self.log_mesg(pylog.last_message)
             self.pc_party.grant_xp(self.monster_party.xp_value)
         elif not self.pc_party.is_alive and self.monster_party.is_alive:
             logger.debug(f"{self.pc_party.name} lost the battle.")
+            self.log_mesg(pylog.last_message)
 
         self.is_started = False
         self.is_ended = True
+
+    def to_dict(self):
+        """Return a dictionary representation of the encounter."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "monsters": self.monster_party.to_dict(),
+            "treasure": self.treasure,
+        }
+
+    def from_dict(cls, data):
+        """Create an encounter from a dictionary representation of the encounter."""
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            monster_party=MonsterParty.from_dict(data["monsters"]),
+            treasure=data["treasure"],
+        )
+
+    @staticmethod
+    def get_random_encounter(dungeon_level: int):
+        """Get a random encounter based on the dungeon level.
+
+        The dungeon_level corresponds to the monster's number of hit dice, and the encounter will contain monsters of
+        the same type and at that level (number of hit dice). For example, if dungeon_level is 1, the encounter will
+        contain monsters with 1d8 (or 1d8+n) hit die. If dungeon_level is 3, the encounter will contain
+        monsters with 3 hit dice (or 3d8+n).
+
+        Args:
+            dungeon_level (int): The level of dungeon the encounter should be appropriate for.
+
+        Returns:
+            Encounter: A random encounter.
+        """
+
+        # Get a random monster type from the stats blocks in the monster_manual module. The monster type is based dungeon level and the first number in the monster's hit dice (e.g., the 1 in 1d8 or the 2 in 2d8).
+        monsters_of_level = [monster for monster in monster_stats_blocks if roll_dice(monster.hit_dice).num_dice == dungeon_level]
+        monster_type = random.choice(monsters_of_level)
+        monsters = MonsterParty(monster_type)
+        return Encounter(name=monster_type.name, description=f"Wandering monsters.", monster_party=monsters)

@@ -51,7 +51,7 @@ system_message = [
     },
 ]
 
-# Prefixes *every* player (user) message sent to the OpenAI API.
+# Prefixes most player (user) messages sent to the OpenAI API.
 user_message_prefix = "Don't tell me what my party does. Don't include any questions in your response. "
 
 # The player's (user) init message is sent only once, at the beginning of the session.
@@ -61,7 +61,7 @@ user_init_message = [
         "content": ( user_message_prefix +
             "I'm a D&D player controlling a party of six characters (adventurers) in your Dungeons & Dragons adventure. "
             "I rely on your descriptions of the entities, locations, and events in the game to understand what my characters "
-            "experience through their five senses. From your descriptions, I can form a detailed picture in my mind "
+            "experience through their five senses. From your descriptions, I can form a picture in my mind "
             "of the game world and its environments and inhabitants. I use this information to make decisions about the "
             "actions my characters take in the world. Do not ask me a question."
         ),
@@ -70,16 +70,18 @@ user_init_message = [
 
 # Prefix sent with every party movement message initiated by the player.
 user_move_prefix = ( user_message_prefix +
-    "Describe this location to me, including its size and exits, as would a "
-    "Dungeon Master to a player who's drawing a map of the dungeon on graph "
-    "paper (but don't mention location IDs or the map): "
+    "Describe this location concisely. Include the location size and exit directions, but be brief - don't mention whether "
+    "the exits are locked. Based on your description, the player must be able to draw an accurate representation "
+    "of the location on graph paper. Maintain a theme based on the adventure description and the last room you "
+    "described. The location descriptions should paint a logical and cohesive picture of the environment. "
+    "Here's the location data: "
 )
 
 battle_summary_prompt = (
-    "Summarize the battle that appears in this log. Keep the summary to a single paragraph. Include highlights of the battle, "
-    "focusing on notable die rolls like high damage rolls by the player characters.Do not mention the monster's attack "
-    "roll values. Alternate between using the character's name and their class when referring to them in the summary. "
-    "Keep the summary under 90 words.Await for the next message before responding with the summary."
+    "Briefly summarize the following battle in a single paragraph of four sentences or less. Include highlights of the battle, "
+    "for example high damage rolls (include their values) and critical hits. Use a factual, report-like tone instead of "
+    "being flowery and expressive. The last sentence should be a list of surviving PCs the XP earned by the party. "
+    "Here's the battle log: "
 )
 
 class DungeonMaster:
@@ -164,4 +166,8 @@ class DungeonMaster:
     def move_party(self, direction) -> str:
         new_location = self.adventure.active_dungeon.move(direction)
         message_from_player = self.format_user_message(user_move_prefix + new_location.json)
+        return self.player_message(message_from_player)
+
+    def summarize_battle(self, battle_log) -> str:
+        message_from_player = self.format_user_message(battle_summary_prompt + battle_log)
         return self.player_message(message_from_player)

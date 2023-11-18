@@ -249,6 +249,39 @@ class Monster:
             new_hp = self.hit_points + hit_points_healed
             self.hit_points = min(new_hp, self.max_hit_points)
 
+    def to_dict(self):
+        """Return a dictionary representation of the monster."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "armor_class": self.armor_class,
+            #"hit_points": self.hit_points,
+            #"max_hit_points": self.max_hit_points,
+            "movement": self.movement,
+            "attacks_per_round": self.attacks_per_round,
+            "damage_per_attack": self.damage_per_attack,
+            #"saving_throws": self.saving_throws,
+            "morale": self.morale,
+            "alignment": self.alignment.value,
+            #"xp_value": self.xp_value,
+        }
+
+    def from_dict(cls, data):
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            armor_class=data["armor_class"],
+            #hit_points=data["hit_points"],
+            #max_hit_points=data["max_hit_points"],
+            movement=data["movement"],
+            attacks_per_round=data["attacks_per_round"],
+            damage_per_attack=data["damage_per_attack"],
+            #saving_throws=data["saving_throws"],
+            morale=data["morale"],
+            alignment=data["alignment"],
+            #xp_value=data["xp_value"],
+        )
+
 
 class MonsterParty:
     """A group of monsters the party can encounter in a dungeon location.
@@ -363,3 +396,17 @@ class MonsterParty:
         roll = roll_dice("1d6")
         logger.debug(f"Monster party rolled {roll} for surprise and got {roll.total_with_modifier}.")
         return roll.total_with_modifier
+
+    def to_dict(self):
+        """Return a dictionary representation of the monster party."""
+        return {
+            "members": [member.to_dict() for member in self.members],
+            "treasure": self.treasure,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            members=[Monster.from_dict(member) for member in data["members"]],
+            treasure=data["treasure"],
+        )

@@ -94,7 +94,7 @@ class Adventure:
         Args:
             party (Party): The adventuring party for the adventure.
         """
-        self.party = party
+        self.active_party = party
         logger.debug(f"Set adventuring party to {party.name}.")
 
     def start_adventure(self):

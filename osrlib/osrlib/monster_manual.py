@@ -291,3 +291,23 @@ zombie_stats = MonsterStatsBlock(
     treasure_type=TreasureType.NONE,
     alignment=Alignment.CHAOTIC
 )
+
+monster_stats_blocks = [
+    berserker_stats,
+    boar_stats,
+    bugbear_stats,
+    carrion_crawler_stats,
+    cyclops_stats,
+    ghoul_stats,
+    gnoll_stats,
+    goblin_stats,
+    hobgoblin_stats,
+    kobold_stats,
+    ogre_stats,
+    orc_stats,
+    owl_bear_stats,
+    skeleton_stats,
+    troglodyte_stats,
+    yellow_mold_stats,
+    zombie_stats
+]

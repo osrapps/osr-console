@@ -6,7 +6,6 @@ from textual.widgets import Button, Header, Footer, Log, Placeholder
 from osrlib import DungeonMaster
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
-from example_adventure import adventure
 from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
 
 
@@ -172,7 +171,7 @@ class ExploreScreen(Screen):
         ("?", "summarize", "Summarize session"),
     ]
 
-    dungeon_master = DungeonMaster(adventure)
+    dungeon_master = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -188,28 +187,53 @@ class ExploreScreen(Screen):
     def action_start_session(self) -> None:
         """Start a new session."""
 
+        player_log = self.query_one("#player_log")
+        dm_log = self.query_one("#dm_log")
+
+        self.dungeon_master = DungeonMaster(self.app.adventure)
         dm_response = self.dungeon_master.start_session()
 
-        # TODO: Need to do this automatically (move the party to the first "real" location)
-        dm_response = self.dungeon_master.move_party(Direction.NORTH)
+        # Move the party to the first location
+        first_exit = self.dungeon_master.adventure.active_dungeon.get_location(1).exits[0]
+        dm_response = self.dungeon_master.move_party(first_exit.direction)
 
-        self.query_one("#player_log").clear()
-        self.query_one("#player_log").write_line("The party stands ready.")
-        self.query_one("#player_log").write_line("---")
-        self.query_one("#dm_log").write_line(wrap_text(dm_response))
-        self.query_one("#dm_log").write_line("---")
+        player_log.clear()
+        player_log.write_line("The party stands ready.")
+        player_log.write_line("---")
+        dm_log.write_line(wrap_text(dm_response))
+        dm_log.write_line(str(self.dungeon_master.adventure.active_dungeon.current_location))
+        dm_log.write_line("---")
 
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
 
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
-        """Perform a move action in a given direction."""
+        """Move the party in the specified direction, execute battle (if any), and log the results."""
+
         self.query_one("#player_log").write_line(log_message)
         self.query_one("#player_log").write_line("---")
         dm_response = self.dungeon_master.move_party(direction)
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.check_for_encounter()
+        self.query_one("#dm_log").write_line(str(self.dungeon_master.adventure.active_dungeon.current_location))
         self.query_one("#dm_log").write_line("---")
+
+    def check_for_encounter(self) -> None:
+        """Check for an encounter and execute battle if there are monsters in the encounter."""
+        if self.dungeon_master.adventure.active_dungeon.current_location.encounter and not self.dungeon_master.adventure.active_dungeon.current_location.encounter.is_ended:
+
+            encounter = self.dungeon_master.adventure.active_dungeon.current_location.encounter
+            encounter.start_encounter(self.dungeon_master.adventure.active_party)
+            encounter_log = encounter.get_encounter_log()
+
+            self.query_one("#dm_log").write_line("---")
+            dm_response = self.dungeon_master.summarize_battle(encounter_log)
+            self.query_one("#dm_log").write_line(wrap_text(dm_response))
+
+            self.query_one("#player_log").write_line("Encounter!")
+            self.query_one("#player_log").write_line(str(self.dungeon_master.adventure.active_party))
+            self.query_one("#player_log").write_line("---")
 
     def action_move_north(self) -> None:
         """Move the party north."""
