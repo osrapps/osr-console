@@ -1,22 +1,13 @@
 import os
 from dotenv import load_dotenv
 import openai
-from osrlib import Adventure, game_manager as gm
+from osrlib.adventure import Adventure
+from osrlib.game_manager import logger
+from osrlib.dungeon import Dungeon
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-openai_model = "gpt-4"
-
-# Error returned by the OpenAI API when access to the model is denied:
-#
-# data = {
-#         'error': {
-#         'message': 'The model `gpt-4` does not exist or you do not have access to it. Learn more: https://help.openai.com/en/articles/7102672-how-can-i-access-gpt-4.',
-#         'type': 'invalid_request_error',
-#         'param': None,
-#         'code': 'model_not_found'
-#     }
-# }
+openai_model = "gpt-4-1106-preview" #"gpt-4"
 
 dm_init_message = (
     "You're a skilled Dungeon Master with years of experience leading groups of Dungeons & Dragons players through exciting "
@@ -29,7 +20,8 @@ dm_init_message = (
     "provided for the location with the same ID on each subsequent visit to that location. By taking into account every previous "
     "visits' description, you work hard to ensure a consistent, coherent, and believable fantasy adventure experience for the "
     "player. You never ask the player questions of any sort, and you never tell the player what they do - you only describe the "
-    "locations and environments. Every location description should be one to three sentences long. The player's messages will "
+    "locations and environments. Your location descriptions should be three or fourt sentences long unless they've visited it before, in "
+    "which case the description should be one sentence. If you see 'is_visited': False, it means they haven't been there before. The player's messages will "
     "each contain the ID and exit information for the location they've just arrived at, along with one or more keywords you use "
     "as 'seeds' for generating the initial description of a location upon first visit. The IDs, exits, and keywords are in JSON "
     "format. You never disclose existence of the structured JSON data to the player; you use the JSON data only for the purpose "
@@ -51,7 +43,7 @@ system_message = [
     },
 ]
 
-# Prefixes *every* player (user) message sent to the OpenAI API.
+# Prefixes most player (user) messages sent to the OpenAI API.
 user_message_prefix = "Don't tell me what my party does. Don't include any questions in your response. "
 
 # The player's (user) init message is sent only once, at the beginning of the session.
@@ -61,7 +53,7 @@ user_init_message = [
         "content": ( user_message_prefix +
             "I'm a D&D player controlling a party of six characters (adventurers) in your Dungeons & Dragons adventure. "
             "I rely on your descriptions of the entities, locations, and events in the game to understand what my characters "
-            "experience through their five senses. From your descriptions, I can form a detailed picture in my mind "
+            "experience through their five senses. From your descriptions, I can form a picture in my mind "
             "of the game world and its environments and inhabitants. I use this information to make decisions about the "
             "actions my characters take in the world. Do not ask me a question."
         ),
@@ -70,16 +62,17 @@ user_init_message = [
 
 # Prefix sent with every party movement message initiated by the player.
 user_move_prefix = ( user_message_prefix +
-    "Describe this location to me, including its size and exits, as would a "
-    "Dungeon Master to a player who's drawing a map of the dungeon on graph "
-    "paper (but don't mention location IDs or the map): "
+    "Describe this location concisely. Include exit directions but not the size. Be brief - don't mention whether "
+    "the exits are locked. Based on your description, the player must be able to imagine an accurate representation "
+    "of the location in their mind. Don't be flowerey or overly dramatic - assume a more matter-of-fact tone. "
+    "Maintain a theme based on the adventure description and the last room you described. Here's the location data: "
 )
 
 battle_summary_prompt = (
-    "Summarize the battle that appears in this log. Keep the summary to a single paragraph. Include highlights of the battle, "
-    "focusing on notable die rolls like high damage rolls by the player characters.Do not mention the monster's attack "
-    "roll values. Alternate between using the character's name and their class when referring to them in the summary. "
-    "Keep the summary under 90 words.Await for the next message before responding with the summary."
+    "Briefly summarize the following battle in a single paragraph of four sentences or less. Include highlights of the battle, "
+    "for example high damage rolls (include their values) and critical hits. Use a factual, report-like tone instead of "
+    "being flowery and expressive. The last sentence should list any PCs killed and the collective XP earned by the party. "
+    "Here's the battle log: "
 )
 
 class DungeonMaster:
@@ -148,7 +141,7 @@ class DungeonMaster:
         )
         self.session_messages.append(completion.choices[0].message)
         self.started = True
-        gm.logger.debug(completion)
+        logger.debug(completion)
         return completion.choices[0].message["content"]
 
     def player_message(self, message):
@@ -158,10 +151,16 @@ class DungeonMaster:
                 model=openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
-            gm.logger.debug(completion)
             return completion.choices[0].message["content"]
 
     def move_party(self, direction) -> str:
         new_location = self.adventure.active_dungeon.move(direction)
+        # new_location.is_visited = False # BUG: This is a hack to force the DM to describe the location again.
+        if new_location is None:
+            return "No exit in that direction."
         message_from_player = self.format_user_message(user_move_prefix + new_location.json)
+        return self.player_message(message_from_player)
+
+    def summarize_battle(self, battle_log) -> str:
+        message_from_player = self.format_user_message(battle_summary_prompt + battle_log)
         return self.player_message(message_from_player)

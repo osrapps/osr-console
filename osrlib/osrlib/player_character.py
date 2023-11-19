@@ -149,12 +149,12 @@ class PlayerCharacter:
         return roll_dice(weapon.damage_die, melee_damage_modifier)
 
     def apply_damage(self, hit_points_damage: int):
-        """Apply damage to the monster by reducing the monster's hit points by the given amount, down to a minimum of 0.
+        """Apply damage to the player character by reducing their hit points by the given amount, down to a minimum of 0.
 
-        This method has no affect if the monster is already dead.
+        This method has no affect if the character is already dead.
 
         Args:
-            damage (int): The amount of damage done to the monster.
+            damage (int): The amount of damage done to the PC.
         """
         if self.is_alive:
             new_hp = self.character_class.hp - hit_points_damage
@@ -250,7 +250,7 @@ class PlayerCharacter:
         logger.debug(
             f"{self.name} rolled {hp_roll} for HP and got {hp_roll.total_with_modifier} ({hp_roll.total} {hp_modifier})."
         )
-        return self.character_class.roll_hp(hp_modifier)
+        return hp_roll
 
     def to_dict(self):
         return {

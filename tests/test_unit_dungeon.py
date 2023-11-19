@@ -2,6 +2,7 @@ import json
 import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
 from osrlib.encounter import Encounter
+from osrlib.game_manager import logger
 
 # --- Test Exit class ---
 
@@ -116,7 +117,10 @@ def test_move():
 
 def test_random_dungeon():
     # Create a random dungeon
-    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
+    random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
+                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
+                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+                                                num_locations=20)
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()
@@ -128,7 +132,7 @@ def test_dungeon_graph_integrity():
     def dfs(location_id, visited):
         if location_id not in visited:
             visited.add(location_id)
-            location = dungeon.get_location(location_id)
+            location = dungeon.get_location_by_id(location_id)
             for exit in location.exits:
                 dfs(exit.destination, visited)
 
@@ -141,3 +145,14 @@ def test_dungeon_graph_integrity():
             break  # If one fails, no need to continue testing others
 
     assert all_locations_reachable, "Not all locations are reachable from every other location."
+
+def test_dungeon_json():
+    # Create a random dungeon
+    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
+
+    # Get the JSON representation
+    dungeon_json = random_dungeon.to_json()
+    logger.debug(dungeon_json)
+
+    # Parse it back to Python object
+    dungeon_dict = json.loads(dungeon_json)

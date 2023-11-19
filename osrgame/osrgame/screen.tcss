@@ -9,7 +9,7 @@ CharacterScreen {
 ExploreScreen {
     layout: grid;
     grid-size: 2;
-    grid-columns: 0.5fr 1.5fr;
+    grid-columns: 0.75fr 1.25fr;
     grid-rows: 100%;
     background: $surface;
 }

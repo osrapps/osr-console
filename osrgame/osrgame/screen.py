@@ -3,10 +3,9 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
-from osrlib import DungeonMaster
+from osrlib.dungeon_master import DungeonMaster
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
-from example_adventure import adventure
 from widgets import CharacterStats, AbilityTable, ItemTable, SavingThrows, CharacterScreenButtons
 
 
@@ -64,6 +63,8 @@ class CharacterScreen(Screen):
     BINDINGS = [
         ("k", "clear_log", "Clear log"),
         ("escape", "app.pop_screen", "Pop screen"),
+        ("n", "next_character", "Next character"),
+        ("ctrl+n", "new_character", "New character"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -79,35 +80,42 @@ class CharacterScreen(Screen):
     def on_mount(self) -> None:
         """Perform actions when the widget is mounted."""
         self.query_one(Log).border_subtitle = "LOG"
-        self.query_one(CharacterStats).pc_name = self.app.player_character.name
-        self.query_one(CharacterStats).pc_class = self.app.player_character.character_class
-        self.query_one(CharacterStats).pc_level = self.app.player_character.character_class.current_level
-        self.query_one(CharacterStats).pc_hp = self.app.player_character.character_class.hp
-        self.query_one(CharacterStats).pc_ac = self.app.player_character.armor_class
+        self.query_one(CharacterStats).pc_name = self.app.adventure.active_party.active_character.name #.player_character.name
+        self.query_one(CharacterStats).pc_class = self.app.adventure.active_party.active_character.character_class
+        self.query_one(CharacterStats).pc_level = self.app.adventure.active_party.active_character.character_class.current_level
+        self.query_one(CharacterStats).pc_hp = self.app.adventure.active_party.active_character.character_class.hp
+        self.query_one(CharacterStats).pc_ac = self.app.adventure.active_party.active_character.armor_class
         self.query_one(AbilityTable).update_table()
         self.query_one(SavingThrows).update_table()
-        self.query_one(ItemTable).items = self.app.player_character.inventory.all_items
+        self.query_one(ItemTable).items = self.app.adventure.active_party.active_character.inventory.all_items
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        pc = self.app.player_character
+        pc = self.app.adventure.active_party.active_character
         if event.button.id == "btn_roll_abilities":
             self.reroll()
             self.query_one(CharacterStats).pc_ac = pc.armor_class
 
         elif event.button.id == "btn_roll_hp":
             hp_roll = pc.roll_hp()
-            pc.character_class.hp = max(hp_roll.total_with_modifier, 1)
+            pc.character_class.max_hp = max(hp_roll.total_with_modifier, 1)
+            pc.character_class.hp = pc.character_class.max_hp
             roll_string = hp_roll.pretty_print()
             self.query_one(Log).write_line(roll_string)
-            self.query_one(CharacterStats).pc_hp = pc.character_class.hp
+            self.query_one(CharacterStats).pc_hp = pc.character_class.max_hp
 
     def action_clear_log(self) -> None:
         """An action to clear the log."""
         self.query_one(Log).clear()
 
+    def action_next_character(self) -> None:
+        """An action to switch to the next character in the party."""
+        self.app.adventure.active_party.set_next_character_as_active()
+        self.on_mount()
+
+
     def reroll(self):
         """Rolls the ability scores of the active character."""
-        self.app.player_character.roll_abilities()
+        self.app.adventure.active_party.active_character.roll_abilities()
         self.query_one(AbilityTable).update_table()
 
 
@@ -172,7 +180,7 @@ class ExploreScreen(Screen):
         ("?", "summarize", "Summarize session"),
     ]
 
-    dungeon_master = DungeonMaster(adventure)
+    dungeon_master = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -188,28 +196,53 @@ class ExploreScreen(Screen):
     def action_start_session(self) -> None:
         """Start a new session."""
 
+        player_log = self.query_one("#player_log")
+        dm_log = self.query_one("#dm_log")
+
+        self.dungeon_master = DungeonMaster(self.app.adventure)
         dm_response = self.dungeon_master.start_session()
 
-        # TODO: Need to do this automatically (move the party to the first "real" location)
-        dm_response = self.dungeon_master.move_party(Direction.NORTH)
+        # Move the party to the first location
+        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
+        dm_response = self.dungeon_master.move_party(first_exit.direction)
 
-        self.query_one("#player_log").clear()
-        self.query_one("#player_log").write_line("The party stands ready.")
-        self.query_one("#player_log").write_line("---")
-        self.query_one("#dm_log").write_line(wrap_text(dm_response))
-        self.query_one("#dm_log").write_line("---")
+        player_log.clear()
+        player_log.write_line("The party stands ready.")
+        player_log.write_line("---")
+        dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
+        dm_log.write_line(wrap_text(dm_response))
+        dm_log.write_line("---")
 
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
 
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
-        """Perform a move action in a given direction."""
+        """Move the party in the specified direction, execute battle (if any), and log the results."""
+
         self.query_one("#player_log").write_line(log_message)
         self.query_one("#player_log").write_line("---")
         dm_response = self.dungeon_master.move_party(direction)
+        self.query_one("#dm_log").write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.check_for_encounter()
         self.query_one("#dm_log").write_line("---")
+
+    def check_for_encounter(self) -> None:
+        """Check for an encounter and execute battle if there are monsters in the encounter."""
+        if self.dungeon_master.adventure.active_dungeon.current_location.encounter and not self.dungeon_master.adventure.active_dungeon.current_location.encounter.is_ended:
+
+            encounter = self.dungeon_master.adventure.active_dungeon.current_location.encounter
+            encounter.start_encounter(self.dungeon_master.adventure.active_party)
+            encounter_log = encounter.get_encounter_log()
+
+            self.query_one("#dm_log").write_line("---")
+            dm_response = self.dungeon_master.summarize_battle(encounter_log)
+            self.query_one("#dm_log").write_line(wrap_text(dm_response))
+
+            self.query_one("#player_log").write_line("Encounter!")
+            self.query_one("#player_log").write_line(str(self.dungeon_master.adventure.active_party))
+            self.query_one("#player_log").write_line("---")
 
     def action_move_north(self) -> None:
         """Move the party north."""
