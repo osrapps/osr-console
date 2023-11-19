@@ -67,7 +67,7 @@ class AbilityTable(Container):
         table.add_columns("Ability", score_column, "Modifiers")
 
     def update_table(self):
-        pc = self.app.player_character
+        pc = self.app.adventure.active_party.active_character
         table = self.query_one(DataTable)
         table.clear()
         for k, v in pc.abilities.items():
@@ -90,7 +90,7 @@ class SavingThrows(Container):
         table.add_columns("Saving Throw", score_column)
 
     def update_table(self):
-        pc = self.app.player_character
+        pc = self.app.adventure.active_party.active_character
         table = self.query_one(DataTable)
         table.clear()
         for k, v in pc.character_class.saving_throws.items():

@@ -20,7 +20,8 @@ dm_init_message = (
     "provided for the location with the same ID on each subsequent visit to that location. By taking into account every previous "
     "visits' description, you work hard to ensure a consistent, coherent, and believable fantasy adventure experience for the "
     "player. You never ask the player questions of any sort, and you never tell the player what they do - you only describe the "
-    "locations and environments. Every location description should be one to three sentences long. The player's messages will "
+    "locations and environments. Your location descriptions should be three or fourt sentences long unless they've visited it before, in "
+    "which case the description should be one sentence. If you see 'is_visited': False, it means they haven't been there before. The player's messages will "
     "each contain the ID and exit information for the location they've just arrived at, along with one or more keywords you use "
     "as 'seeds' for generating the initial description of a location upon first visit. The IDs, exits, and keywords are in JSON "
     "format. You never disclose existence of the structured JSON data to the player; you use the JSON data only for the purpose "
@@ -61,17 +62,16 @@ user_init_message = [
 
 # Prefix sent with every party movement message initiated by the player.
 user_move_prefix = ( user_message_prefix +
-    "Describe this location concisely. Include the location size and exit directions, but be brief - don't mention whether "
-    "the exits are locked. Based on your description, the player must be able to draw an accurate representation "
-    "of the location on graph paper. Maintain a theme based on the adventure description and the last room you "
-    "described. The location descriptions should paint a logical and cohesive picture of the environment. "
-    "Here's the location data: "
+    "Describe this location concisely. Include exit directions but not the size. Be brief - don't mention whether "
+    "the exits are locked. Based on your description, the player must be able to imagine an accurate representation "
+    "of the location in their mind. Don't be flowerey or overly dramatic - assume a more matter-of-fact tone. "
+    "Maintain a theme based on the adventure description and the last room you described. Here's the location data: "
 )
 
 battle_summary_prompt = (
     "Briefly summarize the following battle in a single paragraph of four sentences or less. Include highlights of the battle, "
     "for example high damage rolls (include their values) and critical hits. Use a factual, report-like tone instead of "
-    "being flowery and expressive. The last sentence should be a list of surviving PCs the XP earned by the party. "
+    "being flowery and expressive. The last sentence should list any PCs killed and the collective XP earned by the party. "
     "Here's the battle log: "
 )
 
@@ -155,6 +155,9 @@ class DungeonMaster:
 
     def move_party(self, direction) -> str:
         new_location = self.adventure.active_dungeon.move(direction)
+        # new_location.is_visited = False # BUG: This is a hack to force the DM to describe the location again.
+        if new_location is None:
+            return "No exit in that direction."
         message_from_player = self.format_user_message(user_move_prefix + new_location.json)
         return self.player_message(message_from_player)
 

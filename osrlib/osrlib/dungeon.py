@@ -133,15 +133,14 @@ class Location:
 
     def __str__(self):
         exits_str = ", ".join(str(exit) for exit in self.exits)
-        return f"Location ID: {self.id} Dimensions: {self.dimensions} Exits: [{exits_str}] Keywords: {self.keywords}"
+        return f"Loc ID: {self.id} Size: {str(self.dimensions['width'])}'W x {str(self.dimensions['length'])}'L Exits: [{exits_str}] Keywords: {self.keywords}"
 
 
     @property
     def json(self):
         """Returns a JSON representation of the location."""
-        #json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, indent=4)
         json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, separators=(',', ':'))
-        logger.debug(f"Location JSON:\n{json_location}")
+        logger.debug(json_location)
         return json_location
 
     def get_exit(self, direction: Direction):
@@ -443,7 +442,7 @@ class Dungeon:
         return decoded_json_string
 
     @staticmethod
-    def get_random_dungeon(name: str = "Random Dungeon", description: str = "", num_locations: int = 10) -> "Dungeon":
+    def get_random_dungeon(name: str = "Random Dungeon", description: str = "", num_locations: int = 10, use_ai: bool = False) -> "Dungeon":
         """Generates a random dungeon with the specified number of locations.
 
         Args:
@@ -465,8 +464,8 @@ class Dungeon:
 
             location = Location(id=i, exits=[], length=length, width=width)
 
-            # On every third location, roll 1d6 to check for wandering monsters (2 in 6 chance)
-            if i % 3 == 0 and roll_dice("1d6").total <= 3:
+            # On every third location, roll 1d6 to check for wandering monsters
+            if i % 3 == 0 and roll_dice("1d6").total <= 4:
                 encounter = Encounter.get_random_encounter(dungeon_level=1)
                 location.encounter = encounter
                 logger.debug(f"Added {encounter} to {location}.")
@@ -499,13 +498,14 @@ class Dungeon:
 
         dungeon = Dungeon(name, description, locations)
 
-        location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon)
-        location_keywords_dict = json.loads(location_keywords_json)
-        for location_id_str, keywords in location_keywords_dict.items():
-            location_id = int(location_id_str)
-            location = dungeon.get_location_by_id(location_id)
-            if location:
-                location.keywords = keywords
+        if use_ai:
+            location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon)
+            location_keywords_dict = json.loads(location_keywords_json)
+            for location_id_str, keywords in location_keywords_dict.items():
+                location_id = int(location_id_str)
+                location = dungeon.get_location_by_id(location_id)
+                if location:
+                    location.keywords = keywords
 
         return dungeon
 

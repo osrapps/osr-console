@@ -52,6 +52,11 @@ class PartyInStartedAdventureError(Exception):
     pass
 
 
+class NoMembersInPartyError(Exception):
+    """Raised when attempting an operation on a party member when the party has no members."""
+
+    pass
+
 class Party:
     """Manages a collection of player characters (PCs) that comprise an adventuring party.
 
@@ -262,6 +267,22 @@ class Party:
             raise CharacterNotInPartyError(
                 f"Character '{character.name}' not in party."
             )
+
+    def set_next_character_as_active(self):
+        """Set the next character in the party as active.
+
+        If the currently active character is the last in the list,
+        this method sets the first character in the list as active.
+        """
+        if not self.members or len(self.members) == 0:
+            # Handle the case where there are no members in the party
+            raise NoMembersInPartyError("No members in party.")
+
+        current_active_index = self.get_character_index(self.active_character)
+        next_index = (current_active_index + 1) % len(self.members)
+        next_character = self.get_character_by_index(next_index)
+        self.set_active_character(next_character)
+        logger.debug(f"Set '{next_character.name}' as the next active character in the party.")
 
     def remove_character(self, character: PlayerCharacter):
         """Removes a character from the party.
