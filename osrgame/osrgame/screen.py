@@ -194,7 +194,7 @@ class ExploreScreen(Screen):
         dm_response = self.dungeon_master.start_session()
 
         # Move the party to the first location
-        first_exit = self.dungeon_master.adventure.active_dungeon.get_location(1).exits[0]
+        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
         dm_response = self.dungeon_master.move_party(first_exit.direction)
 
         player_log.clear()

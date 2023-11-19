@@ -117,7 +117,10 @@ def test_move():
 
 def test_random_dungeon():
     # Create a random dungeon
-    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
+    random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
+                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
+                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+                                                num_locations=20)
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()
@@ -129,7 +132,7 @@ def test_dungeon_graph_integrity():
     def dfs(location_id, visited):
         if location_id not in visited:
             visited.add(location_id)
-            location = dungeon.get_location(location_id)
+            location = dungeon.get_location_by_id(location_id)
             for exit in location.exits:
                 dfs(exit.destination, visited)
 

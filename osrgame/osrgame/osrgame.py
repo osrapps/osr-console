@@ -38,10 +38,13 @@ class OSRConsole(App):
         """Quit the application."""
         self.exit()
 
-    adventure = Adventure("Castle of the Copper Maiden")
-    adventure.introduction = "In the secluded vale of  Lurimara, the palace of Duchess Elara stood tall, crafted from moonlit alabaster echoing the brilliance of winter's dawn. This land, filled with creatures of whispered legends, flourished under Elara's watchful eyes, and was particularly famed for its intricate artifacts and armaments, at the heart of which was a gleaming sapphire termed 'The Luminous Gem.' On an evening bathed in starlight, during a majestic carnival, envy took root amidst celebration. Although the palace boasted chambers painted in hues of crimson and azure, and a terrace granting views of enchanting flora and lustrous vines, it was 'The Luminous Gem' that ensnared every gaze. Rumors speak of mages and sprites, consumed by its beauty, orchestrating its disappearance. When dawn broke, the sapphire was lost, and  Lurimara's peace with it. Now, wyvern's silhouettes darken the skies, with tales of a solitary knight astride it, in pursuit of the lost treasure, echoing through time."
+    adventure = Adventure("Whispers in the Mystic Forest")
+    adventure.introduction = "In the heart of the cursed Mystic Forest, a tale as old as time stirs once again. Legends speak of Glofarnux, an ancient wizard lich whose thirst for arcane knowledge knew no bounds. His lair, known as the Dungeon of the Mad Mage, has remained hidden for centuries, its entrance concealed within a secluded glade, untouched by the ravages of time. Brave adventurers are called to unravel the mysteries lying in the depths of this forgotten dungeon. Within its walls, echoes of the past mingle with the shadows of the present, challenging all who dare to uncover the secrets of Glofarnux and the arcane magic that pulsates through the very stones of the dungeon. Your journey begins at the edge of the Mystic Forest, where the line between myth and reality blurs, and the adventure of a lifetime awaits."
 
-    dungeon = Dungeon.get_random_dungeon(num_locations=20)
+    dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
+                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
+                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+                                                num_locations=20)
     dungeon.set_start_location(1)
 
     if dungeon.validate_location_connections():

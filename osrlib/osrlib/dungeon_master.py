@@ -1,22 +1,13 @@
 import os
 from dotenv import load_dotenv
 import openai
-from osrlib import Adventure, game_manager as gm
+from osrlib.adventure import Adventure
+from osrlib.game_manager import logger
+from osrlib.dungeon import Dungeon
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 openai_model = "gpt-4-1106-preview" #"gpt-4"
-
-# Error returned by the OpenAI API when access to the model is denied:
-#
-# data = {
-#         'error': {
-#         'message': 'The model `gpt-4` does not exist or you do not have access to it. Learn more: https://help.openai.com/en/articles/7102672-how-can-i-access-gpt-4.',
-#         'type': 'invalid_request_error',
-#         'param': None,
-#         'code': 'model_not_found'
-#     }
-# }
 
 dm_init_message = (
     "You're a skilled Dungeon Master with years of experience leading groups of Dungeons & Dragons players through exciting "
@@ -150,7 +141,7 @@ class DungeonMaster:
         )
         self.session_messages.append(completion.choices[0].message)
         self.started = True
-        gm.logger.debug(completion)
+        logger.debug(completion)
         return completion.choices[0].message["content"]
 
     def player_message(self, message):
@@ -160,7 +151,6 @@ class DungeonMaster:
                 model=openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
-            gm.logger.debug(completion)
             return completion.choices[0].message["content"]
 
     def move_party(self, direction) -> str:

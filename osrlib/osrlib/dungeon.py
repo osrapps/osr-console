@@ -6,6 +6,12 @@ from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
 
+import os
+from dotenv import load_dotenv
+import openai
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_model = "gpt-4-1106-preview" #"gpt-4"
 
 class Direction(Enum):
     """Enumeration for directions a player can go within a location.
@@ -295,7 +301,7 @@ class Dungeon:
             logger.exception(exception)
             raise exception
 
-    def get_location(self, location_id: int) -> Location:
+    def get_location_by_id(self, location_id: int) -> Location:
         """Returns the location with the specified ID.
 
         Args:
@@ -368,7 +374,7 @@ class Dungeon:
             for src_exit in src_loc.exits:
 
                 # Exit must lead to existing destination Location
-                dst_loc = self.get_location(src_exit.destination)
+                dst_loc = self.get_location_by_id(src_exit.destination)
                 if not dst_loc:
                     validation_error = DestinationLocationNotFoundError(
                         f"[L:{src_loc.id} {src_exit}] points to [L:{src_exit.destination}] which does NOT exist."
@@ -392,6 +398,49 @@ class Dungeon:
                     validation_errors.append(validation_error)
 
         return len(validation_errors) == 0
+
+    @staticmethod
+    def get_dungeon_location_keywords(dungeon: "Dungeon"):
+        """Get the keywords for each location in the dungeon from the OpenAI API.
+
+        Provided a ``Dungeon``, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
+        each location are formatted as a JSON collection and returned to the caller. The OpenAI language model uses the
+        description of the dungeon as context when generating the keywords so that they make sense in the context of the
+        dungeon's description and the other locations' keywords.
+
+        Returns:
+            None
+        """
+        system_message = [
+            {
+                "role": "system",
+                "content": "You are the Dungeon Master component in a turn-based RPG. You help players envision and "
+                "experience the environments they explore through your descriptions of the locations they visit. "
+                "You will be provided a dungeon's name, its description, and the number of locations in the dungeon. "
+                "Your task is to generate four descriptive keywords for each location that will help players "
+                "visualize and add the location to their map. Your response must be in JSON. You should consider the "
+                "dungeon's description and your previously generated locations' keywords to ensure a consistent theme "
+                "across the locations in the dungeon. Keep in mind that adjacent integers typically "
+                "represent adjacent locations in the dungeon, and their keywords should reflect that relationship."
+            },
+        ]
+        user_message = [
+            {
+                "role": "user",
+                "content": f"{dungeon.name}\n{dungeon.description}\n{len(dungeon.locations)}",
+            },
+        ]
+        logger.debug(f"Getting keywords for dungeon {dungeon.name} from OpenAI API...")
+        completion = openai.ChatCompletion.create(
+                model=openai_model,
+                response_format={ "type": "json_object" },
+                messages=system_message + user_message
+            )
+        llm_response = completion.choices[0].message["content"]
+
+        decoded_json_string = bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
+
+        return decoded_json_string
 
     @staticmethod
     def get_random_dungeon(name: str = "Random Dungeon", description: str = "", num_locations: int = 10) -> "Dungeon":
@@ -424,8 +473,10 @@ class Dungeon:
 
             locations.append(location)
 
+        # Only want to connect locations in the cardinal directions for random dungeons
         directions = [d for d in Direction if d not in (Direction.UP, Direction.DOWN)]
 
+        # Connect the locations with random exits
         for i in range(num_locations - 1):
             src = locations[i]
             dst = locations[i + 1]
@@ -446,7 +497,17 @@ class Dungeon:
         if description == "":
             description = f"A randomly generated dungeon with {num_locations} locations."
 
-        return Dungeon(name, description, locations)
+        dungeon = Dungeon(name, description, locations)
+
+        location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon)
+        location_keywords_dict = json.loads(location_keywords_json)
+        for location_id_str, keywords in location_keywords_dict.items():
+            location_id = int(location_id_str)
+            location = dungeon.get_location_by_id(location_id)
+            if location:
+                location.keywords = keywords
+
+        return dungeon
 
     def to_json(self):
         """Returns a JSON representation of the dungeon."""
