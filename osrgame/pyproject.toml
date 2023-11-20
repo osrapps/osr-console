@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "osrgame"
-version = "0.1.1"
+version = "0.1.2"
 description = "Text user interface (TUI) for OSR Console, a turn-based dungeon crawler RPG in the old-school renaissance style."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"
