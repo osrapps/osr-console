@@ -1,5 +1,5 @@
-import os
-from openai import OpenAI
+import asyncio
+from openai import OpenAI, AsyncOpenAI
 from osrlib.adventure import Adventure
 from osrlib.game_manager import logger
 
@@ -88,7 +88,7 @@ class DungeonMaster:
         self.session_messages = system_message + user_init_message
         self.is_started = False
 
-        self.client = OpenAI()
+        self.client = AsyncOpenAI()
         self.openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
 
     def format_user_message(self, message_string: str) -> dict:
@@ -118,7 +118,7 @@ class DungeonMaster:
         """
         return {"role": "user", "content": str(message_string)}
 
-    def start_session(self):
+    async def start_session(self):
         """Start a gaming session with the dungeon master in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
@@ -132,7 +132,7 @@ class DungeonMaster:
         if not self.adventure.is_started:
             self.adventure.start_adventure()
 
-        completion = self.client.chat.completions.create(
+        completion = await self.client.chat.completions.create(
             model=self.openai_model, messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
@@ -140,10 +140,10 @@ class DungeonMaster:
         logger.debug(completion)
         return completion.choices[0].message.content
 
-    def player_message(self, message):
+    async def player_message(self, message):
         if self.is_started:
             self.session_messages.append(message)
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 model=self.openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)

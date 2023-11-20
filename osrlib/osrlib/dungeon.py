@@ -1,8 +1,7 @@
 from typing import List
 from enum import Enum
-import random
-import json
-from openai import OpenAI
+import random, json, asyncio
+from openai import OpenAI, AsyncOpenAI
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
@@ -393,7 +392,7 @@ class Dungeon:
         return len(validation_errors) == 0
 
     @staticmethod
-    def get_dungeon_location_keywords(dungeon: "Dungeon"):
+    async def get_dungeon_location_keywords(dungeon: "Dungeon"):
         """Get the keywords for each location in the dungeon from the OpenAI API.
 
         Provided a ``Dungeon``, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
@@ -427,10 +426,10 @@ class Dungeon:
         ]
         logger.debug(f"Getting keywords for dungeon {dungeon.name} from OpenAI API...")
 
-        client = OpenAI()
+        client = AsyncOpenAI()
         openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
 
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
                 model=openai_model,
                 response_format={ "type": "json_object" },
                 messages=system_message + user_message

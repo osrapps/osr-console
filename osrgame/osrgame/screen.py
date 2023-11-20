@@ -208,10 +208,9 @@ class ExploreScreen(Screen):
 
         player_log.clear()
         player_log.write_line("The party stands ready.")
-        player_log.write_line("---")
+        dm_log.write_line("---")
         dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
         dm_log.write_line(wrap_text(dm_response))
-        dm_log.write_line("---")
 
     def action_quit(self) -> None:
         """Quit the application."""
@@ -220,29 +219,36 @@ class ExploreScreen(Screen):
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
         """Move the party in the specified direction, execute battle (if any), and log the results."""
 
-        self.query_one("#player_log").write_line(log_message)
         self.query_one("#player_log").write_line("---")
+        self.query_one("#player_log").write_line(log_message)
+
         dm_response = self.dungeon_master.move_party(direction)
+
+        self.query_one("#dm_log").write_line("---")
         self.query_one("#dm_log").write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.query_one("#dm_log").write_line(" ")
+
         self.check_for_encounter()
-        self.query_one("#dm_log").write_line("---")
 
     def check_for_encounter(self) -> None:
         """Check for an encounter and execute battle if there are monsters in the encounter."""
         if self.dungeon_master.adventure.active_dungeon.current_location.encounter and not self.dungeon_master.adventure.active_dungeon.current_location.encounter.is_ended:
-
             encounter = self.dungeon_master.adventure.active_dungeon.current_location.encounter
+
+            self.query_one("#dm_log").write_line("> Encounter!")
+
+            # TODO: Check whether monsters were surprised, and if so, give the player a chance to flee.
+            self.query_one("#player_log").write_line("Fight!")
+
             encounter.start_encounter(self.dungeon_master.adventure.active_party)
             encounter_log = encounter.get_encounter_log()
-
-            self.query_one("#dm_log").write_line("---")
             dm_response = self.dungeon_master.summarize_battle(encounter_log)
             self.query_one("#dm_log").write_line(wrap_text(dm_response))
+            self.query_one("#dm_log").write_line(" ")
 
-            self.query_one("#player_log").write_line("Encounter!")
-            self.query_one("#player_log").write_line(str(self.dungeon_master.adventure.active_party))
-            self.query_one("#player_log").write_line("---")
+            self.query_one("#dm_log").write_line("> Party status:")
+            self.query_one("#dm_log").write_line(str(self.dungeon_master.adventure.active_party))
 
     def action_move_north(self) -> None:
         """Move the party north."""
