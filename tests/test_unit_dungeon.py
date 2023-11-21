@@ -120,7 +120,20 @@ def test_random_dungeon():
     random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
                                                 "The first level of the home of the ancient wizard lich Glofarnux, its "
                                                 "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                num_locations=20)
+                                                num_locations=20, use_ai=False)
+
+    # Validate Dungeon
+    assert random_dungeon.validate_location_connections()
+
+@pytest.mark.optin
+@pytest.mark.flaky(reruns=0, reruns_delay=0)
+@pytest.mark.integration
+def test_random_dungeon_ai():
+    # Create a random dungeon
+    random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
+                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
+                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+                                                num_locations=20, use_ai=True)
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()

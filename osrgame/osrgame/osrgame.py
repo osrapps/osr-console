@@ -44,7 +44,7 @@ class OSRConsole(App):
     dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
                                                 "The first level of the home of the ancient wizard lich Glofarnux, its "
                                                 "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                num_locations=50)
+                                                num_locations=50, use_ai=True)
     dungeon.set_start_location(1)
 
     if dungeon.validate_location_connections():

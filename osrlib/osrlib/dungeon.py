@@ -1,17 +1,10 @@
 from typing import List
 from enum import Enum
-import random
-import json
+import random, json, asyncio
+from openai import OpenAI, AsyncOpenAI
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
-
-import os
-from dotenv import load_dotenv
-import openai
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-openai_model = "gpt-4-1106-preview" #"gpt-4"
 
 class Direction(Enum):
     """Enumeration for directions a player can go within a location.
@@ -399,7 +392,7 @@ class Dungeon:
         return len(validation_errors) == 0
 
     @staticmethod
-    def get_dungeon_location_keywords(dungeon: "Dungeon"):
+    async def get_dungeon_location_keywords(dungeon: "Dungeon"):
         """Get the keywords for each location in the dungeon from the OpenAI API.
 
         Provided a ``Dungeon``, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
@@ -419,8 +412,10 @@ class Dungeon:
                 "Your task is to generate four descriptive keywords for each location that will help players "
                 "visualize and add the location to their map. Your response must be in JSON. You should consider the "
                 "dungeon's description and your previously generated locations' keywords to ensure a consistent theme "
-                "across the locations in the dungeon. Keep in mind that adjacent integers typically "
-                "represent adjacent locations in the dungeon, and their keywords should reflect that relationship."
+                "across the locations in the dungeon. Keep in mind that adjacent integers typically represent adjacent "
+                "locations in the dungeon, and their keywords should reflect that relationship. The JSON response "
+                "should be a collection of key-value pairs where the key is the location ID and the value is the "
+                "collection of keywords for that location. The JSON must include keywords for every location."
             },
         ]
         user_message = [
@@ -430,15 +425,19 @@ class Dungeon:
             },
         ]
         logger.debug(f"Getting keywords for dungeon {dungeon.name} from OpenAI API...")
-        completion = openai.ChatCompletion.create(
+
+        client = AsyncOpenAI()
+        openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
+
+        completion = await client.chat.completions.create(
                 model=openai_model,
                 response_format={ "type": "json_object" },
                 messages=system_message + user_message
             )
-        llm_response = completion.choices[0].message["content"]
+        llm_response = completion.choices[0].message.content
 
         decoded_json_string = bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
-
+        logger.debug(f"Keywords for dungeon {dungeon.name} from OpenAI API: {decoded_json_string}")
         return decoded_json_string
 
     @staticmethod

@@ -1,13 +1,7 @@
-import os
-from dotenv import load_dotenv
-import openai
+import asyncio
+from openai import OpenAI, AsyncOpenAI
 from osrlib.adventure import Adventure
 from osrlib.game_manager import logger
-from osrlib.dungeon import Dungeon
-
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-openai_model = "gpt-4-1106-preview" #"gpt-4"
 
 dm_init_message = (
     "You're a skilled Dungeon Master with years of experience leading groups of Dungeons & Dragons players through exciting "
@@ -84,16 +78,18 @@ class DungeonMaster:
 
     Attributes:
         adventure (Adventure): The adventure the DungeonMaster is running.
-        system_message (list): The OpenAI `system` role message sent to the OpenAI API at the beginning of a session.
-        init_message (list): The initial OpenAI `user` role message sent to the OpenAI API at the beginning of a session.
         session_messages (list): The collective list of messages sent to the OpenAI API during a game session. Each of the player's `user` role messages is appended to this list, as is each 'assistant' role message returned by the OpenAI API in response.
+        is_started (bool): Indicates whether the game session has started. The game session starts upon first call to the `start_session()` method.
     """
     def __init__(self, adventure: Adventure):
         self.adventure = adventure
-        self.system_message = system_message
-        self.system_message[0]["content"] += adventure.introduction
-        self.user_message = user_init_message
-        self.session_messages = self.system_message + self.user_message
+
+        system_message[0]["content"] += adventure.introduction
+        self.session_messages = system_message + user_init_message
+        self.is_started = False
+
+        self.client = AsyncOpenAI()
+        self.openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
 
     def format_user_message(self, message_string: str) -> dict:
         """Format the given string as an OpenAI 'user' role message.
@@ -122,7 +118,7 @@ class DungeonMaster:
         """
         return {"role": "user", "content": str(message_string)}
 
-    def start_session(self):
+    async def start_session(self):
         """Start a gaming session with the dungeon master in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
@@ -136,22 +132,22 @@ class DungeonMaster:
         if not self.adventure.is_started:
             self.adventure.start_adventure()
 
-        completion = openai.ChatCompletion.create(
-            model=openai_model, messages=self.session_messages
+        completion = await self.client.chat.completions.create(
+            model=self.openai_model, messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
-        self.started = True
+        self.is_started = True
         logger.debug(completion)
-        return completion.choices[0].message["content"]
+        return completion.choices[0].message.content
 
-    def player_message(self, message):
-        if self.started:
+    async def player_message(self, message):
+        if self.is_started:
             self.session_messages.append(message)
-            completion = openai.ChatCompletion.create(
-                model=openai_model, messages=self.session_messages
+            completion = await self.client.chat.completions.create(
+                model=self.openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
-            return completion.choices[0].message["content"]
+            return completion.choices[0].message.content
 
     def move_party(self, direction) -> str:
         new_location = self.adventure.active_dungeon.move(direction)
