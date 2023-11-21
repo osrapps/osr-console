@@ -1,6 +1,6 @@
 from osrlib.game_manager import logger
-from osrlib.dice_roller import DiceRoll, roll_dice
 from osrlib.dungeon import Dungeon
+from osrlib.party import Party
 from osrlib.quest import Quest
 
 
@@ -87,7 +87,6 @@ class Adventure:
         self.active_dungeon = dungeon
         logger.debug(f"Set active dungeon to {dungeon.name}.")
 
-
     def set_active_party(self, party):
         """Set the party of player characters that will play through the adventure.
 
@@ -104,6 +103,45 @@ class Adventure:
         """
         self.is_started = True
         logger.debug(f"Started adventure {self.name}.")
+
+    def to_dict(self):
+        """Convert the adventure to a dict.
+
+        Returns:
+            dict: A dict representation of the adventure.
+        """
+        adventure_dict = {
+            "name": self.name,
+            "description": self.description,
+            "introduction": self.introduction,
+            "dungeons": [dungeon.to_dict() for dungeon in self.dungeons],
+            "active_dungeon": self.active_dungeon.to_dict(),
+            "active_party": self.active_party.to_dict(),
+            #"quests": [quest.to_dict() for quest in self.quests],
+        }
+        return adventure_dict
+
+
+    @classmethod
+    def from_dict(cls, adventure_dict):
+        """Convert a dict to an adventure.
+
+        Args:
+            adventure_dict (dict): A dict representation of the adventure.
+        """
+        name = adventure_dict["name"]
+        description = adventure_dict["description"]
+        introduction = adventure_dict["introduction"]
+        dungeons = [Dungeon.from_dict(dungeon_dict) for dungeon_dict in adventure_dict["dungeons"]]
+        active_dungeon = Dungeon.from_dict(adventure_dict["active_dungeon"])
+        active_party = Party.from_dict(adventure_dict["active_party"])
+        #quests = [Quest.from_dict(quest_dict) for quest_dict in adventure_dict["quests"]] # TODO: Implement quests
+
+        adventure_from_dict = cls(name, description, introduction, dungeons)
+        adventure_from_dict.set_active_party(active_party)
+        adventure_from_dict.set_active_dungeon(active_dungeon)
+
+        return adventure_from_dict
 
     def end_adventure(self):
         """End the adventure.

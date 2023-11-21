@@ -425,7 +425,7 @@ class Dungeon:
                 "locations in the dungeon, and their keywords should reflect that relationship. The JSON response "
                 "should be a collection of key-value pairs where the key is the location ID and the value is the "
                 "collection of keywords for that location. The JSON must include keywords for every location and no two "
-                "locations should have the same keywords."
+                "locations should have the same keywords. Every location must have four keywords."
             },
         ]
         user_message = [
@@ -434,7 +434,7 @@ class Dungeon:
                 "content": f"{dungeon.name}\n{dungeon.description}\n{len(dungeon.locations)}",
             },
         ]
-        logger.debug(f"Getting keywords for dungeon {dungeon.name} from OpenAI API...")
+        logger.debug(f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API...")
 
         client = AsyncOpenAI()
         openai_model = "gpt-3.5-turbo-1106"  # "gpt-4-1106-preview" #"gpt-4"

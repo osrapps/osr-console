@@ -177,21 +177,29 @@ class Encounter:
 
     def to_dict(self):
         """Return a dictionary representation of the encounter."""
-        return {
+        encounter_dict = {
             "name": self.name,
             "description": self.description,
             "monsters": self.monster_party.to_dict(),
             "treasure": self.treasure,
         }
+        return encounter_dict
 
-    def from_dict(cls, data):
+    @classmethod
+    def from_dict(cls, encounter_dict: dict):
         """Create an encounter from a dictionary representation of the encounter."""
-        return cls(
-            name=data["name"],
-            description=data["description"],
-            monster_party=MonsterParty.from_dict(data["monsters"]),
-            treasure=data["treasure"],
+        name=encounter_dict["name"],
+        description=encounter_dict["description"],
+        monster_party=MonsterParty.from_dict(encounter_dict["monsters"]),
+        treasure=encounter_dict["treasure"],
+
+        encounter = cls(
+            name,
+            description,
+            monster_party,
+            treasure,
         )
+        return encounter
 
     @staticmethod
     def get_random_encounter(dungeon_level: int):

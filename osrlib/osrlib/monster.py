@@ -54,24 +54,29 @@ monster_thac0 = {
     "21+ or more": 5,
 }
 
+
 class MonsterStatsBlock:
-    """Specifies the statistics of the monsters in a monster party.
+    """
+    Initialize a new MonsterStatsBlock instance with monster statistics.
 
-    Pass a MonsterStatBlock instance to the MonsterParty constructor to create a new
-    MonsterParty instance appropriate for populating an Encounter's monster_party attribute.
-
-    Attributes:
+    Args:
         name (str): The name of the monster.
-        description (str): The monster's description.
-        armor_class (int): The monster's armor class (AC). Lower is better.
-        hit_dice (str): The monster's hit dice in "nd8" or "nd8+n" format, for example '1d8', '1d8+2', '3d8'). Default is '1d8'.
-        movement (int): The monster's movement rate in feet per round. Default is 120.
-        num_special_abilities (int): The special ability count of the monster; this value corresponds to the number of asterisks after the monster's hit dice in the Basic and Expert rule books. Default is 0.
-        attacks_per_round (int): The number of attacks the monster can make per round. Default is 1.
-        damage_per_attack (str): The damage the monster does per attack in "ndn" or "ndn+n" format, for example '1d4', '1d4+2', '3d4'). Default is '1d4'.
-        num_appearing (int): The number of monsters in the monster party. Default is 1-6 (1d6).
-        save_as_class (CharacterClassType): The character class type the monster saves as. Default is CharacterClassType.FIGHTER.
-        save_as_level (int): The level of the character class the monster saves as. Default is 1.
+        description (str): A description of the monster.
+        armor_class (int): The armor class (AC) of the monster. Lower values represent better defense.
+        hit_dice (str): The hit dice of the monster in the format 'nd8' or 'nd8+n' (e.g., '1d8', '1d8+2').
+        movement (int): The movement rate of the monster in feet per round.
+        num_special_abilities (int): Count of special abilities of the monster, typically denoted by asterisks in rule books.
+        attacks_per_round (int): The number of attacks the monster can perform in one round.
+        damage_per_attack (str): Damage dealt per attack, in the format 'ndn' or 'ndn+n' (e.g., '1d4', '1d4+2').
+        num_appearing (str): A dice string representing the number of monsters appearing, rolled to determine the actual number.
+        save_as_class (CharacterClassType): The class type the monster uses for saving throws.
+        save_as_level (int): The level at which the monster makes saving throws.
+        morale (int): Morale value of the monster, used in morale checks during combat.
+        treasure_type (TreasureType): Type of treasure the monster carries or guards.
+        alignment (Alignment): The alignment (moral and ethical stance) of the monster.
+
+    The 'num_appearing' parameter is a dice string which will be rolled to determine the actual number of monsters appearing.
+    The rolled value is stored separately for use in game mechanics.
     """
 
     def __init__(
@@ -81,13 +86,13 @@ class MonsterStatsBlock:
         armor_class: int = 10,
         hit_dice: str = "1d8",
         movement: int = 120,
-        num_special_abilities=0, # corresponds to the number of asterisks on the monster's hit dice
-        attacks_per_round=1, # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
+        num_special_abilities=0,  # corresponds to the number of asterisks on the monster's hit dice
+        attacks_per_round=1,  # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
         damage_per_attack="1d4",
         num_appearing="1d6",
         save_as_class=CharacterClassType.FIGHTER,
         save_as_level=1,
-        morale: int = 12, # roll 2d6, if result is higher than this, monster flees
+        morale: int = 12,  # roll 2d6, if result is higher than this, monster flees
         treasure_type=TreasureType.NONE,
         alignment=Alignment.NEUTRAL,
     ):
@@ -100,12 +105,65 @@ class MonsterStatsBlock:
         self.num_special_abilities = num_special_abilities
         self.attacks_per_round = attacks_per_round
         self.damage_per_attack = damage_per_attack
-        self.num_appearing = roll_dice(num_appearing).total_with_modifier
+        self.num_appearing_dice_string = num_appearing
+        self.num_appearing = roll_dice(self.num_appearing_dice_string).total_with_modifier
         self.save_as_class = save_as_class
         self.save_as_level = save_as_level
         self.morale = morale
         self.treasure_type = treasure_type
         self.alignment = alignment
+
+    def to_dict(self):
+        """Convert the MonsterStatsBlock instance to a dictionary.
+
+        This method serializes the MonsterStatsBlock instance into a dictionary format, suitable for JSON serialization or
+        storage in a database. Enum attributes are converted to their string names for portability. The num_appearing
+        attribute uses its original dice string value so it can be rolled again when the monster party is created.
+
+        Returns:
+            dict: A dictionary representation of the MonsterStatsBlock instance.
+        """
+        return {
+            "name": self.name,
+            "description": self.description,
+            "armor_class": self.armor_class,
+            "hit_dice": self.hit_dice,
+            "movement": self.movement,
+            "num_special_abilities": self.num_special_abilities,
+            "attacks_per_round": self.attacks_per_round,
+            "damage_per_attack": self.damage_per_attack,
+            "num_appearing": self.num_appearing_dice_string, # Save the dice string so it's rolled again when the monster party is created
+            "save_as_class": self.save_as_class.name, # Enum to string (we deserialize the string back to an enum in the from_dict method)
+            "save_as_level": self.save_as_level,
+            "morale": self.morale,
+            "treasure_type": self.treasure_type.name, # Enum to string (we deserialize the string back to an enum in the from_dict method
+            "alignment": self.alignment.name, # Enum to string (we deserialize the string back to an enum in the from_dict method
+        }
+
+    @classmethod
+    def from_dict(cls, monster_stats_block_dict: dict):
+        """Create a MonsterStatsBlock instance from a dictionary.
+
+        This class method deserializes a dictionary into a MonsterStatsBlock instance. It expects keys that correspond to
+        the initializer arguments of the class. Enum strings are converted back to their respective enum types.
+
+        Args:
+            monster_stats_block_dict (dict): A dictionary containing key-value pairs of monster attributes.
+
+        Returns:
+            MonsterStatsBlock: An instance of MonsterStatsBlock initialized with the provided attributes.
+
+        Raises:
+            KeyError: If an expected key is missing in the input dictionary.
+            ValueError: If an enum conversion fails or invalid data is provided.
+
+        To ensure compatibility,use this method with dictionariespreviously created with the `to_dict` method.
+        """
+        monster_stats_block_dict['save_as_class'] = CharacterClassType[monster_stats_block_dict['save_as_class']]
+        monster_stats_block_dict['treasure_type'] = TreasureType[monster_stats_block_dict['treasure_type']]
+        monster_stats_block_dict['alignment'] = Alignment[monster_stats_block_dict['alignment']]
+
+        return cls(**monster_stats_block_dict)
 
 
 class Monster:
@@ -125,13 +183,14 @@ class Monster:
         self.attacks_per_round = monster_stats.attacks_per_round
         self.damage_per_attack = monster_stats.damage_per_attack
         self.saving_throws = get_saving_throws_for_class_and_level(
-            monster_stats.save_as_class,
-            monster_stats.save_as_level
-        ) # TODO: Instead of populating a saving_throws property, maybe we call a function in saving_throws to make the saving throw check?
+            monster_stats.save_as_class, monster_stats.save_as_level
+        )  # TODO: Instead of populating a saving_throws property, maybe we call a function in saving_throws to make the saving throw check?
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
 
-        self.xp_value = self._calculate_xp(self.hp_roll, monster_stats.num_special_abilities)
+        self.xp_value = self._calculate_xp(
+            self.hp_roll, monster_stats.num_special_abilities
+        )
 
     def _calculate_xp(self, hp_roll: DiceRoll, num_special_abilities: int = 0):
         """Get the total XP value of the monster. The XP value is based on the monster's hit dice and number of special abilities.
@@ -192,7 +251,9 @@ class Monster:
     def get_initiative_roll(self):
         """Rolls a 1d6 and returns the total for the monster's initiative."""
         roll = roll_dice("1d6")
-        logger.debug(f"{self.name} rolled {roll} for initiative and got {roll.total_with_modifier}.")
+        logger.debug(
+            f"{self.name} rolled {roll} for initiative and got {roll.total_with_modifier}."
+        )
         return roll.total_with_modifier
 
     def get_to_hit_target_ac(self, target_ac: int) -> int:
@@ -206,8 +267,12 @@ class Monster:
             thac0_key = f"{self.hp_roll.num_dice - 1}+ to {self.hp_roll.num_dice}"
 
         thac0 = monster_thac0[thac0_key]
-        needed_to_hit = max(thac0 - target_ac, 2) # 1 always misses, so 2 is the lowest to-hit value possible
-        logger.debug(f"{self.name} THAC0: {thac0} ({thac0_key}) | To hit target AC {target_ac}: {needed_to_hit}")
+        needed_to_hit = max(
+            thac0 - target_ac, 2
+        )  # 1 always misses, so 2 is the lowest to-hit value possible
+        logger.debug(
+            f"{self.name} THAC0: {thac0} ({thac0_key}) | To hit target AC {target_ac}: {needed_to_hit}"
+        )
 
         return needed_to_hit
 
@@ -249,39 +314,6 @@ class Monster:
             new_hp = self.hit_points + hit_points_healed
             self.hit_points = min(new_hp, self.max_hit_points)
 
-    def to_dict(self):
-        """Return a dictionary representation of the monster."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "armor_class": self.armor_class,
-            #"hit_points": self.hit_points,
-            #"max_hit_points": self.max_hit_points,
-            "movement": self.movement,
-            "attacks_per_round": self.attacks_per_round,
-            "damage_per_attack": self.damage_per_attack,
-            #"saving_throws": self.saving_throws,
-            "morale": self.morale,
-            "alignment": self.alignment.value,
-            #"xp_value": self.xp_value,
-        }
-
-    def from_dict(cls, data):
-        return cls(
-            name=data["name"],
-            description=data["description"],
-            armor_class=data["armor_class"],
-            #hit_points=data["hit_points"],
-            #max_hit_points=data["max_hit_points"],
-            movement=data["movement"],
-            attacks_per_round=data["attacks_per_round"],
-            damage_per_attack=data["damage_per_attack"],
-            #saving_throws=data["saving_throws"],
-            morale=data["morale"],
-            alignment=data["alignment"],
-            #xp_value=data["xp_value"],
-        )
-
 
 class MonsterParty:
     """A group of monsters the party can encounter in a dungeon location.
@@ -291,23 +323,24 @@ class MonsterParty:
         is_alive (bool): True if at least one monster in the monster party is alive, otherwise False.
     """
 
-    def __init__(self, monster_stat_block: MonsterStatsBlock):
+    def __init__(self, monster_stats_block: MonsterStatsBlock):
         """Initialize a new MonsterParty instance.
 
         The number of monsters that comprise the monster party, as well as hit points, armor class, and other
-        statistics are determined by the given MonsterStatBlock.
+        statistics are determined by the given MonsterStatsBlock.
 
         Args:
-            monster_stat_block (MonsterStatBlock): The stat block for the monsters in the party.
+            monster_stats_block (MonsterStatsBlock): The stat block for the monsters in the party.
         """
+        self.monster_stats_block = monster_stats_block
         self.members = [
-            Monster(monster_stat_block)
+            Monster(monster_stats_block)
             for _ in range(
-                #roll_dice(monster_stat_block.num_appearing).total_with_modifier
-                monster_stat_block.num_appearing
+                # roll_dice(monster_stats_block.num_appearing).total_with_modifier
+                monster_stats_block.num_appearing
             )
         ]
-        self.treasure = self._get_treasure(monster_stat_block.treasure_type)
+        self.treasure = self._get_treasure(monster_stats_block.treasure_type)
         self.is_surprised = False
 
     def _get_treasure(self, treasure_type: TreasureType):
@@ -388,25 +421,21 @@ class MonsterParty:
             int: The total XP value of the monster party.
         """
         monster_xp = sum(monster.xp_value for monster in self.members)
-        treasure_xp = 0 # TODO: sum(item.xp_value for item in self.treasure)
+        treasure_xp = 0  # TODO: sum(item.xp_value for item in self.treasure)
         return monster_xp + treasure_xp
 
     def get_surprise_roll(self) -> int:
         """Rolls a 1d6 and returns the total for the monster party's surprise roll."""
         roll = roll_dice("1d6")
-        logger.debug(f"Monster party rolled {roll} for surprise and got {roll.total_with_modifier}.")
+        logger.debug(
+            f"Monster party rolled {roll} for surprise and got {roll.total_with_modifier}."
+        )
         return roll.total_with_modifier
 
     def to_dict(self):
-        """Return a dictionary representation of the monster party."""
-        return {
-            "members": [member.to_dict() for member in self.members],
-            "treasure": self.treasure,
-        }
+        """Return a dictionary representation of the monster party's MonsterStatsBlock."""
+        return self.monster_stats_block.to_dict()
 
     @classmethod
-    def from_dict(cls, data):
-        return cls(
-            members=[Monster.from_dict(member) for member in data["members"]],
-            treasure=data["treasure"],
-        )
+    def from_dict(cls, monster_stats_block_dict: dict):
+        return cls(monster_stats_block_dict)

@@ -464,7 +464,7 @@ class Party:
         return party_dict
 
     @classmethod
-    def from_dict(cls, party_dict):
+    def from_dict(cls, party_dict: dict):
         characters_from_dict = [
             PlayerCharacter.from_dict(character_dict)
             for character_dict in party_dict["characters"]
