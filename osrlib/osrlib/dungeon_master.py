@@ -126,7 +126,7 @@ class DungeonMaster:
         If it's not the first session of the adventure, only the system and user init messages are sent.
 
         Returns:
-            str: The response from the Dungeon Master (in this case, the OpenAI API) when initiating game session. This string is appropriate for display to the player.
+            str: The response from the Dungeon Master (in this case, the OpenAI API) when initiating a game session. This string is appropriate for display to the player.
         """
 
         if not self.adventure.is_started:
