@@ -4,16 +4,10 @@ The tests include starting a session and moving the party in a dungeon.
 The tests expect an OPENAI_API_KEY environment variable has been set.
 """
 import pytest
-import os
-import openai
 from osrlib.dungeon import Dungeon, Location, Exit, Direction
 from osrlib.dungeon_master import DungeonMaster
 from osrlib.adventure import Adventure
-from osrlib import game_manager as gm
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from osrlib.game_manager import logger
 
 @pytest.mark.optin
 @pytest.mark.flaky(reruns=0, reruns_delay=0)
@@ -24,7 +18,7 @@ def test_dungeon_master_start_session_real_api():
     dm = DungeonMaster(adventure)
 
     message = dm.start_session()
-    gm.logger.info(message)
+    logger.debug(message)
     assert len(message) > 0
 
 @pytest.mark.optin
@@ -44,21 +38,21 @@ def test_dungeon_master_move_party():
     dm = DungeonMaster(adventure)
 
     message = dm.start_session()
-    gm.logger.info(message)
+    logger.debug(message)
     assert len(message) > 0
 
     loc_desc = dm.move_party(Direction.NORTH)
-    gm.logger.info(loc_desc)
+    logger.debug(loc_desc)
     assert len(loc_desc) > 0
 
     loc_desc = dm.move_party(Direction.NORTH)
-    gm.logger.info(loc_desc)
+    logger.debug(loc_desc)
     assert len(loc_desc) > 0
 
     loc_desc = dm.move_party(Direction.NORTH)
-    gm.logger.info(loc_desc)
+    logger.debug(loc_desc)
     assert len(loc_desc) > 0
 
     loc_desc = dm.move_party(Direction.SOUTH)
-    gm.logger.info(loc_desc)
+    logger.debug(loc_desc)
     assert len(loc_desc) > 0

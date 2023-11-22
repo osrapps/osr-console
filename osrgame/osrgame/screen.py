@@ -3,6 +3,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
+from osrlib.adventure import Adventure
 from osrlib.dungeon_master import DungeonMaster
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
@@ -178,9 +179,12 @@ class ExploreScreen(Screen):
         ("w", "move_west", "West"),
         ("k", "clear_logs", "Clear logs"),
         ("?", "summarize", "Summarize session"),
+        ("ctrl+s", "save_game", "Save game"),
+        ("ctrl+l", "load_game", "Load game"),
     ]
 
     dungeon_master = None
+    save_path = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -192,29 +196,6 @@ class ExploreScreen(Screen):
         self.query_one("#player_log", Log).border_title = "COMMAND LOG"
         self.query_one("#dm_log", Log).border_subtitle = "ADVENTURE LOG"
         self.query_one("#player_log", Log).write_line("Press 'b' to begin a new session.")
-
-    def action_start_session(self) -> None:
-        """Start a new session."""
-
-        player_log = self.query_one("#player_log")
-        dm_log = self.query_one("#dm_log")
-
-        self.dungeon_master = DungeonMaster(self.app.adventure)
-        dm_response = self.dungeon_master.start_session()
-
-        # Move the party to the first location
-        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
-        dm_response = self.dungeon_master.move_party(first_exit.direction)
-
-        player_log.clear()
-        player_log.write_line("The party stands ready.")
-        dm_log.write_line("---")
-        dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
-        dm_log.write_line(wrap_text(dm_response))
-
-    def action_quit(self) -> None:
-        """Quit the application."""
-        self.app.exit()
 
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
         """Move the party in the specified direction, execute battle (if any), and log the results."""
@@ -249,6 +230,29 @@ class ExploreScreen(Screen):
 
             self.query_one("#dm_log").write_line("> Party status:")
             self.query_one("#dm_log").write_line(str(self.dungeon_master.adventure.active_party))
+
+    def action_start_session(self) -> None:
+        """Start a new session."""
+
+        player_log = self.query_one("#player_log")
+        dm_log = self.query_one("#dm_log")
+
+        self.dungeon_master = DungeonMaster(self.app.adventure)
+        dm_response = self.dungeon_master.start_session()
+
+        # Move the party to the first location
+        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
+        dm_response = self.dungeon_master.move_party(first_exit.direction)
+
+        player_log.clear()
+        player_log.write_line("The party stands ready.")
+        dm_log.write_line("---")
+        dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
+        dm_log.write_line(wrap_text(dm_response))
+
+    def action_quit(self) -> None:
+        """Quit the application."""
+        self.app.exit()
 
     def action_move_north(self) -> None:
         """Move the party north."""
@@ -287,6 +291,27 @@ class ExploreScreen(Screen):
         dm_response = self.dungeon_master.player_message(formatted_message)
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("===")
+
+    def action_save_game(self) -> None:
+        """An action to save the game."""
+        self.query_one("#player_log").write_line("> Save adventure")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line("> Saving adventure...")
+        self.save_path = self.dungeon_master.adventure.save_adventure()
+        self.query_one("#dm_log").write_line(f"Adventure {self.dungeon_master.adventure.name} saved to {self.save_path}.")
+        self.query_one("#dm_log").write_line("===")
+
+    def action_load_game(self) -> None:
+        """An action to save the game."""
+        self.query_one("#player_log").write_line("> Load adventure")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line("> Loading adventure...")
+        if self.save_path is None:
+            self.query_one("#dm_log").write_line("No save path found.")
+        else:
+            loaded_adventure = Adventure.load_adventure(self.save_path)
+            self.dungeon_master.adventure = loaded_adventure
+            self.query_one("#dm_log").write_line(f"Adventure {loaded_adventure.name} loaded from {self.save_path}.")
 
 
 ####################

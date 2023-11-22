@@ -4,6 +4,19 @@ from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundE
 from osrlib.encounter import Encounter
 from osrlib.game_manager import logger
 
+
+@pytest.fixture
+def sample_dungeon():
+    # Create a simple dungeon with a couple of locations and exits
+    location1 = Location(1, exits=[Exit(Direction.NORTH, 2)])
+    location2 = Location(2, exits=[Exit(Direction.SOUTH, 1)])
+    return Dungeon(
+        name="Test Dungeon",
+        description="A simple test dungeon.",
+        locations=[location1, location2],
+    )
+
+
 # --- Test Exit class ---
 
 
@@ -27,7 +40,9 @@ def test_exit_lock_unlock():
 
 def test_location_initialization():
     exit_north = Exit(Direction.NORTH, 1)
-    encounter = Encounter("Test Encounter", "A test encounter in a test location in a test dungeon.")
+    encounter = Encounter(
+        "Test Encounter", "A test encounter in a test location in a test dungeon."
+    )
     location = Location(1, 10, 10, [exit_north], ["keyword1"], encounter)
 
     assert location.id == 1
@@ -74,8 +89,8 @@ def test_location_json():
 
 def test_dungeon_initialization():
     exit_north = Exit(Direction.NORTH, 1)
-    encounter = (
-        Encounter("Test Encounter", "A test encounter in a test location in a test dungeon.")
+    encounter = Encounter(
+        "Test Encounter", "A test encounter in a test location in a test dungeon."
     )
     location1 = Location(1, 10, 10, [exit_north], ["keyword1"], encounter)
     location2 = Location(2, 6, 6, [], ["keyword2"], None)
@@ -117,23 +132,30 @@ def test_move():
 
 def test_random_dungeon():
     # Create a random dungeon
-    random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
-                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
-                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                num_locations=20, use_ai=False)
+    random_dungeon = Dungeon.get_random_dungeon(
+        "Dungeon of the Mad Mage",
+        "The first level of the home of the ancient wizard lich Glofarnux, its "
+        "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+        num_locations=20,
+        use_ai=False,
+    )
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()
+
 
 @pytest.mark.optin
 @pytest.mark.flaky(reruns=0, reruns_delay=0)
 @pytest.mark.integration
 def test_random_dungeon_ai():
     # Create a random dungeon
-    random_dungeon = Dungeon.get_random_dungeon("Dungeon of the Mad Mage",
-                                                "The first level of the home of the ancient wizard lich Glofarnux, its "
-                                                "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                num_locations=20, use_ai=True)
+    random_dungeon = Dungeon.get_random_dungeon(
+        "Dungeon of the Mad Mage",
+        "The first level of the home of the ancient wizard lich Glofarnux, its "
+        "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+        num_locations=20,
+        use_ai=True,
+    )
 
     # Validate Dungeon
     assert random_dungeon.validate_location_connections()
@@ -157,7 +179,10 @@ def test_dungeon_graph_integrity():
             all_locations_reachable = False
             break  # If one fails, no need to continue testing others
 
-    assert all_locations_reachable, "Not all locations are reachable from every other location."
+    assert (
+        all_locations_reachable
+    ), "Not all locations are reachable from every other location."
+
 
 def test_dungeon_json():
     # Create a random dungeon
@@ -169,3 +194,48 @@ def test_dungeon_json():
 
     # Parse it back to Python object
     dungeon_dict = json.loads(dungeon_json)
+
+
+def test_dungeon_to_dict(sample_dungeon):
+    dungeon_dict = sample_dungeon.to_dict()
+
+    # Verify that the dungeon attributes are correctly serialized
+    assert dungeon_dict["name"] == "Test Dungeon"
+    assert dungeon_dict["description"] == "A simple test dungeon."
+    assert len(dungeon_dict["locations"]) == 2
+
+    # Verify the serialization of locations and exits
+    for location, location_dict in zip(sample_dungeon.locations, dungeon_dict["locations"]):
+        assert location_dict["id"] == location.id
+        assert location_dict["dimensions"] == location.dimensions
+        assert len(location_dict["exits"]) == len(location.exits)
+
+        # Verify each exit in the location
+        for exit, exit_dict in zip(location.exits, location_dict["exits"]):
+            assert exit_dict["direction"] == exit.direction.value
+            assert exit_dict["destination"] == exit.destination
+            assert exit_dict["locked"] == exit.locked
+
+
+def test_dungeon_from_dict(sample_dungeon):
+    dungeon_dict = sample_dungeon.to_dict()
+
+    # Deserialize the dictionary back into a Dungeon instance
+    rehydrated_dungeon = Dungeon.from_dict(dungeon_dict)
+
+    # Verify that the rehydrated dungeon has the same attributes as the original
+    assert rehydrated_dungeon.name == sample_dungeon.name
+    assert rehydrated_dungeon.description == sample_dungeon.description
+    assert len(rehydrated_dungeon.locations) == len(sample_dungeon.locations)
+
+    # Verify the integrity of locations and exits
+    for original_location, rehydrated_location in zip(sample_dungeon.locations, rehydrated_dungeon.locations):
+        assert rehydrated_location.id == original_location.id
+        assert rehydrated_location.dimensions == original_location.dimensions
+        assert len(rehydrated_location.exits) == len(original_location.exits)
+
+        # Verify each exit in the rehydrated location
+        for original_exit, rehydrated_exit in zip(original_location.exits, rehydrated_location.exits):
+            assert rehydrated_exit.direction == original_exit.direction
+            assert rehydrated_exit.destination == original_exit.destination
+            assert rehydrated_exit.locked == original_exit.locked

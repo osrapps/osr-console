@@ -1,10 +1,11 @@
 from typing import List
 from enum import Enum
-import random, json, asyncio
+import random, json, asyncio, uuid
 from openai import OpenAI, AsyncOpenAI
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
+
 
 class Direction(Enum):
     """Enumeration for directions a player can go within a location.
@@ -128,11 +129,12 @@ class Location:
         exits_str = ", ".join(str(exit) for exit in self.exits)
         return f"Loc ID: {self.id} Size: {str(self.dimensions['width'])}'W x {str(self.dimensions['length'])}'L Exits: [{exits_str}] Keywords: {self.keywords}"
 
-
     @property
     def json(self):
         """Returns a JSON representation of the location."""
-        json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, separators=(',', ':'))
+        json_location = json.dumps(
+            self.to_dict(), default=lambda o: o.__dict__, separators=(",", ":")
+        )
         logger.debug(json_location)
         return json_location
 
@@ -197,7 +199,6 @@ class NoMatchingExitError(Exception):
     pass
 
 
-
 class DestinationLocationNotFoundError(Exception):
     """Raised when a destination ``Location`` of an ``Exit`` doesn't exist in the ``Dungeon``."""
 
@@ -220,6 +221,7 @@ class Dungeon:
     """Contains a collection of interconnected locations. Validates the integrity of these connections.
 
     Attributes:
+        id (uuid.UUID): Unique identifier for the dungeon.
         name (str): The name of the dungeon.
         description (str): A brief description providing context or history for the dungeon.
         locations (List[Location]): List of locations within the dungeon. A location must have at least one exit, and all exits must have valid destinations within the dungeon. No locations should be islands unless the dungeon only contains that single location.
@@ -241,14 +243,17 @@ class Dungeon:
         description: str = None,
         locations: List[Location] = [],
         start_location_id: int = None,
+        id: str = str(uuid.uuid4()),
     ) -> None:
         self.name = name
         self.description = description
         self.locations = locations
+        self.start_location_id = start_location_id
         if start_location_id:
             self.set_start_location(start_location_id)
         else:
             self.current_location = None
+        self.id = id
 
     def set_start_location(self, location_id: int) -> Location:
         """Sets the starting location for the dungeon.
@@ -326,18 +331,27 @@ class Dungeon:
         """
         logger.debug(f"Moving party {direction.name} from {self.current_location}.")
         try:
-            exit = [exit for exit in self.current_location.exits if exit.direction == direction][0]
+            exit = [
+                exit
+                for exit in self.current_location.exits
+                if exit.direction == direction
+            ][0]
         except IndexError:
             logger.debug(
                 f"No exit to the {direction.name} from {self.current_location}. The only exits are: "
-                + ", ".join(str(exit) for exit in self.current_location.exits) + "."
+                + ", ".join(str(exit) for exit in self.current_location.exits)
+                + "."
             )
             return None
 
-        self.current_location = [loc for loc in self.locations if loc.id == exit.destination][0]
+        self.current_location = [
+            loc for loc in self.locations if loc.id == exit.destination
+        ][0]
 
         if self.current_location.is_visited:
-            logger.debug(f"Party moved to previously visited location {self.current_location}.")
+            logger.debug(
+                f"Party moved to previously visited location {self.current_location}."
+            )
         else:
             logger.debug(f"Party moved to new location {self.current_location}.")
             self.current_location.is_visited = True
@@ -364,7 +378,6 @@ class Dungeon:
 
         for src_loc in self.locations:
             for src_exit in src_loc.exits:
-
                 # Exit must lead to existing destination Location
                 dst_loc = self.get_location_by_id(src_exit.destination)
                 if not dst_loc:
@@ -392,7 +405,7 @@ class Dungeon:
         return len(validation_errors) == 0
 
     @staticmethod
-    async def get_dungeon_location_keywords(dungeon: "Dungeon"):
+    def get_dungeon_location_keywords(dungeon: "Dungeon"):
         """Get the keywords for each location in the dungeon from the OpenAI API.
 
         Provided a ``Dungeon``, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
@@ -415,7 +428,8 @@ class Dungeon:
                 "across the locations in the dungeon. Keep in mind that adjacent integers typically represent adjacent "
                 "locations in the dungeon, and their keywords should reflect that relationship. The JSON response "
                 "should be a collection of key-value pairs where the key is the location ID and the value is the "
-                "collection of keywords for that location. The JSON must include keywords for every location."
+                "collection of keywords for that location. The JSON must include keywords for every location and no two "
+                "locations should have the same keywords. Every location must have four keywords."
             },
         ]
         user_message = [
@@ -424,33 +438,45 @@ class Dungeon:
                 "content": f"{dungeon.name}\n{dungeon.description}\n{len(dungeon.locations)}",
             },
         ]
-        logger.debug(f"Getting keywords for dungeon {dungeon.name} from OpenAI API...")
+        logger.debug(f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API...")
 
-        client = AsyncOpenAI()
-        openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
+        client = OpenAI() # AsyncOpenAI()
+        openai_model = "gpt-3.5-turbo-1106"  # "gpt-4-1106-preview" #"gpt-4"
 
-        completion = await client.chat.completions.create(
-                model=openai_model,
-                response_format={ "type": "json_object" },
-                messages=system_message + user_message
-            )
+        completion = client.chat.completions.create(
+            model=openai_model,
+            response_format={"type": "json_object"},
+            messages=system_message + user_message,
+        )
         llm_response = completion.choices[0].message.content
 
-        decoded_json_string = bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
-        logger.debug(f"Keywords for dungeon {dungeon.name} from OpenAI API: {decoded_json_string}")
+        decoded_json_string = (
+            bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
+        )
+        logger.debug(
+            f"Keywords for dungeon {dungeon.name} from OpenAI API: {decoded_json_string}"
+        )
         return decoded_json_string
 
     @staticmethod
-    def get_random_dungeon(name: str = "Random Dungeon", description: str = "", num_locations: int = 10, use_ai: bool = False) -> "Dungeon":
+    def get_random_dungeon(
+        name: str = "Random Dungeon",
+        description: str = "",
+        num_locations: int = 10,
+        use_ai: bool = False,
+        level: int = 1,
+    ) -> "Dungeon":
         """Generates a random dungeon with the specified number of locations.
 
         Args:
             name (str): The name of the dungeon.
             description (str): A brief description providing context or history for the dungeon.
             num_locations (int): The number of locations to generate in the dungeon.
+            use_ai (bool): Indicates whether to use the OpenAI API to generate keywords for each location in the dungeon.
+            level (int): The level of the dungeon. Determines the hit die (and thus the difficulty) of monsters in encounters in the dungeon.
 
         Returns:
-            Dungeon: A randomly generated dungeon with the specified number of locations.
+            Dungeon: A randomly generated dungeon with the specified number of locations, each with a random size and possibility of an encounter.
         """
         if num_locations < 1:
             raise ValueError("Dungeon must have at least one location.")
@@ -463,9 +489,9 @@ class Dungeon:
 
             location = Location(id=i, exits=[], length=length, width=width)
 
-            # On every third location, roll 1d6 to check for wandering monsters
-            if i % 3 == 0 and roll_dice("1d6").total <= 4:
-                encounter = Encounter.get_random_encounter(dungeon_level=1)
+            # Roll 1d6 to check for wandering monsters (1-2 on 1d6)
+            if roll_dice("1d6").total <= 2:
+                encounter = Encounter.get_random_encounter(level)
                 location.encounter = encounter
                 logger.debug(f"Added {encounter} to {location}.")
 
@@ -493,7 +519,9 @@ class Dungeon:
                     break
 
         if description == "":
-            description = f"A randomly generated dungeon with {num_locations} locations."
+            description = (
+                f"A randomly generated dungeon with {num_locations} locations."
+            )
 
         dungeon = Dungeon(name, description, locations)
 
@@ -518,6 +546,8 @@ class Dungeon:
             "name": self.name,
             "description": self.description,
             "locations": [location.to_dict() for location in self.locations],
+            "start_location_id": self.start_location_id,
+            "id": self.id,
         }
 
     @classmethod
@@ -527,4 +557,6 @@ class Dungeon:
             data["name"],
             data["description"],
             [Location.from_dict(location_data) for location_data in data["locations"]],
+            data["start_location_id"],
+            data["id"]
         )

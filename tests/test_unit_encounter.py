@@ -1,81 +1,58 @@
 import pytest
+import random
 from osrlib.encounter import Encounter
-from osrlib.monster import MonsterParty, MonsterStatsBlock
-from osrlib.character_classes import CharacterClassType
-from osrlib.player_character import Alignment
-from osrlib.treasure import TreasureType
+from osrlib.monster import MonsterParty
+from osrlib.monster_manual import monster_stats_blocks
+from osrlib.game_manager import logger
 
 @pytest.fixture
-def goblin_party():
-    stats = MonsterStatsBlock(
-        name="Goblin",
-        description="A small incredibly ugly humanoid with pale earthy color skin, like a chalky tan or livid gray.",
-        armor_class=6,
-        hit_dice="1d8-1",
-        num_appearing="2d4",
-        movement=60,
-        num_special_abilities=0,
-        attacks_per_round=1,
-        damage_per_attack="1d6",
-        save_as_class=CharacterClassType.COMMONER,
-        save_as_level=1,
-        morale=7,
-        treasure_type=TreasureType.R,
-        alignment=Alignment.CHAOTIC
-    )
-    monster_party = MonsterParty(stats)
-    yield monster_party
+def random_monster_party():
+    # Randomly select a MonsterStatsBlock from the monster_manual for testing
+    random_stats_block = random.choice(monster_stats_blocks)
+    monster_party = MonsterParty(random_stats_block)
+    return monster_party
 
-@pytest.fixture
-def hobgoblin_party():
-    stats = MonsterStatsBlock(
-        name="Hobgoblin",
-        description="A larger and meaner relative of the goblin.",
-        armor_class=6,
-        hit_dice="1d8+1",
-        num_appearing="1d6",
-        movement=90,
-        num_special_abilities=0,
-        attacks_per_round=1,
-        damage_per_attack="1d8",
-        save_as_class=CharacterClassType.FIGHTER,
-        save_as_level=1,
-        morale=8,
-        treasure_type=TreasureType.D,
-        alignment=Alignment.CHAOTIC
-    )
-    monster_party = MonsterParty(stats)
-    yield monster_party
+def test_encounter_initialization(random_monster_party):
+    logger.debug(f"Testing encounter with monster party: {random_monster_party}")
+    encounter = Encounter("Test Encounter", "A test encounter with monsters.", random_monster_party)
 
+    assert encounter.name == "Test Encounter"
+    assert encounter.description == "A test encounter with monsters."
+    assert encounter.monster_party == random_monster_party
 
-@pytest.fixture
-def kobold_party():
-    stats = MonsterStatsBlock(
-        name="Kobold",
-        description="A small, lizard-like humanoid.",
-        armor_class=7,
-        hit_dice="1d4",
-        num_appearing="4d4",
-        movement=60,
-        num_special_abilities=0,
-        attacks_per_round=1,
-        damage_per_attack="1d4",
-        save_as_class=CharacterClassType.FIGHTER,
-        save_as_level=1,
-        morale=6,
-        treasure_type=TreasureType.P,
-        alignment=Alignment.CHAOTIC
-    )
-    monster_party = MonsterParty(stats)
-    yield monster_party
+    # Handle dice strings like "d1"
+    num_appearing_range = encounter.monster_party.monster_stats_block.num_appearing_dice_string
+    parts = num_appearing_range.split('d')
+    min_appearing = int(parts[0]) if parts[0] else 1  # Default to 1 if no leading number
+    max_appearing = int(parts[1])
 
-def test_encounter_initialization(kobold_party):
-    encounter = Encounter("Test Kobold Encounter", "A test encounter with a party of kobolds.", kobold_party)
+    assert min_appearing <= len(encounter.monster_party.members) <= (min_appearing * max_appearing)
 
-    assert encounter.name == "Test Kobold Encounter"
-    assert encounter.description == "A test encounter with a party of kobolds."
-    assert encounter.monster_party == kobold_party
+    # Testing the XP value calculation - may need to adjust depending on your XP calculation logic
+    expected_xp = sum(member.xp_value for member in encounter.monster_party.members)
+    assert encounter.monster_party.xp_value == expected_xp
 
-    # TODO: These should probably move to a test for MonsterParty
-    assert len(encounter.monster_party.members) >= 4 and len(encounter.monster_party.members) <= 16
-    assert encounter.monster_party.xp_value == len(kobold_party.members) * 5 # Under 1 HD = 5 XP
+def test_encounter_to_dict(random_monster_party):
+    encounter = Encounter("Test Encounter", "A test encounter with monsters.", random_monster_party)
+    encounter_dict = encounter.to_dict()
+
+    # Check if the dictionary contains the correct keys and their associated values
+    assert encounter_dict["name"] == "Test Encounter"
+    assert encounter_dict["description"] == "A test encounter with monsters."
+    assert isinstance(encounter_dict["monsters"], dict)  # The monster party should be a dictionary
+    assert encounter_dict["monsters"]["name"] == random_monster_party.monster_stats_block.name  # Check if monster party is correctly serialized
+
+def test_encounter_from_dict(random_monster_party):
+    # Create an Encounter instance and serialize it to a dictionary
+    encounter = Encounter("Test Encounter", "A test encounter with monsters.", random_monster_party)
+    encounter_dict = encounter.to_dict()
+
+    # Deserialize the dictionary back into an Encounter instance
+    rehydrated_encounter = Encounter.from_dict(encounter_dict)
+
+    # Check if the rehydrated encounter has the same attributes as the original
+    assert rehydrated_encounter.name == encounter.name
+    assert rehydrated_encounter.description == encounter.description
+    assert rehydrated_encounter.monster_party.monster_stats_block.name == random_monster_party.monster_stats_block.name
+
+    # Additional checks can be added to verify the integrity of the rehydrated monster party
