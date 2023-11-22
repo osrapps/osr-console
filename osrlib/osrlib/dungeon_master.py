@@ -88,7 +88,7 @@ class DungeonMaster:
         self.session_messages = system_message + user_init_message
         self.is_started = False
 
-        self.client = AsyncOpenAI()
+        self.client = OpenAI() #AsyncOpenAI()
         self.openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
 
     def format_user_message(self, message_string: str) -> dict:
@@ -118,7 +118,7 @@ class DungeonMaster:
         """
         return {"role": "user", "content": str(message_string)}
 
-    async def start_session(self):
+    def start_session(self):
         """Start a gaming session with the dungeon master in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
@@ -132,7 +132,7 @@ class DungeonMaster:
         if not self.adventure.is_started:
             self.adventure.start_adventure()
 
-        completion = await self.client.chat.completions.create(
+        completion = self.client.chat.completions.create(
             model=self.openai_model, messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
@@ -140,10 +140,10 @@ class DungeonMaster:
         logger.debug(completion)
         return completion.choices[0].message.content
 
-    async def player_message(self, message):
+    def player_message(self, message):
         if self.is_started:
             self.session_messages.append(message)
-            completion = await self.client.chat.completions.create(
+            completion = self.client.chat.completions.create(
                 model=self.openai_model, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
