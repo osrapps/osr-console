@@ -85,7 +85,7 @@ class Adventure:
                 f"Dungeon {dungeon.name} is not in the adventure."
             )
         self.active_dungeon = dungeon
-        logger.debug(f"Set active dungeon to {dungeon.name}.")
+        logger.debug(f"Active dungeon set to {dungeon.name}.")
 
     def set_active_party(self, party):
         """Set the party of player characters that will play through the adventure.
@@ -94,7 +94,7 @@ class Adventure:
             party (Party): The adventuring party for the adventure.
         """
         self.active_party = party
-        logger.debug(f"Set adventuring party to {party.name}.")
+        logger.debug(f"Active adventuring party set to {party.name}.")
 
     def start_adventure(self):
         """Start the adventure.
@@ -124,24 +124,29 @@ class Adventure:
 
     @classmethod
     def from_dict(cls, adventure_dict):
-        """Convert a dict to an adventure.
-
-        Args:
-            adventure_dict (dict): A dict representation of the adventure.
-        """
         name = adventure_dict["name"]
         description = adventure_dict["description"]
         introduction = adventure_dict["introduction"]
         dungeons = [Dungeon.from_dict(dungeon_dict) for dungeon_dict in adventure_dict["dungeons"]]
-        active_dungeon = Dungeon.from_dict(adventure_dict["active_dungeon"])
-        active_party = Party.from_dict(adventure_dict["active_party"])
-        #quests = [Quest.from_dict(quest_dict) for quest_dict in adventure_dict["quests"]] # TODO: Implement quests
+        # quests = [Quest.from_dict(quest_dict) for quest_dict in adventure_dict["quests"]] # TODO: Implement quests
 
+        # Create the Adventure instance with the list of rehydrated dungeons
         adventure_from_dict = cls(name, description, introduction, dungeons)
+
+        # Find and set the active dungeon by matching it with one of the rehydrated dungeons
+        active_dungeon_id = adventure_dict["active_dungeon"]["id"]
+        active_dungeon = next((dungeon for dungeon in dungeons if dungeon.id == active_dungeon_id), None)
+        if active_dungeon:
+            adventure_from_dict.set_active_dungeon(active_dungeon)
+        else:
+            raise DungeonNotFoundError(f"Active dungeon with ID {active_dungeon_id} not found in the adventure.")
+
+        # Set the active party
+        active_party = Party.from_dict(adventure_dict["active_party"])
         adventure_from_dict.set_active_party(active_party)
-        adventure_from_dict.set_active_dungeon(active_dungeon)
 
         return adventure_from_dict
+
 
     def end_adventure(self):
         """End the adventure.

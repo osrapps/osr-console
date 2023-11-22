@@ -1,7 +1,7 @@
 from typing import List
 from enum import Enum
-import random, json, asyncio
-from openai import OpenAI, AsyncOpenAI
+import random, json, asyncio, uuid
+from openai import AsyncOpenAI
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
@@ -221,6 +221,7 @@ class Dungeon:
     """Contains a collection of interconnected locations. Validates the integrity of these connections.
 
     Attributes:
+        id (uuid.UUID): Unique identifier for the dungeon.
         name (str): The name of the dungeon.
         description (str): A brief description providing context or history for the dungeon.
         locations (List[Location]): List of locations within the dungeon. A location must have at least one exit, and all exits must have valid destinations within the dungeon. No locations should be islands unless the dungeon only contains that single location.
@@ -242,14 +243,17 @@ class Dungeon:
         description: str = None,
         locations: List[Location] = [],
         start_location_id: int = None,
+        id: str = str(uuid.uuid4()),
     ) -> None:
         self.name = name
         self.description = description
         self.locations = locations
+        self.start_location_id = start_location_id
         if start_location_id:
             self.set_start_location(start_location_id)
         else:
             self.current_location = None
+        self.id = id
 
     def set_start_location(self, location_id: int) -> Location:
         """Sets the starting location for the dungeon.
@@ -542,6 +546,8 @@ class Dungeon:
             "name": self.name,
             "description": self.description,
             "locations": [location.to_dict() for location in self.locations],
+            "start_location_id": self.start_location_id,
+            "id": self.id,
         }
 
     @classmethod
@@ -551,4 +557,6 @@ class Dungeon:
             data["name"],
             data["description"],
             [Location.from_dict(location_data) for location_data in data["locations"]],
+            data["start_location_id"],
+            data["id"]
         )

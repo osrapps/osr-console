@@ -487,8 +487,8 @@ class MonsterParty:
 
         Note:
             This method does not serialize the dynamic state of the MonsterParty itself (such as the current health of
-            monsters or the treasure collected). It serializes the MonsterStatsBlock, which can be used to recreate a
-            similar MonsterParty with a new state.
+            monsters or their treasure. It serializes the MonsterStatsBlock, which can be used to recreate a similar
+            MonsterParty with a new state.
         """
         return self.monster_stats_block.to_dict()
 
