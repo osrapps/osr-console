@@ -2,19 +2,19 @@ from osrlib.item import Armor, Item, ItemType, Weapon
 from osrlib.enums import CharacterClassType
 
 _armor_combat_classes = {
-    CharacterClassType.FIGHTER,
-    CharacterClassType.ELF,
-    CharacterClassType.DWARF,
-    CharacterClassType.HALFLING,
     CharacterClassType.CLERIC,
+    CharacterClassType.DWARF,
+    CharacterClassType.ELF,
+    CharacterClassType.FIGHTER,
+    CharacterClassType.HALFLING,
 }
 
 _weapon_combat_classes = {
-    CharacterClassType.FIGHTER,
-    CharacterClassType.THIEF,
-    CharacterClassType.ELF,
     CharacterClassType.DWARF,
+    CharacterClassType.ELF,
+    CharacterClassType.FIGHTER,
     CharacterClassType.HALFLING,
+    CharacterClassType.THIEF,
 }
 
 _all_classes = _weapon_combat_classes | {

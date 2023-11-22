@@ -3,6 +3,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log, Placeholder
 
+from osrlib.adventure import Adventure
 from osrlib.dungeon_master import DungeonMaster
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
@@ -179,9 +180,11 @@ class ExploreScreen(Screen):
         ("k", "clear_logs", "Clear logs"),
         ("?", "summarize", "Summarize session"),
         ("ctrl+s", "save_game", "Save game"),
+        ("ctrl+l", "load_game", "Load game"),
     ]
 
     dungeon_master = None
+    save_path = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -294,9 +297,21 @@ class ExploreScreen(Screen):
         self.query_one("#player_log").write_line("> Save adventure")
         self.query_one("#player_log").write_line("---")
         self.query_one("#dm_log").write_line("> Saving adventure...")
-        save_path = self.dungeon_master.adventure.save_adventure()
-        self.query_one("#dm_log").write_line("Adventure saved to: " + save_path)
+        self.save_path = self.dungeon_master.adventure.save_adventure()
+        self.query_one("#dm_log").write_line(f"Adventure {self.dungeon_master.adventure.name} saved to {self.save_path}.")
         self.query_one("#dm_log").write_line("===")
+
+    def action_load_game(self) -> None:
+        """An action to save the game."""
+        self.query_one("#player_log").write_line("> Load adventure")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line("> Loading adventure...")
+        if self.save_path is None:
+            self.query_one("#dm_log").write_line("No save path found.")
+        else:
+            loaded_adventure = Adventure.load_adventure(self.save_path)
+            self.dungeon_master.adventure = loaded_adventure
+            self.query_one("#dm_log").write_line(f"Adventure {loaded_adventure.name} loaded from {self.save_path}.")
 
 
 ####################
