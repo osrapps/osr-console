@@ -546,7 +546,7 @@ class Dungeon:
             "name": self.name,
             "description": self.description,
             "locations": [location.to_dict() for location in self.locations],
-            "start_location_id": self.start_location_id,
+            "start_location_id": self.current_location.id, # save the current location as the start location on load
             "id": self.id,
         }
 
@@ -557,6 +557,6 @@ class Dungeon:
             data["name"],
             data["description"],
             [Location.from_dict(location_data) for location_data in data["locations"]],
-            data["start_location_id"],
+            data["start_location_id"], # will be the location that was current when the dungeon was saved
             data["id"]
         )

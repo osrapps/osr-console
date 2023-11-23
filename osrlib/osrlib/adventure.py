@@ -181,7 +181,7 @@ class Adventure:
 
         if file_path is None:
             # Default file path in the user's home directory
-            filename = f"{self.name}.json".replace(" ", "_").lower
+            filename = f"{self.name}.json".replace(" ", "_").lower()
             home_dir = os.path.expanduser("~")
             file_path = os.path.join(home_dir, filename)
 
@@ -196,7 +196,7 @@ class Adventure:
         return file_path
 
     @staticmethod
-    def load_adventure(file_path: str) -> "Adventure":
+    def load_adventure(file_path: str = None) -> "Adventure":
         """
         Loads the adventure from a JSON file.
 
