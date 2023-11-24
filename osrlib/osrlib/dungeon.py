@@ -1,7 +1,8 @@
 from typing import List
 from enum import Enum
 import random, json, asyncio, uuid
-from openai import OpenAI, AsyncOpenAI
+from openai import OpenAI
+from osrlib.enums import OpenAIModelVersion
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
@@ -250,13 +251,13 @@ class Dungeon:
         self.locations = locations
         self.start_location_id = start_location_id
         if start_location_id:
-            self.set_start_location(start_location_id)
+            self.set_start_location(start_location_id) # Also sets self.current_location
         else:
-            self.current_location = None
+            self.current_location = self.locations[0] if len(self.locations) > 0 else None
         self.id = id
 
     def set_start_location(self, location_id: int) -> Location:
-        """Sets the starting location for the dungeon.
+        """Sets the starting location for the dungeon. Also sets the current location to the starting location.
 
         Args:
             location_id (int): The ID of the location to set as the starting location.
@@ -440,8 +441,8 @@ class Dungeon:
         ]
         logger.debug(f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API...")
 
-        client = OpenAI() # AsyncOpenAI()
-        openai_model = "gpt-3.5-turbo-1106"  # "gpt-4-1106-preview" #"gpt-4"
+        client = OpenAI()
+        openai_model = OpenAIModelVersion.DEFAULT.value
 
         completion = client.chat.completions.create(
             model=openai_model,
@@ -523,7 +524,7 @@ class Dungeon:
                 f"A randomly generated dungeon with {num_locations} locations."
             )
 
-        dungeon = Dungeon(name, description, locations)
+        dungeon = Dungeon(name, description, locations, start_location_id=1)
 
         if use_ai:
             location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon)

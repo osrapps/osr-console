@@ -11,21 +11,21 @@ def test_format_modifiers():
 
     This function tests the format_modifiers() function with various input values and verifies that the output is as expected.
     """
-    logger.info("Testing empty modifiers: '" + format_modifiers({}) + "'")
+    logger.debug("Testing empty modifiers: '" + format_modifiers({}) + "'")
     assert format_modifiers({}) == ""
 
-    logger.info("Testing single modifier with positive value: '" + format_modifiers({ModifierType.TO_HIT: 1}) + "'")
+    logger.debug("Testing single modifier with positive value: '" + format_modifiers({ModifierType.TO_HIT: 1}) + "'")
     assert format_modifiers({ModifierType.TO_HIT: 1}) == "To hit: +1"
 
-    logger.info("Testing single modifier with negative value: '" + format_modifiers({ModifierType.DAMAGE: -1}) + "'")
+    logger.debug("Testing single modifier with negative value: '" + format_modifiers({ModifierType.DAMAGE: -1}) + "'")
     assert format_modifiers({ModifierType.DAMAGE: -1}) == "Damage: -1"
 
-    logger.info(
+    logger.debug(
         "Testing single modifier with no (zero) value: '" + format_modifiers({ModifierType.OPEN_DOORS: 0}) + "'"
     )
     assert format_modifiers({ModifierType.OPEN_DOORS: 0}) == "Open doors: 0"
 
-    logger.info(
+    logger.debug(
         "Testing multiple modifiers with positive and negative values: '"
         + format_modifiers(
             {

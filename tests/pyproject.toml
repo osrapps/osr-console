@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tests"
-version = "0.1.0"
+version = "0.1.1"
 description = "Test library for osrlib."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"

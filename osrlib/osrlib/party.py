@@ -214,12 +214,12 @@ class Party:
                 f"A character with that name ('{character.name}') is already in party."
             )
 
-        logger.info(f"Adding '{character.name}' to party '{self.name}'...")
+        logger.debug(f"Adding '{character.name}' to party '{self.name}'...")
         self.members.append(character)
 
         if set_as_active_character:
 
-            logger.info(
+            logger.debug(
                 f"Setting '{character.name}' as the active character in party '{self.name}'..."
             )
             self.set_active_character(character)

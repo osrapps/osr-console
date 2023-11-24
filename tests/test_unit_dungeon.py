@@ -10,11 +10,13 @@ def sample_dungeon():
     # Create a simple dungeon with a couple of locations and exits
     location1 = Location(1, exits=[Exit(Direction.NORTH, 2)])
     location2 = Location(2, exits=[Exit(Direction.SOUTH, 1)])
-    return Dungeon(
+    dungeon = Dungeon(
         name="Test Dungeon",
         description="A simple test dungeon.",
         locations=[location1, location2],
+        start_location_id=1,
     )
+    return dungeon
 
 
 # --- Test Exit class ---

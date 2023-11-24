@@ -1,12 +1,11 @@
 from typing import List
-from collections import defaultdict
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
 from textual.widgets import Button, DataTable, Log, Static
 
-from osrlib import Item, ItemType
+from osrlib import Item
 from osrlib.utils import format_modifiers
 
 
@@ -17,7 +16,7 @@ class CharacterScreenButtons(Container):
         yield Button("Save character", id="btn_save_character", classes="button")
 
 
-class CharacterStats(Container):
+class CharacterStatsBox(Container):
     """A container for the character stats like name, class, level, HP, and AC."""
 
     pc_name = reactive("")
@@ -79,7 +78,31 @@ class AbilityTable(Container):
             table.add_row(*row_data, key=k.name)
 
 
-class SavingThrows(Container):
+class PartyRosterTable(Container):
+    def compose(self) -> ComposeResult:
+        yield DataTable(id="tbl_party_roster", cursor_type="row", classes="table")
+
+    def on_mount(self) -> None:
+        """Perform actions when the widget is mounted."""
+        table = self.query_one(DataTable)
+        table.add_columns("Name", "Class", "Level", "HP", "AC")
+
+    def update_table(self):
+        party = self.app.adventure.active_party
+        table = self.query_one(DataTable)
+        table.clear()
+        for pc in party.members:
+            row_data = [
+                pc.name,
+                pc.character_class.class_type.value,
+                Text(str(pc.level), justify="center"),
+                Text(f"{str(pc.hit_points)}/{str(pc.character_class.max_hp)}", justify="center"),
+                Text(str(pc.armor_class), justify="center"),
+            ]
+            table.add_row(*row_data, key=pc.name)
+
+
+class SavingThrowTable(Container):
     def compose(self) -> ComposeResult:
         yield DataTable(cursor_type=None, classes="table")
 

@@ -48,6 +48,7 @@ from .dungeon import (
 from .enums import (
     CharacterClassType,
     PartyReaction,
+    OpenAIModelVersion,
 )
 from .game_manager import (
     GameManager,

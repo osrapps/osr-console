@@ -152,7 +152,7 @@ def get_thac0_for_class_for_level(char_class_type, level):
 
 def test_thac0_for_classes_and_levels(pc_party):
     for pc in pc_party.members:
-        logger.info(f"Testing THAC0 for {pc.name} ({pc.character_class.class_type.value})")
+        logger.debug(f"Testing THAC0 for {pc.name} ({pc.character_class.class_type.value})")
 
         for level in class_levels[pc.character_class.class_type]:
             # PCs start at level 1 (we're not going to check level 0 NPCs)
