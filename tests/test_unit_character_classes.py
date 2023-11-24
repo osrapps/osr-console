@@ -18,14 +18,14 @@ def generate_player_character_params(starting_level: int = 1):
 
 @pytest.mark.parametrize("pc", generate_player_character_params(starting_level=1))
 def test_characters_init_sane_level_one(pc: PlayerCharacter):
-    logger.info(pc)
+    logger.debug(pc)
     assert pc.character_class.current_level.level_num == 1
     assert pc.character_class.max_hp > 0
     assert pc.character_class.xp == 0
 
 @pytest.mark.parametrize("pc", generate_player_character_params(starting_level=0))
 def test_character_can_reach_all_available_levels(pc: PlayerCharacter):
-    logger.info(
+    logger.debug(
         f"Testing whether {pc.name.upper()} can reach all {pc.character_class.class_type.value.upper()} levels ..."
     )
 

@@ -9,8 +9,8 @@ CharacterScreen {
 ExploreScreen {
     layout: grid;
     grid-size: 2;
-    grid-columns: 0.75fr 1.25fr;
-    grid-rows: 100%;
+    grid-columns: 0.40fr 0.60fr;
+    grid-rows: 50%;
     background: $surface;
 }
 
@@ -42,10 +42,8 @@ ExploreScreen {
     align: center middle;
 }
 
-#explore-logs {
-    border: solid $surface-lighten-3;
-    layout: horizontal;
-    align: center middle;
+#dm_log {
+    row-span: 2;
 }
 
 .box {

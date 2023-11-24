@@ -54,10 +54,10 @@ def test_magic_user():
 def db():
     db_path = "test_db.json"
     full_path = os.path.abspath(db_path)
-    gm.logger.info(f"Setting up TinyDB: {full_path}")
+    gm.logger.debug(f"Setting up TinyDB: {full_path}")
     db = TinyDB(db_path)
     yield db
-    gm.logger.info(f"Tearing down TinyDB: {db}")
+    gm.logger.debug(f"Tearing down TinyDB: {db}")
     db.drop_tables()
     db.close()
 
@@ -508,7 +508,7 @@ def test_player_character_saveload(db, test_fighter):
     pc.inventory.equip_item(weapon)
 
     # SAVE the PC
-    gm.logger.info(f"Saving PC: {pc}")
+    gm.logger.debug(f"Saving PC: {pc}")
     pc_table = db.table("player_characters")
     pc_dict = pc.to_dict()
     pc_table.insert(pc_dict)
@@ -517,7 +517,7 @@ def test_player_character_saveload(db, test_fighter):
     PCQuery = Query()
     loaded_pc_dict = pc_table.search(PCQuery.name == pc.name)[0]
     loaded_pc = PlayerCharacter.from_dict(loaded_pc_dict)
-    gm.logger.info(f"Loaded PC: {loaded_pc}")
+    gm.logger.debug(f"Loaded PC: {loaded_pc}")
 
     assert str(loaded_pc) == str(pc)
     assert loaded_pc.inventory.items.keys() == pc.inventory.items.keys()
@@ -559,7 +559,7 @@ def test_party_saveload(db):
     elf.inventory.equip_item(weapon)
 
     # SAVE the party
-    gm.logger.info(
+    gm.logger.debug(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
     )
     party_table = db.table("player_characters")
@@ -569,7 +569,7 @@ def test_party_saveload(db):
     assert doc_id == 1
 
     # LOAD the party
-    gm.logger.info(f"Loading party {pc_party.name}...")
+    gm.logger.debug(f"Loading party {pc_party.name}...")
     PartyQuery = Query()
     fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
     assert len(fetched_party_dicts) == 1
@@ -577,7 +577,7 @@ def test_party_saveload(db):
 
     # Deserialize and create a Party object from the fetched dictionary
     loaded_party = Party.from_dict(fetched_party_dict)
-    gm.logger.info(f"Loaded party:\n{loaded_party}")
+    gm.logger.debug(f"Loaded party:\n{loaded_party}")
 
     # Verify that the loaded Party is the same as the original
     assert loaded_party.name == pc_party.name
@@ -601,7 +601,7 @@ def test_party_saveload_dead(db):
         character.apply_damage(character.character_class.max_hp)
 
     # Write the party to storage
-    gm.logger.info(
+    gm.logger.debug(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
     )
     party_table = db.table("player_characters")
@@ -611,7 +611,7 @@ def test_party_saveload_dead(db):
     assert doc_id == 1
 
     # LOAD the party from storage
-    gm.logger.info(f"Loading party {pc_party.name}...")
+    gm.logger.debug(f"Loading party {pc_party.name}...")
     PartyQuery = Query()
     fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
     assert len(fetched_party_dicts) == 1
@@ -619,7 +619,7 @@ def test_party_saveload_dead(db):
 
     # Deserialize and create a Party object from the fetched dictionary
     loaded_party = Party.from_dict(fetched_party_dict)
-    gm.logger.info(f"Loaded party:\n{loaded_party}")
+    gm.logger.debug(f"Loaded party:\n{loaded_party}")
 
     # Verify that the loaded Party is still dead (all party members have 0 HP)
     assert not loaded_party.is_alive

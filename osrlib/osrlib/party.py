@@ -214,12 +214,12 @@ class Party:
                 f"A character with that name ('{character.name}') is already in party."
             )
 
-        logger.info(f"Adding '{character.name}' to party '{self.name}'...")
+        logger.debug(f"Adding '{character.name}' to party '{self.name}'...")
         self.members.append(character)
 
         if set_as_active_character:
 
-            logger.info(
+            logger.debug(
                 f"Setting '{character.name}' as the active character in party '{self.name}'..."
             )
             self.set_active_character(character)
@@ -470,7 +470,9 @@ class Party:
             for character_dict in party_dict["characters"]
         ]
         name = party_dict["name"]
-        return cls(name, characters=characters_from_dict)
+        party = cls(name, characters=characters_from_dict)
+        party.set_active_character(party.members[0])
+        return party
 
 def get_default_party(party_name: str = "Default Party") -> Party:  # pragma: no cover
     """Get a party of six (6) first-level characters: a Fighter, Elf, Dwarf, Thief, Halfling, and Magic User.

@@ -1,6 +1,7 @@
 import asyncio
-from openai import OpenAI, AsyncOpenAI
+from openai import OpenAI
 from osrlib.adventure import Adventure
+from osrlib.enums import OpenAIModelVersion
 from osrlib.game_manager import logger
 
 dm_init_message = (
@@ -89,7 +90,7 @@ class DungeonMaster:
         self.is_started = False
 
         self.client = OpenAI() #AsyncOpenAI()
-        self.openai_model = "gpt-3.5-turbo-1106" # "gpt-4-1106-preview" #"gpt-4"
+        self.openai_model = OpenAIModelVersion.DEFAULT.value
 
     def format_user_message(self, message_string: str) -> dict:
         """Format the given string as an OpenAI 'user' role message.

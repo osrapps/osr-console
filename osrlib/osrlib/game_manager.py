@@ -61,10 +61,10 @@ class GameManager:
         parties: list = [],
         adventures: list = [],
     ):
-        logger.info("Initializing the GameManager...")
+        logger.debug("Initializing the GameManager...")
         self.adventures = adventures
         self.parties = parties
-        logger.info(
+        logger.debug(
             f"GameManager initialized. There are {len(self.adventures)} adventures available."
         )
 
@@ -74,7 +74,7 @@ class GameManager:
         Args:
             storage_type (StorageType): The format to use for saving the game state.
         """
-        logger.info(
+        logger.debug(
             f"Saving the game to persistent storage in {storage_type} format..."
         )
         if storage_type == StorageType.JSON:

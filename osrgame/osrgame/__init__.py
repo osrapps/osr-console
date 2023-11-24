@@ -1,3 +1,11 @@
 from .osrgame import OSRConsole
-from .screen import CharacterScreen, WelcomeScreen, ModuleScreen, ExploreScreen
-from .widgets import CharacterScreenButtons, CharacterStats, AbilityTable, ItemTable, SavingThrows
+from .screen_character import CharacterScreen
+from .screen_explore import ExploreScreen
+from .screen_welcome import WelcomeScreen
+from .widgets import (
+    CharacterScreenButtons,
+    CharacterStatsBox,
+    AbilityTable,
+    ItemTable,
+    SavingThrowTable,
+)

@@ -5,10 +5,10 @@ from osrlib.party import get_default_party
 
 @pytest.fixture
 def sample_adventure() -> Adventure:
-    # Create a simple adventure with a couple of dungeons
-    dungeon1 = Dungeon(name="Dungeon 1")
-    dungeon2 = Dungeon(name="Dungeon 2")
-    return Adventure(name="Test Adventure", description="A simple test adventure.", dungeons=[dungeon1, dungeon2])
+    # Create a small adventure with a couple dungeons
+    dungeon1 = Dungeon.get_random_dungeon("Random Dungeon 1", "First-level dungeon for test_unit_adventure.py.", num_locations=2, level=1)
+    dungeon2 = Dungeon.get_random_dungeon("Random Dungeon 2", "Second-level dungeon for test_unit_adventure.py.", num_locations=2, level=2)
+    return Adventure(name="Test Adventure", description="A small test adventure.", dungeons=[dungeon1, dungeon2])
 
 def test_adventure_to_dict(sample_adventure):
     default_party = get_default_party()
@@ -19,7 +19,7 @@ def test_adventure_to_dict(sample_adventure):
 
     # Verify that the adventure attributes are correctly serialized
     assert adventure_dict["name"] == "Test Adventure"
-    assert adventure_dict["description"] == "A simple test adventure."
+    assert adventure_dict["description"] == "A small test adventure."
     assert len(adventure_dict["dungeons"]) == 2
     assert adventure_dict["active_dungeon"]["name"] == sample_adventure.dungeons[0].name
     assert adventure_dict["active_party"]["name"] == default_party.name
@@ -59,7 +59,7 @@ def test_save_adventure(sample_adventure, tmp_path):
     with open(file_path, "r") as file:
         data = json.load(file)
         assert data["name"] == "Test Adventure"
-        assert data["description"] == "A simple test adventure."
+        assert data["description"] == "A small test adventure."
 
 def test_load_adventure(sample_adventure, tmp_path):
     """

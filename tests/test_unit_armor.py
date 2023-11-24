@@ -83,10 +83,10 @@ def test_armor_equip_status(setup_pc, armor, expected_result):
     if armor.is_usable_by_owner:
         dex = pc.abilities[AbilityType.DEXTERITY].score
         ac_mod = pc.abilities[AbilityType.DEXTERITY].modifiers[ModifierType.AC]
-        logger.info(f"{armor.name} is usable by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
+        logger.debug(f"{armor.name} is usable by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
         pc.inventory.equip_item(armor)
-        logger.info(f"{armor.name} equipped  by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
+        logger.debug(f"{armor.name} equipped  by {pc.name} [DEX: {dex} ({ac_mod}), AC: {pc.armor_class})]")
         assert armor.is_equipped
     else:
-        logger.info(f"{armor.name} is NOT usable by {pc.name}")
+        logger.debug(f"{armor.name} is NOT usable by {pc.name}")
         assert not armor.is_equipped
