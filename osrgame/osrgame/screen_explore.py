@@ -38,8 +38,37 @@ class ExploreScreen(Screen):
         self.query_one("#dm_log", Log).border_title = "Adventure Log"
         self.query_one(PartyRosterTable).border_title = "Adventuring Party"
         self.query_one(PartyRosterTable).update_table()
-        self.query_one("#dm_log", Log).write_line("Press 'b' to begin a new session.")
+        self.start_session()
+
+    def start_session(self) -> None:
+        """Start a new session."""
+
+        if self.app.adventure is None:
+            self.app.set_active_adventure(adventure=None)
+
         self.dungeon_master = DungeonMaster(self.app.adventure)
+
+        # If this is the first time this screen has been displayed, it's possible that its widgets haven't been
+        # mounted yet. If that's the case, we'll get a DOM error when we try to access them. If we can't get the
+        # player_log widget, we bail.
+        try:
+            player_log = self.query_one("#player_log")
+            dm_log = self.query_one("#dm_log")
+
+            dm_response = self.dungeon_master.start_session()
+
+            # Move the party to the first location
+            first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
+            dm_response = self.dungeon_master.move_party(first_exit.direction)
+
+            dm_log.clear()
+            dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
+            dm_log.write_line(wrap_text(dm_response))
+
+            player_log.clear()
+            player_log.write_line("The party stands ready.")
+        except:
+            return
 
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
         """Move the party in the specified direction, execute battle (if any), and log the results."""
@@ -72,25 +101,7 @@ class ExploreScreen(Screen):
             self.query_one("#dm_log").write_line(wrap_text(dm_response))
             self.query_one("#dm_log").write_line(" ")
 
-            self.query_one("#pc_party_table").update_table()
-
-    def action_start_session(self) -> None:
-        """Start a new session."""
-
-        player_log = self.query_one("#player_log")
-        dm_log = self.query_one("#dm_log")
-
-        dm_response = self.dungeon_master.start_session()
-
-        # Move the party to the first location
-        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
-        dm_response = self.dungeon_master.move_party(first_exit.direction)
-
-        player_log.clear()
-        player_log.write_line("The party stands ready.")
-        dm_log.write_line("---")
-        dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
-        dm_log.write_line(wrap_text(dm_response))
+        self.query_one("#pc_party_table").update_table()
 
     def action_quit(self) -> None:
         """Quit the application."""
@@ -129,7 +140,7 @@ class ExploreScreen(Screen):
         """An action to summarize the session."""
         self.query_one("#player_log").write_line("Summarizing session...")
         self.query_one("#player_log").write_line("===")
-        formatted_message = self.dungeon_master.format_user_message("Please provide a journal entry for the adventurers that summarizes the locations they've seen and encounters they've had in this game session. Include only what the player characters in the adventuring party would know. Add a bulleted list at the end with number of locations visited, monsters killed, PCs killed, and total experience points earned.")
+        formatted_message = self.dungeon_master.format_user_message("Please provide a journal entry for the adventurers that summarizes the locations they've seen and encounters they've had in this game session. Include only what the player characters in the adventuring party would know. Include stats at the very end with number of locations visited, monsters killed, PCs killed, and total experience points earned.")
         dm_response = self.dungeon_master.player_message(formatted_message)
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("===")
@@ -140,7 +151,7 @@ class ExploreScreen(Screen):
         self.query_one("#player_log").write_line("---")
         self.query_one("#dm_log").write_line("> Saving adventure...")
         self.save_path = self.dungeon_master.adventure.save_adventure()
-        self.query_one("#dm_log").write_line(f"Adventure {self.dungeon_master.adventure.name} saved to {self.save_path}.")
+        self.query_one("#dm_log").write_line(f"Adventure '{self.dungeon_master.adventure.name}' saved to {self.save_path}.")
         self.query_one("#dm_log").write_line("===")
 
     def action_load_game(self) -> None:
@@ -154,4 +165,4 @@ class ExploreScreen(Screen):
             self.app.adventure = Adventure.load_adventure(self.save_path)
             loaded_adventure = Adventure.load_adventure(self.save_path)
             self.dungeon_master.adventure = loaded_adventure
-            self.query_one("#dm_log").write_line(f"Adventure {loaded_adventure.name} loaded from {self.save_path}.")
+            self.query_one("#dm_log").write_line(f"Adventure '{loaded_adventure.name}' loaded from {self.save_path}.")

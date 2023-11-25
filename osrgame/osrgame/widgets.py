@@ -9,6 +9,13 @@ from osrlib import Item
 from osrlib.utils import format_modifiers
 
 
+class WelcomeScreenButtons(Container):
+    def compose(self) -> ComposeResult:
+        yield Button("Start default adventure", id="btn-adventure-default", classes="button")
+        yield Button("Load adventure", id="btn-adventure-load", classes="button")
+        yield Button("Create adventure", id="btn-adventure-create", classes="button")
+        yield Button("Quit", id="btn-quit", classes="button")
+
 class CharacterScreenButtons(Container):
     def compose(self) -> ComposeResult:
         yield Button("Roll abilities", id="btn_roll_abilities", classes="button")

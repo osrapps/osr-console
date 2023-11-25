@@ -58,7 +58,6 @@ class CharacterScreen(Screen):
         self.app.adventure.active_party.set_next_character_as_active()
         self.on_mount()
 
-
     def reroll(self):
         """Rolls the ability scores of the active character."""
         self.app.adventure.active_party.active_character.roll_abilities()

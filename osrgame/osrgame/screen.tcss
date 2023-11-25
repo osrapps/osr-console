@@ -1,3 +1,11 @@
+AdventureBrowserScreen {
+    layout: grid;
+    grid-size: 2;
+    grid-columns: 0.30fr 0.70fr;
+    grid-rows: 100%;
+    background: $surface;
+}
+
 CharacterScreen {
     layout: grid;
     grid-size: 4;
@@ -37,6 +45,12 @@ ExploreScreen {
 }
 
 #char-buttons {
+    border: solid $surface-lighten-3;
+    layout: vertical;
+    align: center middle;
+}
+
+#welcome-buttons {
     border: solid $surface-lighten-3;
     layout: vertical;
     align: center middle;
