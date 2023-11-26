@@ -1,7 +1,7 @@
 AdventureBrowserScreen {
     layout: grid;
     grid-size: 2;
-    grid-columns: 0.30fr 0.70fr;
+    grid-columns: 0.40fr 0.60fr;
     grid-rows: 100%;
     background: $surface;
 }

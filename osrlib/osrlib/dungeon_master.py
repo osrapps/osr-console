@@ -87,7 +87,7 @@ class DungeonMaster:
         self.system_message = None
         self.session_messages = []
         self.client = None
-        self.openai_model = openai_model
+        self.openai_model = openai_model.value
 
         if adventure is not None:
             self.set_active_adventure(adventure)

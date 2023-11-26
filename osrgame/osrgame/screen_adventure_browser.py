@@ -70,9 +70,9 @@ class AdventureBrowserScreen(Screen):
         try:
             loaded_adventure = Adventure.load_adventure(self.adventure_file_path)
             self.app.set_active_adventure(loaded_adventure)
-            self.app.get_screen("scr_explore").start_session()
+            self.app.start_session()
             self.app.pop_screen()
-            self.app.push_screen("scr_explore")
+            self.app.push_screen("screen_explore")
         except Exception:
             # Get the traceback and display it in the code view.
             code_view = self.query_one("#code", Static)
