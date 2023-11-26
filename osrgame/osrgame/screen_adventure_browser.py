@@ -10,6 +10,8 @@ from textual.widgets import DirectoryTree, Footer, Header, Static
 
 from osrlib.adventure import Adventure
 
+from widgets import JsonFilteredDirectoryTree
+
 class AdventureBrowserScreen(Screen):
     """File browser for selecting an adventure to load."""
 
@@ -26,16 +28,16 @@ class AdventureBrowserScreen(Screen):
         path = os.path.expanduser("~") + "/"
         yield Header()
         with Container():
-            yield DirectoryTree(path, id="tree-view")
+            yield JsonFilteredDirectoryTree(path, id="tree-view")
         with VerticalScroll(id="code-view"):
             yield Static(id="code", expand=True)
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one(DirectoryTree).focus()
+        self.query_one(JsonFilteredDirectoryTree).focus()
 
     def on_directory_tree_file_selected(
-        self, event: DirectoryTree.FileSelected
+        self, event: JsonFilteredDirectoryTree.FileSelected
     ) -> None:
         """Called when the user selects a file in the directory tree."""
         event.stop()

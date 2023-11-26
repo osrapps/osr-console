@@ -17,6 +17,7 @@ flake8 = "^6.1.0"
 flake8-docstrings = "^1.7.0"
 pytest = "^7.4.2"
 mkdocs-material = "^9.4.6"
+osrlib = { path = "../osrlib" }
 textual-dev = "^1.2.1"
 
 [build-system]

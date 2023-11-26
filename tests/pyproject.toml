@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tests"
-version = "0.1.1"
+version = "0.1.2"
 description = "Test library for osrlib."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"
@@ -8,9 +8,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-osrlib = {path = "../osrlib"}
 pytest = "^7.4.2"
+osrlib = {path = "../osrlib"}
 
+
+[tool.poetry.dev-dependencies]
+osrlib = { path = "../osrlib" }
 
 [build-system]
 requires = ["poetry-core"]

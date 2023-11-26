@@ -1,12 +1,7 @@
 import pytest
-from osrlib import (
-    ArmorFactory,
-    EquipmentFactory,
-    WeaponFactory,
-    CharacterClassType,
-    ItemType,
-    ItemDataNotFoundError,
-)
+from osrlib.character_classes import CharacterClassType
+from osrlib.item import ItemType
+from osrlib.item_factories import ArmorFactory, EquipmentFactory, WeaponFactory, ItemDataNotFoundError
 
 def test_create_valid_armor():
     """Test successful creation of a valid armor."""

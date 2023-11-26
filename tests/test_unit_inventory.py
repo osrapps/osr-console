@@ -1,4 +1,6 @@
-from osrlib import Inventory, Item, PlayerCharacter, CharacterClassType
+from osrlib.inventory import Inventory
+from osrlib.item import Item
+from osrlib.player_character import PlayerCharacter, CharacterClassType
 from osrlib.item import ItemType
 import pytest
 

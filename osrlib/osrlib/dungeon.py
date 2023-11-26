@@ -250,7 +250,7 @@ class Dungeon:
         self.description = description
         self.locations = locations
         self.start_location_id = start_location_id
-        if start_location_id:
+        if start_location_id is not None:
             self.set_start_location(start_location_id) # Also sets self.current_location
         else:
             self.current_location = self.locations[0] if len(self.locations) > 0 else None
@@ -271,6 +271,9 @@ class Dungeon:
         logger.debug(f"Setting starting location to location with ID {location_id}.")
         try:
             start_location = [loc for loc in self.locations if loc.id == location_id][0]
+            self.current_location = start_location
+            logger.debug(f"Starting location set to {start_location}.")
+            return start_location
         except IndexError:
             logger.exception(
                 f"Location with ID {location_id} does not exist in the dungeon."
@@ -278,11 +281,6 @@ class Dungeon:
             raise LocationNotFoundError(
                 f"Location with ID {location_id} does not exist in the dungeon."
             )
-
-        self.current_location = start_location
-        logger.debug(f"Starting location set to {start_location}.")
-
-        return start_location
 
     def add_location(self, location: Location) -> None:
         """Adds a location to the dungeon.
