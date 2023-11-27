@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "osrlib"
-version = "0.1.18"
+version = "0.1.27"
 description = "Turn-based dungeon-crawler game engine for OSR-style RPGs."
 authors = ["Marsh Macy <mmacy@users.noreply.github.com>"]
 license = "MIT"

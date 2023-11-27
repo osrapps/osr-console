@@ -53,7 +53,12 @@ class Encounter:
 
     def __str__(self):
         """Return a string representation of the encounter."""
-        return f"{self.name}: {self.description} ({len(self.monster_party.members)} {self.monster_party.members[0].name if self.monster_party.members else ''})"
+        if self.monster_party is None:
+            return f"{self.name}: {self.description}"
+        elif len(self.monster_party.members) == 0:
+            return f"{self.name}: {self.description} (no monsters)"
+        else:
+            return f"{self.name}: {self.description} ({len(self.monster_party.members)} {self.monster_party.members[0].name if self.monster_party.members else ''})"
 
     def log_mesg(self, message: str):
         """Log an encounter log message."""
@@ -203,16 +208,18 @@ class Encounter:
 
     def end_encounter(self):
         logger.debug(f"Ending encounter '{self.name}'...")
-        self.log_mesg(pylog.last_message)
-        if self.pc_party.is_alive and not self.monster_party.is_alive:
-            logger.debug(
-                f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party..."
-            )
+
+        if self.pc_party:
             self.log_mesg(pylog.last_message)
-            self.pc_party.grant_xp(self.monster_party.xp_value)
-        elif not self.pc_party.is_alive and self.monster_party.is_alive:
-            logger.debug(f"{self.pc_party.name} lost the battle.")
-            self.log_mesg(pylog.last_message)
+            if self.pc_party.is_alive and not self.monster_party.is_alive:
+                logger.debug(
+                    f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party..."
+                )
+                self.log_mesg(pylog.last_message)
+                self.pc_party.grant_xp(self.monster_party.xp_value)
+            elif not self.pc_party.is_alive and self.monster_party.is_alive:
+                logger.debug(f"{self.pc_party.name} lost the battle.")
+                self.log_mesg(pylog.last_message)
 
         self.is_started = False
         self.is_ended = True
@@ -267,16 +274,17 @@ class Encounter:
             "description": self.description,
             "monsters": self.monster_party.to_dict(),
             "treasure": self.treasure,
+            "is_ended": self.is_ended,
         }
         return encounter_dict
 
     @classmethod
-    def from_dict(cls, encounter_dict: dict):
+    def from_dict(cls, encounter_dict: dict) -> 'Encounter':
         """Deserialize a dictionary into an Encounter instance.
 
         This class method creates a new instance of Encounter using the data provided in a dictionary.
         The dictionary should contain keys corresponding to the attributes of an Encounter, including a serialized
-        MonsterParty instance.
+        MonsterParty instance. If 'is_ended' is True, the end_encounter() method will be called.
 
         Args:
             encounter_dict (dict): A dictionary containing the encounter's attributes.
@@ -289,15 +297,24 @@ class Encounter:
             encounter = Encounter.from_dict(encounter_dict)
             # The 'encounter' is now a rehydrated instance of the Encounter class
         """
-        name = encounter_dict["name"]
-        description = encounter_dict["description"]
-        monster_party = MonsterParty.from_dict(encounter_dict["monsters"])
-        treasure = encounter_dict["treasure"]
+        try:
+            name = encounter_dict["name"]
+            description = encounter_dict["description"]
+            monster_party = MonsterParty.from_dict(encounter_dict["monsters"])
+            treasure = encounter_dict["treasure"]
+            is_ended = encounter_dict.get("is_ended", False)
 
-        encounter = cls(
-            name,
-            description,
-            monster_party,
-            treasure,
-        )
-        return encounter
+            encounter = cls(
+                name,
+                description,
+                monster_party,
+                treasure,
+            )
+
+            if is_ended and isinstance(is_ended, bool):
+                encounter.end_encounter()
+
+            return encounter
+
+        except KeyError as e:
+            raise ValueError(f"Missing key in encounter_dict: {e}")

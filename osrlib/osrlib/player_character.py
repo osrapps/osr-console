@@ -68,9 +68,9 @@ class PlayerCharacter:
         )
         return (
             f"{self.name} ({self.character_class} {self.level}) "
-            f"HP: {self.hit_points}/{self.character_class.max_hp} "
+            f"HP: {self.hit_points}/{self.max_hit_points} "
             f"AC: {self.armor_class} "
-            f"XP: {self.character_class.xp}/{self.character_class.xp_needed_for_next_level}"
+            f"XP: {self.xp}/{self.xp_needed_for_next_level}"
         )
 
     @property
@@ -97,6 +97,11 @@ class PlayerCharacter:
         return self.character_class.hp
 
     @property
+    def max_hit_points(self) -> int:
+        """Get the maximum hit points of the character."""
+        return self.character_class.max_hp
+
+    @property
     def armor_class(self):
         """Get the armor class of the character."""
         armor_class = 9
@@ -107,6 +112,16 @@ class PlayerCharacter:
             if armor_item.is_equipped
         )
         return armor_class
+
+    @property
+    def xp(self) -> int:
+        """Get the character's current XP total."""
+        return self.character_class.xp
+
+    @property
+    def xp_needed_for_next_level(self) -> int:
+        """Get the amount of XP needed for the character to reach the next level."""
+        return self.character_class.xp_needed_for_next_level
 
     def get_ability_roll(self):
         """Rolls a 4d6 and returns the sum of the three highest rolls."""

@@ -128,7 +128,7 @@ class Location:
 
     def __str__(self):
         exits_str = ", ".join(str(exit) for exit in self.exits)
-        return f"Loc ID: {self.id} Size: {str(self.dimensions['width'])}'W x {str(self.dimensions['length'])}'L Exits: [{exits_str}] Keywords: {self.keywords}"
+        return f"LOC ID: {self.id} Size: {str(self.dimensions['width'])}'W x {str(self.dimensions['length'])}'L Exits: [{exits_str}] Keywords: {self.keywords}"
 
     @property
     def json(self):

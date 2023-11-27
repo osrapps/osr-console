@@ -137,7 +137,7 @@ class MonsterStatsBlock:
         self.attacks_per_round = attacks_per_round
         self.damage_per_attack = damage_per_attack
         self.num_appearing_dice_string = num_appearing
-        self.num_appearing = roll_dice(self.num_appearing_dice_string).total_with_modifier
+        self.num_appearing = max(roll_dice(self.num_appearing_dice_string).total_with_modifier, 1)
         self.save_as_class = save_as_class
         self.save_as_level = save_as_level
         self.morale = morale
@@ -209,7 +209,7 @@ class Monster:
         self.armor_class = monster_stats.armor_class
 
         self.hp_roll = roll_dice(monster_stats.hit_dice)
-        self.hit_points = self.hp_roll.total_with_modifier
+        self.hit_points = max(self.hp_roll.total_with_modifier, 1)
         self.max_hit_points = self.hit_points
 
         self.movement = monster_stats.movement
@@ -224,6 +224,10 @@ class Monster:
         self.xp_value = self._calculate_xp(
             self.hp_roll, monster_stats.num_special_abilities
         )
+
+    def __str__(self):
+        """Get a string representation of the monster."""
+        return f"{self.name} (HP: {self.hit_points}/{self.max_hit_points} AC: {self.armor_class} XP value: {self.xp_value})"
 
     def _calculate_xp(self, hp_roll: DiceRoll, num_special_abilities: int = 0):
         """Get the total XP value of the monster. The XP value is based on the monster's hit dice and number of special abilities.
@@ -375,6 +379,10 @@ class MonsterParty:
         ]
         self.treasure = self._get_treasure(monster_stats_block.treasure_type)
         self.is_surprised = False
+
+    def __str__(self):
+        """Get a string representation of the monster party."""
+        return "\n".join([str(member) for member in self.members])
 
     def _get_treasure(self, treasure_type: TreasureType):
         """Get the treasure for the monster party based on the treasure type.
