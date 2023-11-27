@@ -93,7 +93,7 @@ class PartyRosterTable(Container):
     def on_mount(self) -> None:
         """Perform actions when the widget is mounted."""
         table = self.query_one(DataTable)
-        table.add_columns("Name", "Class", "Level", "HP", "AC")
+        table.add_columns("Name", "Class", "Level", "HP", "AC", "XP")
 
     def update_table(self):
         party = self.app.adventure.active_party
@@ -104,8 +104,9 @@ class PartyRosterTable(Container):
                 pc.name,
                 pc.character_class.class_type.value,
                 Text(str(pc.level), justify="center"),
-                Text(f"{str(pc.hit_points)}/{str(pc.character_class.max_hp)}", justify="center"),
+                Text(f"{str(pc.hit_points)}/{str(pc.max_hit_points)}", justify="center"),
                 Text(str(pc.armor_class), justify="center"),
+                Text(str(pc.xp) + "/" + str(pc.xp_needed_for_next_level), justify="center"),
             ]
             table.add_row(*row_data, key=pc.name)
 
