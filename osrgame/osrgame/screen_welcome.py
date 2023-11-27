@@ -10,16 +10,11 @@ from osrlib.enums import OpenAIModelVersion
 
 
 class WelcomeScreen(Screen):
-    BINDINGS = [
-        ("escape", "app.pop_screen", "Pop screen"),
-        ("q", "quit", "Quit"),
-    ]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, id="header")
         yield WelcomeScreenButtons(id="welcome-buttons")
         yield Footer()
-
     def on_mount(self) -> None:
         pass
 
@@ -47,8 +42,7 @@ class WelcomeScreen(Screen):
     def action_start_default_adventure(self) -> None:
         """Start the default adventure, which is an adventure with one randomly generated dungeon."""
         self.app.set_active_adventure(adventure=None)
-        dm_response = self.app.start_session()
-        # TODO: set up a textual reactive property for the DM response and watch that in all the screens
+        dm_response = self.app.start_session() # TODO: dm_response should be a textual reactive property
         self.app.push_screen("screen_explore")
 
     def action_load_adventure(self) -> None:

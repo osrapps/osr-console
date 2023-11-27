@@ -17,14 +17,12 @@ class OSRConsole(App):
     player_party = None
     adventure = None
     dungeon_master = None
+    openai_model = OpenAIModelVersion.GPT4TURBO
 
     CSS_PATH = "screen.tcss"
 
     BINDINGS = [
-        ("c", "character", "Character"),
-        # ("e", "explore", "Explore"),
-        # ("ctrl+l", "load", "Load"),
-        ("escape", "app.pop_screen", "Pop screen"),
+        ("escape", "previous_screen", "Previous screen"),
         ("q", "quit", "Quit"),
     ]
 
@@ -41,17 +39,14 @@ class OSRConsole(App):
 
     def on_mount(self) -> None:
         self.title = "OSR Console"
-        self.sub_title = "Adventures in turn-based text"
+        self.sub_title = f"Adventures in turn-based text (model: {self.openai_model.value})"
 
-    def action_character(self) -> None:
-        """Show the character screen."""
-        self.push_screen("screen_character")
+    ### Actions ###
 
-    def action_explore(self) -> None:
-        """Show the explore screen."""
-        if self.adventure is None:
-            self.set_active_adventure()
-        self.push_screen("screen_explore")
+    def action_previous_screen(self) -> None:
+        """Return to the previous screen."""
+        if len(self.screen_stack) > 1:
+            self.pop_screen()
 
     def action_quit(self) -> None:
         """Quit the application."""
@@ -80,7 +75,7 @@ class OSRConsole(App):
             dungeon = Dungeon.get_random_dungeon("Dungeon of the Raving Mage",
                                                     "The first level of the home of the ancient wizard lich Glofarnux, its "
                                                     "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                    num_locations=50, use_ai=True, openai_model=OpenAIModelVersion.GPT35TURBO)
+                                                    num_locations=50, use_ai=True, openai_model=self.openai_model)
             dungeon.set_start_location(1)
 
             if dungeon.validate_location_connections():
@@ -97,7 +92,7 @@ class OSRConsole(App):
         if self.adventure is None:
             self.set_active_adventure(adventure=None)
 
-        self.dungeon_master = DungeonMaster(self.adventure, openai_model=OpenAIModelVersion.GPT35TURBO)
+        self.dungeon_master = DungeonMaster(self.adventure, openai_model=self.openai_model)
         dm_start_session_response = self.dungeon_master.start_session()
         logger.debug(f"DM start session response: {dm_start_session_response}")
 

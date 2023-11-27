@@ -6,7 +6,7 @@ from rich.traceback import Traceback
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import DirectoryTree, Footer, Header, Static
+from textual.widgets import Footer, Header, Static
 
 from osrlib.adventure import Adventure
 
@@ -16,8 +16,7 @@ class AdventureBrowserScreen(Screen):
     """File browser for selecting an adventure to load."""
 
     BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("l", "load_adventure", "Load adventure"),
+        ("ctrl+l", "load_adventure", "Load selected adventure"),
     ]
 
     adventure_file_path = None
@@ -70,9 +69,9 @@ class AdventureBrowserScreen(Screen):
         try:
             loaded_adventure = Adventure.load_adventure(self.adventure_file_path)
             self.app.set_active_adventure(loaded_adventure)
-            self.app.start_session()
             self.app.pop_screen()
             self.app.push_screen("screen_explore")
+            self.app.start_session()
         except Exception:
             # Get the traceback and display it in the code view.
             code_view = self.query_one("#code", Static)
