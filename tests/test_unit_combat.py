@@ -1,12 +1,11 @@
 import pytest
-from osrlib.encounter import Encounter
-from osrlib.monster import MonsterParty, MonsterStatsBlock
 from osrlib.character_classes import CharacterClassType, class_levels
+from osrlib.encounter import Encounter
+from osrlib.game_manager import logger
+from osrlib.monster import MonsterParty, MonsterStatsBlock
+from osrlib.party import get_default_party
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
-from osrlib.party import get_default_party
-from osrlib.game_manager import logger
-from osrlib.dice_roller import roll_dice
 
 
 # THAC0 data for each class type

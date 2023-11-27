@@ -3,7 +3,6 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, Log, Placeholder
 
 from osrlib.adventure import Adventure
-from osrlib.dungeon_master import DungeonMaster
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
 
@@ -20,7 +19,7 @@ class ExploreScreen(Screen):
         ("k", "clear_logs", "Clear logs"),
         ("?", "summarize", "Summarize session"),
         ("ctrl+s", "save_game", "Save game"),
-        ("ctrl+l", "load_game", "Load game"),
+        ("ctrl+h", "heal_party", "Heal party"),
     ]
 
     dungeon_master = None
@@ -34,12 +33,11 @@ class ExploreScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.dungeon_master = self.app.dungeon_master
         self.query_one("#player_log", Log).border_title = "Command Log"
         self.query_one("#dm_log", Log).border_title = "Adventure Log"
         self.query_one(PartyRosterTable).border_title = "Adventuring Party"
         self.query_one(PartyRosterTable).update_table()
-        self.query_one("#dm_log", Log).write_line("Press 'b' to begin a new session.")
-        self.dungeon_master = DungeonMaster(self.app.adventure)
 
     def perform_move_action(self, direction: Direction, log_message: str) -> None:
         """Move the party in the specified direction, execute battle (if any), and log the results."""
@@ -52,6 +50,7 @@ class ExploreScreen(Screen):
         self.query_one("#dm_log").write_line("---")
         self.query_one("#dm_log").write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.query_one("#dm_log").write_line(f"[model: {self.dungeon_master.openai_model}]")
         self.query_one("#dm_log").write_line(" ")
 
         self.check_for_encounter()
@@ -70,27 +69,10 @@ class ExploreScreen(Screen):
             encounter_log = encounter.get_encounter_log()
             dm_response = self.dungeon_master.summarize_battle(encounter_log)
             self.query_one("#dm_log").write_line(wrap_text(dm_response))
+            self.query_one("#dm_log").write_line(f"[model: {self.dungeon_master.openai_model}]")
             self.query_one("#dm_log").write_line(" ")
 
-            self.query_one("#pc_party_table").update_table()
-
-    def action_start_session(self) -> None:
-        """Start a new session."""
-
-        player_log = self.query_one("#player_log")
-        dm_log = self.query_one("#dm_log")
-
-        dm_response = self.dungeon_master.start_session()
-
-        # Move the party to the first location
-        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
-        dm_response = self.dungeon_master.move_party(first_exit.direction)
-
-        player_log.clear()
-        player_log.write_line("The party stands ready.")
-        dm_log.write_line("---")
-        dm_log.write_line("> " + str(self.dungeon_master.adventure.active_dungeon.current_location))
-        dm_log.write_line(wrap_text(dm_response))
+        self.query_one("#pc_party_table").update_table()
 
     def action_quit(self) -> None:
         """Quit the application."""
@@ -129,9 +111,10 @@ class ExploreScreen(Screen):
         """An action to summarize the session."""
         self.query_one("#player_log").write_line("Summarizing session...")
         self.query_one("#player_log").write_line("===")
-        formatted_message = self.dungeon_master.format_user_message("Please provide a journal entry for the adventurers that summarizes the locations they've seen and encounters they've had in this game session. Include only what the player characters in the adventuring party would know. Add a bulleted list at the end with number of locations visited, monsters killed, PCs killed, and total experience points earned.")
+        formatted_message = self.dungeon_master.format_user_message("Please provide a journal entry for the adventurers that summarizes the locations they've seen and encounters they've had in this game session. Include only what the player characters in the adventuring party would know. Include stats at the very end with number of locations visited, monsters killed, PCs killed, and total experience points earned.")
         dm_response = self.dungeon_master.player_message(formatted_message)
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
+        self.query_one("#dm_log").write_line(f"[model: {self.dungeon_master.openai_model}]")
         self.query_one("#dm_log").write_line("===")
 
     def action_save_game(self) -> None:
@@ -140,8 +123,18 @@ class ExploreScreen(Screen):
         self.query_one("#player_log").write_line("---")
         self.query_one("#dm_log").write_line("> Saving adventure...")
         self.save_path = self.dungeon_master.adventure.save_adventure()
-        self.query_one("#dm_log").write_line(f"Adventure {self.dungeon_master.adventure.name} saved to {self.save_path}.")
+        self.query_one("#dm_log").write_line(f"Adventure '{self.dungeon_master.adventure.name}' saved to {self.save_path}.")
         self.query_one("#dm_log").write_line("===")
+
+    def action_heal_party(self) -> None:
+        """An action to heal the party."""
+        self.query_one("#player_log").write_line("> Heal party")
+        self.query_one("#player_log").write_line("---")
+        self.query_one("#dm_log").write_line("> Healing party...")
+        self.dungeon_master.adventure.active_party.heal_party()
+        self.query_one("#dm_log").write_line("Party healed.")
+        self.query_one("#pc_party_table").update_table()
+
 
     def action_load_game(self) -> None:
         """An action to save the game."""
@@ -154,4 +147,5 @@ class ExploreScreen(Screen):
             self.app.adventure = Adventure.load_adventure(self.save_path)
             loaded_adventure = Adventure.load_adventure(self.save_path)
             self.dungeon_master.adventure = loaded_adventure
-            self.query_one("#dm_log").write_line(f"Adventure {loaded_adventure.name} loaded from {self.save_path}.")
+            self.query_one("#dm_log").write_line(f"Adventure '{loaded_adventure.name}' loaded from {self.save_path}.")
+            self.query_one("#pc_party_table").update_table()

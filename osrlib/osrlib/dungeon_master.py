@@ -82,15 +82,21 @@ class DungeonMaster:
         session_messages (list): The collective list of messages sent to the OpenAI API during a game session. Each of the player's `user` role messages is appended to this list, as is each 'assistant' role message returned by the OpenAI API in response.
         is_started (bool): Indicates whether the game session has started. The game session starts upon first call to the `start_session()` method.
     """
-    def __init__(self, adventure: Adventure):
+    def __init__(self, adventure: Adventure = None, openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT):
+        self.adventure = None
+        self.system_message = None
+        self.session_messages = []
+        self.client = None
+        self.openai_model = openai_model.value
+
+        if adventure is not None:
+            self.set_active_adventure(adventure)
+
+    def set_active_adventure(self, adventure: Adventure = None) -> None:
         self.adventure = adventure
-
-        system_message[0]["content"] += adventure.introduction
+        self.system_message = system_message
+        self.system_message[0]["content"] += adventure.introduction
         self.session_messages = system_message + user_init_message
-        self.is_started = False
-
-        self.client = OpenAI() #AsyncOpenAI()
-        self.openai_model = OpenAIModelVersion.DEFAULT.value
 
     def format_user_message(self, message_string: str) -> dict:
         """Format the given string as an OpenAI 'user' role message.
@@ -123,29 +129,39 @@ class DungeonMaster:
         """Start a gaming session with the dungeon master in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
-        dungeon master's (system) init message is sent to theOpenAI API as is player's (user) init message.
+        dungeon master's (system) init message is sent to the OpenAI API as is player's (user) init message.
         If it's not the first session of the adventure, only the system and user init messages are sent.
 
         Returns:
             str: The response from the Dungeon Master (in this case, the OpenAI API) when initiating a game session. This string is appropriate for display to the player.
+
+        Raises:
+            ValueError: If there is no active adventure. Call set_active_adventure() with a valid adventure before calling start_session().
         """
+        if self.adventure is None:
+            raise ValueError("There is no active adventure. Call set_active_adventure() with a valid adventure before calling start_session().")
+
+        self.client = OpenAI()
 
         if not self.adventure.is_started:
             self.adventure.start_adventure()
 
         completion = self.client.chat.completions.create(
-            model=self.openai_model, messages=self.session_messages
+            model=self.openai_model,
+            messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
         self.is_started = True
         logger.debug(completion)
+
         return completion.choices[0].message.content
 
     def player_message(self, message):
         if self.is_started:
             self.session_messages.append(message)
             completion = self.client.chat.completions.create(
-                model=self.openai_model, messages=self.session_messages
+                model=self.openai_model,
+                messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
             return completion.choices[0].message.content

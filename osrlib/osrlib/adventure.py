@@ -1,4 +1,4 @@
-import json, os
+import json, os, datetime
 from osrlib.game_manager import logger
 from osrlib.dungeon import Dungeon
 from osrlib.party import Party
@@ -180,8 +180,9 @@ class Adventure:
         json_data = json.dumps(adventure_data, indent=4)
 
         if file_path is None:
-            # Default file path in the user's home directory
-            filename = f"{self.name}.json".replace(" ", "_").lower()
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%Y%m%d_%H%M%S") # YYYYMMDD_HHMMSS
+            filename = f"{self.name}_{timestamp}.json".replace(" ", "_").lower()
             home_dir = os.path.expanduser("~")
             file_path = os.path.join(home_dir, filename)
 

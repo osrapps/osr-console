@@ -1,6 +1,6 @@
 import logging
 
-from osrlib import ModifierType
+from osrlib.ability import ModifierType
 from osrlib.utils import format_modifiers
 
 logger = logging.getLogger(__name__)

@@ -250,7 +250,7 @@ class Dungeon:
         self.description = description
         self.locations = locations
         self.start_location_id = start_location_id
-        if start_location_id:
+        if start_location_id is not None:
             self.set_start_location(start_location_id) # Also sets self.current_location
         else:
             self.current_location = self.locations[0] if len(self.locations) > 0 else None
@@ -271,6 +271,9 @@ class Dungeon:
         logger.debug(f"Setting starting location to location with ID {location_id}.")
         try:
             start_location = [loc for loc in self.locations if loc.id == location_id][0]
+            self.current_location = start_location
+            logger.debug(f"Starting location set to {start_location}.")
+            return start_location
         except IndexError:
             logger.exception(
                 f"Location with ID {location_id} does not exist in the dungeon."
@@ -278,11 +281,6 @@ class Dungeon:
             raise LocationNotFoundError(
                 f"Location with ID {location_id} does not exist in the dungeon."
             )
-
-        self.current_location = start_location
-        logger.debug(f"Starting location set to {start_location}.")
-
-        return start_location
 
     def add_location(self, location: Location) -> None:
         """Adds a location to the dungeon.
@@ -406,7 +404,7 @@ class Dungeon:
         return len(validation_errors) == 0
 
     @staticmethod
-    def get_dungeon_location_keywords(dungeon: "Dungeon"):
+    def get_dungeon_location_keywords(dungeon: "Dungeon", openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT):
         """Get the keywords for each location in the dungeon from the OpenAI API.
 
         Provided a ``Dungeon``, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
@@ -430,7 +428,8 @@ class Dungeon:
                 "locations in the dungeon, and their keywords should reflect that relationship. The JSON response "
                 "should be a collection of key-value pairs where the key is the location ID and the value is the "
                 "collection of keywords for that location. The JSON must include keywords for every location and no two "
-                "locations should have the same keywords. Every location must have four keywords."
+                "locations should have the same keywords. Every location must have four keywords, and the word 'whisper' "
+                "must never be used, nor should 'footsteps' or 'dripping'."
             },
         ]
         user_message = [
@@ -442,7 +441,7 @@ class Dungeon:
         logger.debug(f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API...")
 
         client = OpenAI()
-        openai_model = OpenAIModelVersion.DEFAULT.value
+        openai_model = openai_model.value
 
         completion = client.chat.completions.create(
             model=openai_model,
@@ -466,6 +465,7 @@ class Dungeon:
         num_locations: int = 10,
         use_ai: bool = False,
         level: int = 1,
+        openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT,
     ) -> "Dungeon":
         """Generates a random dungeon with the specified number of locations.
 
@@ -475,6 +475,7 @@ class Dungeon:
             num_locations (int): The number of locations to generate in the dungeon.
             use_ai (bool): Indicates whether to use the OpenAI API to generate keywords for each location in the dungeon.
             level (int): The level of the dungeon. Determines the hit die (and thus the difficulty) of monsters in encounters in the dungeon.
+            openai_model (OpenAIModelVersion): The OpenAI model to use when generating keywords for each location in the dungeon.
 
         Returns:
             Dungeon: A randomly generated dungeon with the specified number of locations, each with a random size and possibility of an encounter.
@@ -527,7 +528,7 @@ class Dungeon:
         dungeon = Dungeon(name, description, locations, start_location_id=1)
 
         if use_ai:
-            location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon)
+            location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon, openai_model)
             location_keywords_dict = json.loads(location_keywords_json)
             for location_id_str, keywords in location_keywords_dict.items():
                 location_id = int(location_id_str)

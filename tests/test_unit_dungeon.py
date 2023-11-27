@@ -1,9 +1,11 @@
 import json
 import pytest
+import osrlib
 from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
 from osrlib.encounter import Encounter
 from osrlib.game_manager import logger
 
+logger.info(osrlib.__file__)
 
 @pytest.fixture
 def sample_dungeon():

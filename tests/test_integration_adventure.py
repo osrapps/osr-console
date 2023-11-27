@@ -1,5 +1,6 @@
 import pytest
-from osrlib import Location, Exit, Direction, Dungeon, Adventure
+from osrlib.adventure import Adventure
+from osrlib.dungeon import Location, Exit, Direction, Dungeon
 
 @pytest.fixture
 def setup_adventure():

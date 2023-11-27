@@ -215,6 +215,15 @@ class PlayerCharacter:
             self.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
         )
 
+    def heal(self, hit_points_healed: int):
+        """Heal the player character by increasing their hit points by the given amount, up to their maximum hit points.
+
+        Args:
+            hit_points_healed (int): The amount of hit points to heal the PC.
+        """
+        new_hp = self.hit_points + hit_points_healed
+        self.character_class.hp = min(new_hp, self.character_class.max_hp)
+
     def roll_abilities(self):
         """Rolls the ability scores of the character."""
         self.abilities = {}

@@ -1,20 +1,28 @@
-from typing import List
+from pathlib import Path
+from typing import List, Iterable
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
-from textual.widgets import Button, DataTable, Log, Static
+from textual.widgets import Button, DataTable, Log, Static, DirectoryTree
+
 
 from osrlib import Item
 from osrlib.utils import format_modifiers
 
+
+class WelcomeScreenButtons(Container):
+    def compose(self) -> ComposeResult:
+        yield Button("Start default adventure", id="btn-adventure-default", classes="button")
+        yield Button("Load adventure", id="btn-adventure-load", classes="button")
+        yield Button("Create adventure", id="btn-adventure-create", classes="button")
+        yield Button("Quit", id="btn-quit", classes="button")
 
 class CharacterScreenButtons(Container):
     def compose(self) -> ComposeResult:
         yield Button("Roll abilities", id="btn_roll_abilities", classes="button")
         yield Button("Roll HP", id="btn_roll_hp", classes="button")
         yield Button("Save character", id="btn_save_character", classes="button")
-
 
 class CharacterStatsBox(Container):
     """A container for the character stats like name, class, level, HP, and AC."""
@@ -172,3 +180,8 @@ class ExploreLogs(Container):
         """Perform actions when the widget is mounted."""
         self.query_one("#dm_log", Log).border_title = "DM LOG"
         self.query_one("#player_log", Log).border_subtitle = "PLAYER LOG"
+
+class JsonFilteredDirectoryTree(DirectoryTree):
+    """A directory tree that shows only JSON files."""
+    def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
+        return [path for path in paths if path.name.endswith(".json")]
