@@ -349,11 +349,10 @@ class Dungeon:
 
         if self.current_location.is_visited:
             logger.debug(
-                f"Party moved to previously visited location {self.current_location}."
+                f"Party moved to previously visited (is_visited = True) location {self.current_location}."
             )
         else:
-            logger.debug(f"Party moved to new location {self.current_location}.")
-            self.current_location.is_visited = True
+            logger.debug(f"Party moved to new (is_visited = False) location {self.current_location}.")
 
         return self.current_location
 
