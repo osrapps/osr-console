@@ -9,6 +9,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Header, Static
 
 from osrlib.adventure import Adventure
+from osrlib.utils import get_data_dir_path
 
 from widgets import JsonFilteredDirectoryTree
 
@@ -24,7 +25,7 @@ class AdventureBrowserScreen(Screen):
     def compose(self) -> ComposeResult:
         """Compose our UI."""
         # Set the path to the current user's home directory.
-        path = os.path.expanduser("~") + "/"
+        path = get_data_dir_path("osrlib")# / "adventures"
         yield Header()
         with Container():
             yield JsonFilteredDirectoryTree(path, id="tree-view")

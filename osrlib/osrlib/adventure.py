@@ -3,6 +3,7 @@ from osrlib.game_manager import logger
 from osrlib.dungeon import Dungeon
 from osrlib.party import Party
 from osrlib.quest import Quest
+from osrlib.utils import get_data_dir_path, create_dir_tree_if_not_exist
 
 
 class DungeonNotFoundError(Exception):
@@ -168,7 +169,7 @@ class Adventure:
 
         Args:
             file_path (str, optional): The path where the file will be saved.
-                                       If None, saves in the user's home directory.
+                                       If None, saves in the default data directory.
 
         Returns:
             str: The path where the file was saved.
@@ -183,8 +184,9 @@ class Adventure:
             now = datetime.datetime.now()
             timestamp = now.strftime("%Y%m%d_%H%M%S") # YYYYMMDD_HHMMSS
             filename = f"{self.name}_{timestamp}.json".replace(" ", "_").lower()
-            home_dir = os.path.expanduser("~")
-            file_path = os.path.join(home_dir, filename)
+            save_dir = get_data_dir_path("osrlib")# / "adventures"
+            create_dir_tree_if_not_exist(save_dir)
+            file_path = save_dir / filename
 
         try:
             with open(file_path, "w") as file:
@@ -194,7 +196,7 @@ class Adventure:
             logger.error(f"Failed to save adventure to {file_path}: {e}")
             raise
 
-        return file_path
+        return str(file_path)
 
     @staticmethod
     def load_adventure(file_path: str = None) -> "Adventure":

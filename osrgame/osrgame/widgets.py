@@ -7,7 +7,7 @@ from textual.reactive import reactive
 from textual.widgets import Button, DataTable, Log, Static, DirectoryTree
 
 
-from osrlib import Item
+from osrlib.item import Item
 from osrlib.utils import format_modifiers
 
 

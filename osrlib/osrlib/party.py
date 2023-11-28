@@ -81,7 +81,7 @@ class Party:
     def __init__(
         self,
         name: str,
-        max_party_members: int = 6,
+        max_party_members: int = 8,
         characters: List[PlayerCharacter] = None,
     ):
         """Initialize a new Party instance."""
@@ -488,6 +488,7 @@ def get_default_party(party_name: str = "Default Party") -> Party:  # pragma: no
     party = Party(party_name)
     party.create_character("Sckricko", CharacterClassType.FIGHTER, 1)
     party.create_character("Mazpar", CharacterClassType.ELF, 1)
+    party.create_character("Friar from Briar", CharacterClassType.CLERIC, 1)
     party.create_character("Blarg The Destructor", CharacterClassType.DWARF, 1)
     party.create_character("Slick", CharacterClassType.THIEF, 1)
     party.create_character("Dimp Beefeeder", CharacterClassType.HALFLING, 1)
