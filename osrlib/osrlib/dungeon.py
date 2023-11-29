@@ -250,10 +250,8 @@ class Dungeon:
         self.description = description
         self.locations = locations
         self.start_location_id = start_location_id
-        if start_location_id is not None:
-            self.set_start_location(start_location_id) # Also sets self.current_location
-        else:
-            self.set_start_location(self.locations[0].id) if len(self.locations) > 0 else None
+        self.current_location = None
+        self.set_start_location(start_location_id) # Also sets self.current_location
         self.id = id
 
     def set_start_location(self, location_id: int) -> Location:

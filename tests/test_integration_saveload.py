@@ -647,6 +647,7 @@ def test_location_save_load(db):
 def test_dungeon_save_load(db):
     location = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
     dungeon = Dungeon("TestDungeon", "An example dungeon.", [location])
+    dungeon.set_start_location(1)
     data = dungeon.to_dict()
     db.insert(data)
     loaded_data = db.all()[0]
