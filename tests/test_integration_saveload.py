@@ -548,7 +548,7 @@ def test_party_saveload(db):
     normal_item = Item(
         "50' rope", ItemType.EQUIPMENT, gp_value=1, max_equipped=0
     )
-    elf = pc_party.get_character_by_name("Mazpar")
+    elf = pc_party.get_characters_by_class(CharacterClassType.ELF)[0]
     elf.inventory.add_item(armor)
     elf.inventory.add_item(weapon)
     elf.inventory.add_item(normal_item)

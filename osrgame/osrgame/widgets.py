@@ -13,7 +13,7 @@ from osrlib.utils import format_modifiers
 
 class WelcomeScreenButtons(Container):
     def compose(self) -> ComposeResult:
-        yield Button("Start default adventure", id="btn-adventure-default", classes="button")
+        yield Button("Random adventure", id="btn-adventure-default", classes="button")
         yield Button("Load adventure", id="btn-adventure-load", classes="button")
         yield Button("Create adventure", id="btn-adventure-create", classes="button")
         yield Button("Quit", id="btn-quit", classes="button")
@@ -33,7 +33,7 @@ class CharacterStatsBox(Container):
     pc_hp = reactive(0)
     pc_ac = reactive(0)
 
-    BORDER_TITLE = "CHARACTER RECORD SHEET"
+    BORDER_TITLE = "Character Record Sheet"
 
     def compose(self) -> ComposeResult:
         yield Static(id="name")
@@ -110,6 +110,12 @@ class PartyRosterTable(Container):
             ]
             table.add_row(*row_data, key=pc.name)
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Called when the user selects a row in the party roster table."""
+        event.stop()
+        party = self.app.adventure.active_party
+        party.set_active_character(party.members[event.cursor_row])
+        #self.update_table()
 
 class SavingThrowTable(Container):
     def compose(self) -> ComposeResult:

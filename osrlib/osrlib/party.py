@@ -1,6 +1,7 @@
 """The Party module contains the Party class and functions related to managing a party of player characters (collection
 of type PlayerCharacter)."""
 
+import random
 from typing import List
 
 from osrlib.player_character import PlayerCharacter
@@ -8,7 +9,15 @@ from osrlib.game_manager import logger
 from osrlib.enums import CharacterClassType
 from osrlib.item_factories import equip_party
 from osrlib.dice_roller import roll_dice
-import time
+from osrlib.constants import (
+    FIGHTER_NAMES,
+    ELF_NAMES,
+    CLERIC_NAMES,
+    DWARF_NAMES,
+    THIEF_NAMES,
+    HALFLING_NAMES,
+    MAGIC_USER_NAMES
+)
 
 class PartyAtCapacityError(Exception):
     """Raised when attempting to add a player character to a party that already has the maximum number of members."""
@@ -349,6 +358,28 @@ class Party:
         except IndexError:
             return None
 
+    def get_characters_by_class(self, character_class_type: CharacterClassType) -> List[PlayerCharacter]:
+        """Get all characters in the party of the given class.
+
+        Example:
+
+            .. code-block:: python
+                fighters = party.get_characters_by_class(character_classes.CharacterClassType.FIGHTER)
+                for fighter in fighters:
+                    print(fighter.name)
+
+        Args:
+            character_class (character_classes.CharacterClassType): The class of characters to return.
+
+        Returns:
+            List[PlayerCharacter]: A list of all characters in the party of the given class.
+        """
+        return [
+            character
+            for character in self.members
+            if character.character_class.class_type == character_class_type
+        ]
+
     def get_character_index(self, character: PlayerCharacter) -> int:
         """Get the index of a character in the party.
 
@@ -486,13 +517,13 @@ def get_default_party(party_name: str = "Default Party") -> Party:  # pragma: no
         Party: A party with six (6) player characters at first level (zero experience points).
     """
     party = Party(party_name)
-    party.create_character("Sckricko", CharacterClassType.FIGHTER, 1)
-    party.create_character("Mazpar", CharacterClassType.ELF, 1)
-    party.create_character("Friar from Briar", CharacterClassType.CLERIC, 1)
-    party.create_character("Blarg The Destructor", CharacterClassType.DWARF, 1)
-    party.create_character("Slick", CharacterClassType.THIEF, 1)
-    party.create_character("Dimp Beefeeder", CharacterClassType.HALFLING, 1)
-    party.create_character("Merlin", CharacterClassType.MAGIC_USER, 1)
+    party.create_character(random.choice(FIGHTER_NAMES), CharacterClassType.FIGHTER, 1)
+    party.create_character(random.choice(ELF_NAMES), CharacterClassType.ELF, 1)
+    party.create_character(random.choice(CLERIC_NAMES), CharacterClassType.CLERIC, 1)
+    party.create_character(random.choice(DWARF_NAMES), CharacterClassType.DWARF, 1)
+    party.create_character(random.choice(THIEF_NAMES), CharacterClassType.THIEF, 1)
+    party.create_character(random.choice(HALFLING_NAMES), CharacterClassType.HALFLING, 1)
+    party.create_character(random.choice(MAGIC_USER_NAMES), CharacterClassType.MAGIC_USER, 1)
 
     equip_party(party)
 

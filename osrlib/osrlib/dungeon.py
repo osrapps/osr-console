@@ -253,34 +253,26 @@ class Dungeon:
         if start_location_id is not None:
             self.set_start_location(start_location_id) # Also sets self.current_location
         else:
-            self.current_location = self.locations[0] if len(self.locations) > 0 else None
+            self.set_start_location(self.locations[0].id) if len(self.locations) > 0 else None
         self.id = id
 
     def set_start_location(self, location_id: int) -> Location:
-        """Sets the starting location for the dungeon. Also sets the current location to the starting location.
+        """Sets the starting location for the dungeon and also sets the current location to the starting location.
 
         Args:
             location_id (int): The ID of the location to set as the starting location.
 
         Returns:
-            Location: The starting location.
-
-        Raises:
-            LocationNotFoundError: If the location ID does not exist in the dungeon.
+            Location: The starting location if it exists, otherwise None.
         """
         logger.debug(f"Setting starting location to location with ID {location_id}.")
-        try:
-            start_location = [loc for loc in self.locations if loc.id == location_id][0]
+        start_location = self.get_location_by_id(location_id)
+        if start_location:
             self.current_location = start_location
             logger.debug(f"Starting location set to {start_location}.")
             return start_location
-        except IndexError:
-            logger.exception(
-                f"Location with ID {location_id} does not exist in the dungeon."
-            )
-            raise LocationNotFoundError(
-                f"Location with ID {location_id} does not exist in the dungeon."
-            )
+        else:
+            return None
 
     def add_location(self, location: Location) -> None:
         """Adds a location to the dungeon.
@@ -298,18 +290,38 @@ class Dungeon:
             raise exception
 
     def get_location_by_id(self, location_id: int) -> Location:
-        """Returns the location with the specified ID.
+        """Get the location with the specified ID.
 
         Args:
             location_id (int): The ID of the location to return.
 
         Returns:
-            Location: The location with the specified ID, otherwise None if the location with that ID doesn't exist.
+            Location: The location with the specified ID if it exists, otherwise None.
         """
         return next((loc for loc in self.locations if loc.id == location_id), None)
 
+    def get_location_by_direction(self, location: Location, direction: Direction) -> Location:
+        """Get the location in the specified direction from the given location.
+
+        Args:
+            location (Location): The location containing the exit whose destination should be returned.
+            direction (Direction): The direction of the give location's exit whose destination should be returned.
+
+        Returns:
+            Location: The location that is the destination of the exit in the specified direction, otherwise None if there is no exit in that direction.
+        """
+        exit = location.get_exit(direction)
+        if exit:
+            return self.get_location_by_id(exit.destination)
+        else:
+            return None
+
     def move(self, direction: Direction) -> Location:
-        """Moves the party to the location in the specified direction if there's an exit in that direction.
+        """Moves the party to the location in the specified direction if there's an exit in that direction, and sets the
+        dungeon's current location to the new location.
+
+        You should set the new location's ``is_visited`` property to True (if it was false) after you've done any
+        processing required when the party enters the location for the first time.
 
         Example:
             >>> exit1 = Exit(Direction.NORTH, 2)
@@ -319,34 +331,36 @@ class Dungeon:
             >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
             >>> start_location = dungeon.set_start_location(1)
             >>> new_location = dungeon.move(Direction.NORTH)
-            >>> dungeon.current_location.id == location2.id
+            >>> if new_location:
+            ...     if new_location.is_visited:
+            ...         print(f"Party moved to previously visited location {new_location}.")
+            ...     else:
+            ...         print(f"Party moved to new location {new_location}.")
+            ...         new_location.is_visited = True
+            Party moved to new location LOC ID: 2 Size: 10'W x 10'L Exits: [NORTH:1] Keywords: ['rust', 'armory']
+            >>> dungeon.current_location == new_location
             True
 
         Args:
             direction (Direction): The direction of the exit the party should move through.
 
         Returns:
-            Location: The location the party moved to, or None if there is no exit in the specified direction.
+            Location: The location the party moved to if they were able to move in the specified direction, otherwise None.
         """
-        logger.debug(f"Moving party {direction.name} from {self.current_location}.")
-        try:
-            exit = [
-                exit
-                for exit in self.current_location.exits
-                if exit.direction == direction
-            ][0]
-        except IndexError:
+        new_location = self.get_location_by_direction(self.current_location, direction)
+        if not new_location:
             logger.debug(
-                f"No exit to the {direction.name} from {self.current_location}. The only exits are: "
+                f"No location {direction.name} of {self.current_location}. The only exits are: "
                 + ", ".join(str(exit) for exit in self.current_location.exits)
                 + "."
             )
             return None
 
-        self.current_location = [
-            loc for loc in self.locations if loc.id == exit.destination
-        ][0]
+        self.current_location = new_location
 
+        # NOTE: We do NOT set is_visited to True here because we need to give the caller the opportunity to check and
+        # perform any actions that need to be done when the party enters a location for the first time. They can then
+        # set is_visited to True when they're done performing those actions.
         if self.current_location.is_visited:
             logger.debug(
                 f"Party moved to previously visited (is_visited = True) location {self.current_location}."

@@ -110,8 +110,7 @@ def test_set_start_location():
     location1 = Location(1, exits=[exit1])
     dungeon = Dungeon(locations=[location1])
 
-    with pytest.raises(LocationNotFoundError):
-        dungeon.set_start_location(99)
+    assert dungeon.set_start_location(99) == None
 
     start_location = dungeon.set_start_location(1)
     assert start_location.id == 1
