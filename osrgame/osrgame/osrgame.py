@@ -1,3 +1,4 @@
+import random
 from textual.app import App, ComposeResult
 from screen_character import CharacterScreen
 from screen_welcome import WelcomeScreen
@@ -5,6 +6,7 @@ from screen_explore import ExploreScreen
 from screen_adventure_browser import AdventureBrowserScreen
 
 from osrlib.adventure import Adventure
+from osrlib.constants import ADVENTURE_NAMES, DUNGEON_NAMES
 from osrlib.dungeon import Dungeon
 from osrlib.dungeon_master import DungeonMaster
 from osrlib.game_manager import logger
@@ -57,7 +59,7 @@ class OSRConsole(App):
         if adventure is not None:
             self.adventure = adventure
         else:
-            default_adventure = Adventure("Raving Mad Under the Mystic Forest")
+            default_adventure = Adventure(random.choice(ADVENTURE_NAMES))
             default_adventure.description = "An adventure for 4-6 characters of levels 1-3."
             default_adventure.introduction = (
                 "In the heart of the cursed Mystic Forest, a tale as old as time stirs once again. Legends "
@@ -72,7 +74,7 @@ class OSRConsole(App):
                 "Mad Mage."
             )
 
-            dungeon = Dungeon.get_random_dungeon("Dungeon of the Raving Mage",
+            dungeon = Dungeon.get_random_dungeon(random.choice(DUNGEON_NAMES),
                                                     "The first level of the home of the ancient wizard lich Glofarnux, its "
                                                     "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
                                                     num_locations=50, use_ai=True, openai_model=self.openai_model)

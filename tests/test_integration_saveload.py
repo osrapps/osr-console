@@ -2,14 +2,11 @@ import os
 import pytest
 from tinydb import Query, TinyDB
 
-from osrlib import (
-    Party,
-    PlayerCharacter,
-    item,
-    character_classes,
-    party,
-    game_manager as gm,
-)
+from osrlib.party import Party, get_default_party
+from osrlib.player_character import PlayerCharacter
+from osrlib.item import Item, ItemType, ItemNotUsableError, Armor, Weapon, Spell
+from osrlib.character_classes import CharacterClassType
+from osrlib.game_manager import logger
 from osrlib.ability import (
     Strength,
     Intelligence,
@@ -29,14 +26,14 @@ from osrlib.combat import ModifierType
 
 @pytest.fixture
 def test_fighter():
-    pc = PlayerCharacter("Test Fighter", character_classes.CharacterClassType.FIGHTER)
+    pc = PlayerCharacter("Test Fighter", CharacterClassType.FIGHTER)
     yield pc
     pc.inventory.drop_all_items()
 
 
 @pytest.fixture
 def test_elf():
-    pc = PlayerCharacter("Test Elf", character_classes.CharacterClassType.ELF)
+    pc = PlayerCharacter("Test Elf", CharacterClassType.ELF)
     yield pc
     pc.inventory.drop_all_items()
 
@@ -44,7 +41,7 @@ def test_elf():
 @pytest.fixture
 def test_magic_user():
     pc = PlayerCharacter(
-        "Test Magic User", character_classes.CharacterClassType.MAGIC_USER
+        "Test Magic User", CharacterClassType.MAGIC_USER
     )
     yield pc
     pc.inventory.drop_all_items()
@@ -54,10 +51,10 @@ def test_magic_user():
 def db():
     db_path = "test_db.json"
     full_path = os.path.abspath(db_path)
-    gm.logger.debug(f"Setting up TinyDB: {full_path}")
+    logger.debug(f"Setting up TinyDB: {full_path}")
     db = TinyDB(db_path)
     yield db
-    gm.logger.debug(f"Tearing down TinyDB: {db}")
+    logger.debug(f"Tearing down TinyDB: {db}")
     db.drop_tables()
     db.close()
 
@@ -135,11 +132,11 @@ def test_item_saveload(db):
 
     # Create an Item instance
     usable_by = {
-        character_classes.CharacterClassType.FIGHTER,
-        character_classes.CharacterClassType.THIEF,
+        CharacterClassType.FIGHTER,
+        CharacterClassType.THIEF,
     }
-    original_item = item.Item(
-        "50' rope", item.ItemType.ITEM, usable_by, max_equipped=0, gp_value=5
+    original_item = Item(
+        "50' rope", ItemType.ITEM, usable_by, max_equipped=0, gp_value=5
     )
 
     # Serialize and insert into DB
@@ -149,7 +146,7 @@ def test_item_saveload(db):
     # Retrieve and deserialize
     ItemQuery = Query()
     retrieved_item_dict = item_table.search(ItemQuery.name == "50' rope")[0]
-    retrieved_item = item.Item.from_dict(retrieved_item_dict)
+    retrieved_item = Item.from_dict(retrieved_item_dict)
 
     # Assertions to check whether deserialization was correct
     assert original_item.name == retrieved_item.name
@@ -164,10 +161,10 @@ def test_armor_saveload(db):
 
     # Create an Item instance
     usable_by = {
-        character_classes.CharacterClassType.FIGHTER,
-        character_classes.CharacterClassType.ELF,
+        CharacterClassType.FIGHTER,
+        CharacterClassType.ELF,
     }
-    original_item = item.Armor(
+    original_item = Armor(
         "Chain Mail", -4, usable_by_classes=usable_by, max_equipped=1, gp_value=40
     )
 
@@ -178,10 +175,10 @@ def test_armor_saveload(db):
     # Retrieve and deserialize
     ItemQuery = Query()
     retrieved_item_dict = item_table.search(ItemQuery.name == "Chain Mail")[0]
-    retrieved_item = item.Armor.from_dict(retrieved_item_dict)
+    retrieved_item = Armor.from_dict(retrieved_item_dict)
 
     # Assertions to check whether deserialization was correct
-    assert retrieved_item.item_type == item.ItemType.ARMOR
+    assert retrieved_item.item_type == ItemType.ARMOR
     assert original_item.name == retrieved_item.name
     assert original_item.item_type == retrieved_item.item_type
     assert original_item.usable_by_classes == retrieved_item.usable_by_classes
@@ -195,10 +192,10 @@ def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
 
     # Create an Item instance
     usable_by = {
-        character_classes.CharacterClassType.FIGHTER,
-        character_classes.CharacterClassType.ELF,
+        CharacterClassType.FIGHTER,
+        CharacterClassType.ELF,
     }
-    original_sword = item.Weapon(
+    original_sword = Weapon(
         "Sword",
         to_hit_damage_die="1d8",
         usable_by_classes=usable_by,
@@ -213,10 +210,10 @@ def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
     # Retrieve and deserialize
     ItemQuery = Query()
     retrieved_sword_dict = item_table.search(ItemQuery.name == "Sword")[0]
-    retrieved_sword = item.Weapon.from_dict(retrieved_sword_dict)
+    retrieved_sword = Weapon.from_dict(retrieved_sword_dict)
 
     # Assertions to check whether deserialization was correct
-    assert retrieved_sword.item_type == item.ItemType.WEAPON
+    assert retrieved_sword.item_type == ItemType.WEAPON
     assert original_sword.name == retrieved_sword.name
     assert original_sword.item_type == retrieved_sword.item_type
     assert original_sword.usable_by_classes == retrieved_sword.usable_by_classes
@@ -245,8 +242,8 @@ def test_weapon_saveload(db, test_fighter, test_elf, test_magic_user):
     test_magic_user.inventory.add_item(retrieved_sword)
     try:
         test_magic_user.inventory.equip_item(retrieved_sword)
-    except item.ItemNotUsableError as e:
-        assert isinstance(e, item.ItemNotUsableError)
+    except ItemNotUsableError as e:
+        assert isinstance(e, ItemNotUsableError)
     test_magic_user.inventory.remove_item(retrieved_sword)
 
 
@@ -254,8 +251,8 @@ def test_spell_saveload(db, test_fighter, test_magic_user):
     item_table = db.table("spell")
 
     # Create a Spell instance
-    usable_by = {character_classes.CharacterClassType.MAGIC_USER}
-    original_spell = item.Spell(
+    usable_by = {CharacterClassType.MAGIC_USER}
+    original_spell = Spell(
         "Fireball",
         spell_level=3,
         damage_die="8d6",
@@ -273,10 +270,10 @@ def test_spell_saveload(db, test_fighter, test_magic_user):
     # Retrieve and deserialize
     ItemQuery = Query()
     retrieved_spell_dict = item_table.search(ItemQuery.name == "Fireball")[0]
-    retrieved_spell = item.Spell.from_dict(retrieved_spell_dict)
+    retrieved_spell = Spell.from_dict(retrieved_spell_dict)
 
     # Assertions to check whether deserialization was correct
-    assert retrieved_spell.item_type == item.ItemType.SPELL
+    assert retrieved_spell.item_type == ItemType.SPELL
     assert original_spell.name == retrieved_spell.name
     assert original_spell.item_type == retrieved_spell.item_type
     assert original_spell.usable_by_classes == retrieved_spell.usable_by_classes
@@ -299,8 +296,8 @@ def test_spell_saveload(db, test_fighter, test_magic_user):
     try:
         test_fighter.inventory.add_item(retrieved_spell)
         test_fighter.inventory.equip_item(retrieved_spell)
-    except item.ItemNotUsableError as e:
-        assert isinstance(e, item.ItemNotUsableError)
+    except ItemNotUsableError as e:
+        assert isinstance(e, ItemNotUsableError)
     test_fighter.inventory.remove_item(retrieved_spell)
 
 
@@ -318,21 +315,21 @@ def test_item_autoset_attributes_preserved_on_saveload(db, test_fighter):
     item_table = db.table("item")
 
     # Step 1: Create instances
-    armor = item.Armor(
+    armor = Armor(
         "Plate Mail Armor",
         gp_value=50,
         max_equipped=1,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    weapon = item.Weapon(
+    weapon = Weapon(
         "Sword",
         "1d8",
         gp_value=30,
         max_equipped=1,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    normal_item = item.Item(
-        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    normal_item = Item(
+        "50' rope", ItemType.EQUIPMENT, gp_value=1, max_equipped=0
     )
 
     # Step 2: Add to test_fighter's inventory
@@ -367,9 +364,9 @@ def test_item_autoset_attributes_preserved_on_saveload(db, test_fighter):
     retrieved_weapon_dict = item_table.search(ItemQuery.name == "Sword")[0]
     retrieved_normal_item_dict = item_table.search(ItemQuery.name == "50' rope")[0]
 
-    retrieved_armor = item.Armor.from_dict(retrieved_armor_dict)
-    retrieved_weapon = item.Weapon.from_dict(retrieved_weapon_dict)
-    retrieved_normal_item = item.Item.from_dict(retrieved_normal_item_dict)
+    retrieved_armor = Armor.from_dict(retrieved_armor_dict)
+    retrieved_weapon = Weapon.from_dict(retrieved_weapon_dict)
+    retrieved_normal_item = Item.from_dict(retrieved_normal_item_dict)
 
     # Step 6: Set the item's owner and equip previously equipped items.
     #         This is necessary because the owner attribute is not serialized and the
@@ -395,22 +392,22 @@ def test_item_autoset_attributes_preserved_on_saveload(db, test_fighter):
 
 def test_inventory_saveload(db, test_fighter):
     inventory_table = db.table("inventory")
-    armor = item.Armor(
+    armor = Armor(
         "Plate Mail Armor",
         gp_value=50,
         max_equipped=1,
         ac_modifier=-6,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    weapon = item.Weapon(
+    weapon = Weapon(
         "Sword",
         "1d8",
         gp_value=30,
         max_equipped=1,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    normal_item = item.Item(
-        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    normal_item = Item(
+        "50' rope", ItemType.EQUIPMENT, gp_value=1, max_equipped=0
     )
 
     test_fighter.inventory.add_item(armor)
@@ -425,7 +422,7 @@ def test_inventory_saveload(db, test_fighter):
 
     # Simulate a new or loaded character
     test_fighter_loaded_from_db = PlayerCharacter(
-        "Fighter From DB", character_classes.CharacterClassType.FIGHTER
+        "Fighter From DB", CharacterClassType.FIGHTER
     )
 
     # LOAD the inventory from the DB
@@ -484,22 +481,22 @@ def test_inventory_saveload(db, test_fighter):
 def test_player_character_saveload(db, test_fighter):
     # Saving a PlayerCharacter
     pc = test_fighter
-    armor = item.Armor(
+    armor = Armor(
         "Plate Mail Armor",
         gp_value=50,
         max_equipped=1,
         ac_modifier=-6,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    weapon = item.Weapon(
+    weapon = Weapon(
         "Sword",
         "1d8",
         gp_value=30,
         max_equipped=1,
-        usable_by_classes={character_classes.CharacterClassType.FIGHTER},
+        usable_by_classes={CharacterClassType.FIGHTER},
     )
-    normal_item = item.Item(
-        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    normal_item = Item(
+        "50' rope", ItemType.EQUIPMENT, gp_value=1, max_equipped=0
     )
     pc.inventory.add_item(armor)
     pc.inventory.add_item(weapon)
@@ -508,7 +505,7 @@ def test_player_character_saveload(db, test_fighter):
     pc.inventory.equip_item(weapon)
 
     # SAVE the PC
-    gm.logger.debug(f"Saving PC: {pc}")
+    logger.debug(f"Saving PC: {pc}")
     pc_table = db.table("player_characters")
     pc_dict = pc.to_dict()
     pc_table.insert(pc_dict)
@@ -517,7 +514,7 @@ def test_player_character_saveload(db, test_fighter):
     PCQuery = Query()
     loaded_pc_dict = pc_table.search(PCQuery.name == pc.name)[0]
     loaded_pc = PlayerCharacter.from_dict(loaded_pc_dict)
-    gm.logger.debug(f"Loaded PC: {loaded_pc}")
+    logger.debug(f"Loaded PC: {loaded_pc}")
 
     assert str(loaded_pc) == str(pc)
     assert loaded_pc.inventory.items.keys() == pc.inventory.items.keys()
@@ -525,33 +522,33 @@ def test_player_character_saveload(db, test_fighter):
 
 
 def test_party_saveload(db):
-    pc_party = party.get_default_party()
+    pc_party = get_default_party()
 
     # Give one party member some gear
-    armor = item.Armor(
+    armor = Armor(
         "Plate Mail Armor",
         gp_value=50,
         max_equipped=1,
         ac_modifier=-6,
         usable_by_classes={
-            character_classes.CharacterClassType.FIGHTER,
-            character_classes.CharacterClassType.ELF,
+            CharacterClassType.FIGHTER,
+            CharacterClassType.ELF,
         },
     )
-    weapon = item.Weapon(
+    weapon = Weapon(
         "Sword",
         "1d8",
         gp_value=30,
         max_equipped=1,
         usable_by_classes={
-            character_classes.CharacterClassType.FIGHTER,
-            character_classes.CharacterClassType.ELF,
+            CharacterClassType.FIGHTER,
+            CharacterClassType.ELF,
         },
     )
-    normal_item = item.Item(
-        "50' rope", item.ItemType.EQUIPMENT, gp_value=1, max_equipped=0
+    normal_item = Item(
+        "50' rope", ItemType.EQUIPMENT, gp_value=1, max_equipped=0
     )
-    elf = pc_party.get_character_by_name("Mazpar")
+    elf = pc_party.get_characters_by_class(CharacterClassType.ELF)[0]
     elf.inventory.add_item(armor)
     elf.inventory.add_item(weapon)
     elf.inventory.add_item(normal_item)
@@ -559,7 +556,7 @@ def test_party_saveload(db):
     elf.inventory.equip_item(weapon)
 
     # SAVE the party
-    gm.logger.debug(
+    logger.debug(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
     )
     party_table = db.table("player_characters")
@@ -569,7 +566,7 @@ def test_party_saveload(db):
     assert doc_id == 1
 
     # LOAD the party
-    gm.logger.debug(f"Loading party {pc_party.name}...")
+    logger.debug(f"Loading party {pc_party.name}...")
     PartyQuery = Query()
     fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
     assert len(fetched_party_dicts) == 1
@@ -577,7 +574,7 @@ def test_party_saveload(db):
 
     # Deserialize and create a Party object from the fetched dictionary
     loaded_party = Party.from_dict(fetched_party_dict)
-    gm.logger.debug(f"Loaded party:\n{loaded_party}")
+    logger.debug(f"Loaded party:\n{loaded_party}")
 
     # Verify that the loaded Party is the same as the original
     assert loaded_party.name == pc_party.name
@@ -594,14 +591,14 @@ def test_party_saveload(db):
 
 # Test weather a "dead" party stays dead after saving and loading
 def test_party_saveload_dead(db):
-    pc_party = party.get_default_party()
+    pc_party = get_default_party()
 
     # Kill the party
     for character in pc_party.members:
         character.apply_damage(character.character_class.max_hp)
 
     # Write the party to storage
-    gm.logger.debug(
+    logger.debug(
         f"Saving party {pc_party.name} with {pc_party.num_characters} characters..."
     )
     party_table = db.table("player_characters")
@@ -611,7 +608,7 @@ def test_party_saveload_dead(db):
     assert doc_id == 1
 
     # LOAD the party from storage
-    gm.logger.debug(f"Loading party {pc_party.name}...")
+    logger.debug(f"Loading party {pc_party.name}...")
     PartyQuery = Query()
     fetched_party_dicts = party_table.search(PartyQuery.name == pc_party.name)
     assert len(fetched_party_dicts) == 1
@@ -619,7 +616,7 @@ def test_party_saveload_dead(db):
 
     # Deserialize and create a Party object from the fetched dictionary
     loaded_party = Party.from_dict(fetched_party_dict)
-    gm.logger.debug(f"Loaded party:\n{loaded_party}")
+    logger.debug(f"Loaded party:\n{loaded_party}")
 
     # Verify that the loaded Party is still dead (all party members have 0 HP)
     assert not loaded_party.is_alive
@@ -650,6 +647,7 @@ def test_location_save_load(db):
 def test_dungeon_save_load(db):
     location = Location(1, 10, 10, [Exit(Direction.NORTH, 2)])
     dungeon = Dungeon("TestDungeon", "An example dungeon.", [location])
+    dungeon.set_start_location(1)
     data = dungeon.to_dict()
     db.insert(data)
     loaded_data = db.all()[0]

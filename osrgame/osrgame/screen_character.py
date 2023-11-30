@@ -1,6 +1,9 @@
+from typing import Any, Coroutine
+from textual import events
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log
+from textual.events import Event
 
 from widgets import CharacterStatsBox, AbilityTable, ItemTable, SavingThrowTable, CharacterScreenButtons
 
@@ -57,6 +60,14 @@ class CharacterScreen(Screen):
         """An action to switch to the next character in the party."""
         self.app.adventure.active_party.set_next_character_as_active()
         self.on_mount()
+
+
+    def on_event(self, event: Event) -> Coroutine[Any, Any, None]:
+        """Handle events."""
+        # HACK: This is a hack to get the screen to update when the user switches to it.
+        if isinstance(event, events.ScreenResume):
+            self.on_mount()
+        return super().on_event(event)
 
     def reroll(self):
         """Rolls the ability scores of the active character."""

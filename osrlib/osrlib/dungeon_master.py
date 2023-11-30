@@ -157,6 +157,7 @@ class DungeonMaster:
         return completion.choices[0].message.content
 
     def player_message(self, message):
+        """Send a message from the player to the Dungeon Master and return the response."""
         if self.is_started:
             self.session_messages.append(message)
             completion = self.client.chat.completions.create(
@@ -167,12 +168,14 @@ class DungeonMaster:
             return completion.choices[0].message.content
 
     def move_party(self, direction) -> str:
+        """Move the party in the given direction."""
         new_location = self.adventure.active_dungeon.move(direction)
-        # new_location.is_visited = False # BUG: This is a hack to force the DM to describe the location again.
         if new_location is None:
             return "No exit in that direction."
         message_from_player = self.format_user_message(user_move_prefix + new_location.json)
-        return self.player_message(message_from_player)
+        dm_response = self.player_message(message_from_player)
+        new_location.is_visited = True
+        return dm_response
 
     def summarize_battle(self, battle_log) -> str:
         message_from_player = self.format_user_message(battle_summary_prompt + battle_log)
