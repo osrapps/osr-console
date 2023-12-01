@@ -25,7 +25,7 @@ class AdventureBrowserScreen(Screen):
     def compose(self) -> ComposeResult:
         """Compose our UI."""
         # Set the path to the current user's home directory.
-        path = get_data_dir_path("osrlib")# / "adventures"
+        path = get_data_dir_path("osrlib") / "adventures"
         yield Header()
         with Container():
             yield JsonFilteredDirectoryTree(path, id="tree-view")

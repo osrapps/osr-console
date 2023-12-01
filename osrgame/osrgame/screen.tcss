@@ -22,10 +22,40 @@ ExploreScreen {
     background: $surface;
 }
 
+NewCharacterModalScreen {
+    align: center middle;
+}
+
+CharacterClassRadioButtons {
+    column-span: 2;
+    align: center middle;
+}
+
+RadioSet {
+    width: 100%;
+}
+
+#character_name {
+    column-span: 2;
+}
+
+#new_character_grid {
+    align: center middle;
+    grid-size: 1;
+    grid-gutter: 1 2;
+    grid-rows: 0.05fr 0.07fr 0.2fr 0.09fr;
+    padding: 0 1;
+    width: 30%;
+    height: 75%;
+    border: thick $background 70%;
+    background: $surface;
+}
+
 #stat-block {
     padding: 1;
     column-span: 2;
 }
+
 #log {
     column-span: 2;
 }
@@ -68,6 +98,10 @@ ExploreScreen {
 .button {
     margin: 1;
     background: $surface-lighten-1;
+}
+
+.char_create_buttons {
+    align: center bottom;
 }
 
 .header-footer {

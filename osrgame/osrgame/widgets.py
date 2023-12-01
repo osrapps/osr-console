@@ -4,11 +4,18 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
-from textual.widgets import Button, DataTable, Log, Static, DirectoryTree
+from textual.widgets import Button, DataTable, Log, Static, DirectoryTree, RadioSet, RadioButton
 
-
+from osrlib.enums import CharacterClassType
 from osrlib.item import Item
 from osrlib.utils import format_modifiers
+
+
+class CharacterClassRadioButtons(Container):
+    def compose(self) -> ComposeResult:
+        with RadioSet(id="character_class") as radio_set:
+                for character_class in CharacterClassType:
+                    yield RadioButton(character_class.value, value=character_class.name)
 
 
 class WelcomeScreenButtons(Container):
@@ -20,6 +27,7 @@ class WelcomeScreenButtons(Container):
 
 class CharacterScreenButtons(Container):
     def compose(self) -> ComposeResult:
+        yield Button("New character", id="btn_new_character", classes="button")
         yield Button("Roll abilities", id="btn_roll_abilities", classes="button")
         yield Button("Roll HP", id="btn_roll_hp", classes="button")
         yield Button("Save character", id="btn_save_character", classes="button")
