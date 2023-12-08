@@ -112,7 +112,7 @@ class PartyRosterTable(Container):
                 pc.name,
                 pc.character_class.class_type.value,
                 Text(str(pc.level), justify="center"),
-                Text(f"{str(pc.hit_points)}/{str(pc.max_hit_points)}", justify="center"),
+                Text("DEAD" if pc.hit_points <= 0 else f"{pc.hit_points}/{pc.max_hit_points}", justify="center"),
                 Text(str(pc.armor_class), justify="center"),
                 Text(str(pc.xp) + "/" + str(pc.xp_needed_for_next_level), justify="center"),
             ]

@@ -17,8 +17,8 @@ class NewCharacterModalScreen(ModalScreen):
             Input(id="character_name", placeholder="Enter character name"),
             CharacterClassRadioButtons(),
             Horizontal(
-                Button("Create", id="btn_char_create", variant="primary"),
-                Button("Cancel", id="btn_char_cancel", variant="default"),
+                Button("Create", id="btn_char_create", variant="primary", classes="button"),
+                Button("Cancel", id="btn_char_cancel", variant="default", classes="button"),
                 classes="char_create_buttons",
             ),
             id="new_character_grid",

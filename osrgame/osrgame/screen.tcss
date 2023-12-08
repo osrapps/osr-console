@@ -97,7 +97,6 @@ RadioSet {
 
 .button {
     margin: 1;
-    background: $surface-lighten-1;
 }
 
 .char_create_buttons {
