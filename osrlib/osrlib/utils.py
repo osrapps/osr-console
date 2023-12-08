@@ -1,4 +1,4 @@
-import os, platform, textwrap
+import os, platform, textwrap, re
 from pathlib import Path
 
 from osrlib.ability import ModifierType
@@ -48,11 +48,6 @@ def wrap_text(text: str, width: int = 100) -> str:
         to be wrapped for better readability.
     """
     return textwrap.fill(text, width)
-
-
-import re
-
-# import unicodedata  # Uncomment if you need Unicode normalization
 
 
 def sanitize_path_element(path_element: str, replace_space: str = "_") -> str:

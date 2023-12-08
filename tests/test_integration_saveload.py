@@ -588,8 +588,7 @@ def test_party_saveload(db):
         assert loaded_character.level
         assert loaded_character.level == original_member.level
 
-
-# Test weather a "dead" party stays dead after saving and loading
+# Test whether a "dead" party stays dead after saving and loading
 def test_party_saveload_dead(db):
     pc_party = get_default_party()
 

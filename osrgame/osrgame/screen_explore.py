@@ -121,7 +121,7 @@ class ExploreScreen(Screen):
         )
         dm_response = self.dungeon_master.player_message(formatted_message)
         self.query_one("#dm_log").write_line(
-            "> " + str(self.dungeon_master.adventure.active_dungeon.current_location)
+            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")
