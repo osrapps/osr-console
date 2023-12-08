@@ -1,12 +1,8 @@
 from textual import on
-from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.app import ComposeResult
 from textual.widgets import Header, Footer, Button
 from widgets import WelcomeScreenButtons
-from osrlib.dungeon_master import DungeonMaster
-from osrlib.game_manager import logger
-from osrlib.enums import OpenAIModelVersion
 
 
 class WelcomeScreen(Screen):

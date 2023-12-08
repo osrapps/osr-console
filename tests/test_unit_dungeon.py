@@ -116,13 +116,15 @@ def test_set_start_location():
     assert start_location.id == 1
 
 
-def test_move():
+def test_move_to_dungeon_location():
     exit1 = Exit(Direction.NORTH, 2)
     exit2 = Exit(Direction.SOUTH, 1)
     location1 = Location(1, exits=[exit1])
     location2 = Location(2, exits=[exit2])
     dungeon = Dungeon(locations=[location1, location2])
     dungeon.set_start_location(1)
+
+    assert dungeon.validate_location_connections()
 
     new_location = dungeon.move(Direction.NORTH)
     assert new_location.id == 2

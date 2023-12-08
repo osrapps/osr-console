@@ -1,5 +1,6 @@
 """This module contains the PlayerCharacter class."""
 from enum import Enum
+import datetime, json
 import osrlib.ability
 from osrlib.ability import (
     AbilityType,
@@ -18,6 +19,7 @@ from osrlib.character_classes import (
 from osrlib.inventory import Inventory
 from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.game_manager import logger
+from osrlib.utils import get_data_dir_path, create_dir_tree_if_not_exist
 
 
 class Alignment(Enum):
@@ -307,3 +309,38 @@ class PlayerCharacter:
         pc.inventory = Inventory.from_dict(data_dict["inventory"], pc)
 
         return pc
+
+    def save_character(self, file_path: str = None) -> str:
+        """
+        Saves the character to a JSON file.
+
+        Args:
+            file_path (str, optional): The path where the file will be saved.
+                                       If None, saves in the default data directory.
+
+        Returns:
+            str: The path where the file was saved.
+
+        Raises:
+            OSError: If the file cannot be written.
+        """
+        character_data = self.to_dict()
+        json_data = json.dumps(character_data, indent=4)
+
+        if file_path is None:
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%Y%m%d_%H%M%S") # YYYYMMDD_HHMMSS
+            filename = f"{self.name}_{timestamp}.json".replace(" ", "_").lower()
+            save_dir = get_data_dir_path("osrlib") / "characters"
+            create_dir_tree_if_not_exist(save_dir)
+            file_path = save_dir / filename
+
+        try:
+            with open(file_path, "w") as file:
+                file.write(json_data)
+            logger.debug(f"Character saved to {file_path}")
+        except OSError as e:
+            logger.error(f"Failed to save character to {file_path}: {e}")
+            raise
+
+        return str(file_path)

@@ -184,7 +184,7 @@ class Adventure:
             now = datetime.datetime.now()
             timestamp = now.strftime("%Y%m%d_%H%M%S") # YYYYMMDD_HHMMSS
             filename = f"{self.name}_{timestamp}.json".replace(" ", "_").lower()
-            save_dir = get_data_dir_path("osrlib")# / "adventures"
+            save_dir = get_data_dir_path("osrlib") / "adventures"
             create_dir_tree_if_not_exist(save_dir)
             file_path = save_dir / filename
 

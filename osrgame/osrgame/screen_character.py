@@ -1,17 +1,23 @@
 from typing import Any, Coroutine
-from textual import events
+from textual import events, on
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log
 from textual.events import Event
 
-from widgets import CharacterStatsBox, AbilityTable, ItemTable, SavingThrowTable, CharacterScreenButtons
+from widgets import (
+    CharacterStatsBox,
+    AbilityTable,
+    ItemTable,
+    SavingThrowTable,
+    CharacterScreenButtons,
+)
 
 
 class CharacterScreen(Screen):
     BINDINGS = [
         ("k", "clear_log", "Clear log"),
-        ("escape", "app.pop_screen", "Pop screen"),
+        ("escape", "app.pop_screen", "Back"),
         ("n", "next_character", "Next character"),
         ("ctrl+n", "new_character", "New character"),
     ]
@@ -38,6 +44,10 @@ class CharacterScreen(Screen):
         self.query_one(SavingThrowTable).update_table()
         self.query_one(ItemTable).items = self.app.adventure.active_party.active_character.inventory.all_items
 
+    @on(Button.Pressed, "#btn_new_character")
+    def default_button_pressed(self) -> None:
+        self.action_new_character()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         pc = self.app.adventure.active_party.active_character
         if event.button.id == "btn_roll_abilities":
@@ -52,15 +62,22 @@ class CharacterScreen(Screen):
             self.query_one(Log).write_line(roll_string)
             self.query_one(CharacterStatsBox).pc_hp = pc.character_class.max_hp
 
+        elif event.button.id == "btn_save_character":
+            pc.save_character()
+            self.query_one(Log).write_line("Character saved.")
+
     def action_clear_log(self) -> None:
         """An action to clear the log."""
         self.query_one(Log).clear()
+
+    def action_new_character(self) -> None:
+        """An action to create a new character."""
+        self.app.push_screen("screen_modal_new_char")
 
     def action_next_character(self) -> None:
         """An action to switch to the next character in the party."""
         self.app.adventure.active_party.set_next_character_as_active()
         self.on_mount()
-
 
     def on_event(self, event: Event) -> Coroutine[Any, Any, None]:
         """Handle events."""

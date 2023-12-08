@@ -1029,7 +1029,7 @@ datalib = ["numpy (>=1)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
 
 [[package]]
 name = "osrlib"
-version = "0.1.43"
+version = "0.1.45"
 description = "Turn-based dungeon-crawler game engine for OSR-style RPGs."
 optional = false
 python-versions = "^3.11"

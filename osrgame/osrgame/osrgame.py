@@ -3,6 +3,7 @@ from textual.app import App, ComposeResult
 from screen_character import CharacterScreen
 from screen_welcome import WelcomeScreen
 from screen_explore import ExploreScreen
+from screen_modal_new_char import NewCharacterModalScreen
 from screen_adventure_browser import AdventureBrowserScreen
 
 from osrlib.adventure import Adventure
@@ -19,21 +20,21 @@ class OSRConsole(App):
     player_party = None
     adventure = None
     dungeon_master = None
-    openai_model = OpenAIModelVersion.GPT4TURBO
+    openai_model = OpenAIModelVersion.GPT35TURBO
 
     CSS_PATH = "screen.tcss"
 
     BINDINGS = [
-        ("escape", "previous_screen", "Previous screen"),
+        ("escape", "previous_screen", "Back"),
         ("q", "quit", "Quit"),
     ]
 
     SCREENS = {
         "screen_adventure_browser": AdventureBrowserScreen(),
-        #"screen_adventure_creator": AdventureCreator(),
         "screen_character": CharacterScreen(),
         "screen_explore": ExploreScreen(),
         "screen_welcome": WelcomeScreen(),
+        "screen_modal_new_char": NewCharacterModalScreen(),
     }
 
     def compose(self) -> ComposeResult:
