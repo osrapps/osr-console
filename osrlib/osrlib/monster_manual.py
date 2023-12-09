@@ -1,7 +1,6 @@
 from osrlib.monster import MonsterStatsBlock
-from osrlib.enums import CharacterClassType
+from osrlib.enums import CharacterClassType, TreasureType
 from osrlib.player_character import Alignment
-from osrlib.treasure import TreasureType
 
 berserker_stats = MonsterStatsBlock(
     name="Berserker",

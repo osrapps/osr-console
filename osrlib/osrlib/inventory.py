@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List
 
+from osrlib.enums import ItemType
 from osrlib.item import (
     Item,
     ItemAlreadyHasOwnerError,
@@ -9,7 +10,6 @@ from osrlib.item import (
     ItemNotEquippedError,
     ItemNotInInventoryError,
     ItemNotUsableError,
-    ItemType,
     Armor,
     Weapon,
     Spell

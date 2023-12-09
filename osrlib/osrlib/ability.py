@@ -1,21 +1,8 @@
 """Defines player character abilities."""
 
 from abc import ABC, abstractmethod
-from enum import Enum
 
-from osrlib.enums import CharacterClassType
-from osrlib.combat import ModifierType
-
-
-class AbilityType(Enum):
-    """Enum representing the types of abilities."""
-
-    STRENGTH = "Strength"
-    INTELLIGENCE = "Intelligence"
-    WISDOM = "Wisdom"
-    DEXTERITY = "Dexterity"
-    CONSTITUTION = "Constitution"
-    CHARISMA = "Charisma"
+from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 
 
 class Ability(ABC):

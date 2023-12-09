@@ -1,3 +1,5 @@
+"""Constants for use in random character and dungeon generation."""
+
 FIGHTER_NAMES = [
     "Alistair Goldleaf",
     "Anya Steelgaze",

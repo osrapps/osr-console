@@ -2,25 +2,7 @@
 from enum import Enum
 from typing import Optional, Set
 
-from osrlib.enums import CharacterClassType
-
-
-class ItemType(Enum):
-    """Enumerates the types of items in the game.
-
-    The item type determines whether the item can be used by a player character (PC) and, if so, whether it can be
-    equipped by the PC.
-    """
-
-    ARMOR = ("Armor", "Armor, helmet, gloves, or boots")
-    WEAPON = ("Weapon", "Bladed, blunt, or ranged weapon")
-    SPELL = ("Spell", "Spell or scroll")
-    EQUIPMENT = ("Equipment", "Piece of adventurers' equipment")
-    MAGIC_ITEM = (
-        "Magic item",
-        "Potion, ring, or other item imbued with magical properties",
-    )
-    ITEM = ("Normal item", "Normal (non-magical) item")
+from osrlib.enums import CharacterClassType, ItemType
 
 
 class ItemAlreadyHasOwnerError(Exception):

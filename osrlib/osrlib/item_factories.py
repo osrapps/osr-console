@@ -1,5 +1,5 @@
-from osrlib.item import Armor, Item, ItemType, Weapon
-from osrlib.enums import CharacterClassType
+from osrlib.item import Armor, Item, Weapon
+from osrlib.enums import CharacterClassType, ItemType
 
 _armor_combat_classes = {
     CharacterClassType.CLERIC,

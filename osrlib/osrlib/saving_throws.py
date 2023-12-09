@@ -1,5 +1,4 @@
-from osrlib.enums import CharacterClassType
-from osrlib.combat import AttackType
+from osrlib.enums import CharacterClassType, AttackType
 from osrlib.game_manager import logger
 
 saving_throws = {
