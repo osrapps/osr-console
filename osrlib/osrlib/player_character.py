@@ -3,19 +3,15 @@ from enum import Enum
 import datetime, json
 import osrlib.ability
 from osrlib.ability import (
-    AbilityType,
     Charisma,
     Constitution,
     Dexterity,
     Intelligence,
-    ModifierType,
     Strength,
     Wisdom,
 )
-from osrlib.character_classes import (
-    CharacterClass,
-    CharacterClassType,
-)
+from osrlib.character_classes import CharacterClass
+from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 from osrlib.inventory import Inventory
 from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.game_manager import logger
@@ -136,7 +132,9 @@ class PlayerCharacter:
             ModifierType.INITIATIVE
         ]
         roll = roll_dice("1d6", modifier_value)
-        logger.debug(f"{self.name} ({self.character_class.class_type.value}) rolled {roll} for initiative and got {roll.total_with_modifier}.")
+        logger.debug(
+            f"{self.name} ({self.character_class.class_type.value}) rolled {roll} for initiative and got {roll.total_with_modifier}."
+        )
         return roll.total_with_modifier
 
     def get_attack_roll(self) -> DiceRoll:
@@ -151,8 +149,12 @@ class PlayerCharacter:
         #  - TODO: Melee: Strength modifier, enchanted/cursed weapon adjustment, buffs/curses
         #  - TODO: Ranged: Dexterity modifier, enchanted/cursed weapon adjustment, buffs/curses
 
-        melee_attack_modifier = self.abilities[AbilityType.STRENGTH].modifiers[ModifierType.TO_HIT]
-        ranged_attack_modifier = self.abilities[AbilityType.DEXTERITY].modifiers[ModifierType.TO_HIT]
+        melee_attack_modifier = self.abilities[AbilityType.STRENGTH].modifiers[
+            ModifierType.TO_HIT
+        ]
+        ranged_attack_modifier = self.abilities[AbilityType.DEXTERITY].modifiers[
+            ModifierType.TO_HIT
+        ]
         return roll_dice("1d20", melee_attack_modifier)
 
     def get_damage_roll(self) -> DiceRoll:
@@ -162,7 +164,9 @@ class PlayerCharacter:
             DiceRoll: The result of the damage roll.
         """
         weapon = self.inventory.get_equipped_weapon()
-        melee_damage_modifier = self.abilities[AbilityType.STRENGTH].modifiers[ModifierType.DAMAGE]
+        melee_damage_modifier = self.abilities[AbilityType.STRENGTH].modifiers[
+            ModifierType.DAMAGE
+        ]
         return roll_dice(weapon.damage_die, melee_damage_modifier)
 
     def apply_damage(self, hit_points_damage: int):
@@ -199,7 +203,9 @@ class PlayerCharacter:
             if all(score >= 13 for score in prime_requisites_scores):
                 self.xp_adjustment_percentage = 10
 
-        logger.debug(f"XP adjustment percentage set to: {self.xp_adjustment_percentage}%")
+        logger.debug(
+            f"XP adjustment percentage set to: {self.xp_adjustment_percentage}%"
+        )
 
     def set_character_class(
         self, character_class_type: CharacterClassType, level: int = 1
@@ -329,7 +335,7 @@ class PlayerCharacter:
 
         if file_path is None:
             now = datetime.datetime.now()
-            timestamp = now.strftime("%Y%m%d_%H%M%S") # YYYYMMDD_HHMMSS
+            timestamp = now.strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS
             filename = f"{self.name}_{timestamp}.json".replace(" ", "_").lower()
             save_dir = get_data_dir_path("osrlib") / "characters"
             create_dir_tree_if_not_exist(save_dir)

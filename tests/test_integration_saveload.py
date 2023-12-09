@@ -5,7 +5,6 @@ from tinydb import Query, TinyDB
 from osrlib.party import Party, get_default_party
 from osrlib.player_character import PlayerCharacter
 from osrlib.item import Item, ItemType, ItemNotUsableError, Armor, Weapon, Spell
-from osrlib.character_classes import CharacterClassType
 from osrlib.game_manager import logger
 from osrlib.ability import (
     Strength,
@@ -21,7 +20,7 @@ from osrlib.dungeon import (
     Exit,
     Direction,
 )
-from osrlib.combat import ModifierType
+from osrlib.enums import CharacterClassType, ModifierType
 
 
 @pytest.fixture
