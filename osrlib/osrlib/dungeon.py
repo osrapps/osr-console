@@ -2,25 +2,10 @@ from typing import List
 from enum import Enum
 import random, json, asyncio, uuid
 from openai import OpenAI
-from osrlib.enums import OpenAIModelVersion
+from osrlib.enums import Direction, OpenAIModelVersion
 from osrlib.game_manager import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
-
-
-class Direction(Enum):
-    """Enumeration for directions a player can go within a location.
-
-    Attributes:
-        NORTH, SOUTH, EAST, WEST, UP, DOWN: Cardinal directions and vertical movements.
-    """
-
-    NORTH = "N"
-    SOUTH = "S"
-    EAST = "E"
-    WEST = "W"
-    UP = "U"
-    DOWN = "D"
 
 
 class Exit:

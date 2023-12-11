@@ -20,6 +20,21 @@ class AttackType(Enum):
     RODS_STAVES_SPELLS = "Rods, staves, or spells"
 
 
+class Direction(Enum):
+    """Enumeration for directions a player can go within a location.
+
+    Attributes:
+        NORTH, SOUTH, EAST, WEST, UP, DOWN: Cardinal directions and vertical movements.
+    """
+
+    NORTH = "N"
+    SOUTH = "S"
+    EAST = "E"
+    WEST = "W"
+    UP = "U"
+    DOWN = "D"
+
+
 class ModifierType(Enum):
     TO_HIT = "To hit"
     DAMAGE = "Damage"
