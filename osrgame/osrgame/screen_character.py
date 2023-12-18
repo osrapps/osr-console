@@ -20,6 +20,7 @@ class CharacterScreen(Screen):
         ("escape", "app.pop_screen", "Back"),
         ("n", "next_character", "Next character"),
         ("ctrl+n", "new_character", "New character"),
+        ("ctrl+delete", "delete_character", "Delete character"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -47,6 +48,10 @@ class CharacterScreen(Screen):
     @on(Button.Pressed, "#btn_new_character")
     def default_button_pressed(self) -> None:
         self.action_new_character()
+
+    @on(Button.Pressed, "#btn_delete_character")
+    def default_button_pressed(self) -> None:
+        self.action_delete_character()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         pc = self.app.adventure.active_party.active_character
@@ -77,7 +82,15 @@ class CharacterScreen(Screen):
     def action_next_character(self) -> None:
         """An action to switch to the next character in the party."""
         self.app.adventure.active_party.set_next_character_as_active()
+        self.query_one(Log).write_line(f"Active character is now {self.app.adventure.active_party.active_character.name}.")
         self.on_mount()
+
+    def action_delete_character(self) -> None:
+        """An action to delete the active character."""
+        character_to_remove = self.app.adventure.active_party.active_character
+        self.action_next_character()
+        self.app.adventure.active_party.remove_character(character_to_remove)
+        self.query_one(Log).write_line(f"Character {character_to_remove.name} removed from party.")
 
     def on_event(self, event: Event) -> Coroutine[Any, Any, None]:
         """Handle events."""
