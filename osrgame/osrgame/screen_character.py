@@ -76,9 +76,9 @@ class CharacterScreen(Screen):
 
     @on(Button.Pressed, "#btn_roll_hp")
     def btn_roll_hp(self) -> None:
-        pc = self.app.adventure.active_party.active_character
-        pc.character_class.roll_hp()
-        self.query_one(CharacterStatsBox).pc_hp = pc.character_class.hp
+        roll = self.app.adventure.active_party.active_character.roll_hp()
+        self.query_one(Log).write_line(f"HP roll: {roll.total_with_modifier} on {roll}.")
+        self.query_one(CharacterStatsBox).pc_hp = self.app.adventure.active_party.active_character.max_hit_points
 
     @on(Button.Pressed, "#btn_save_character")
     def btn_save_character(self) -> None:

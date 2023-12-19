@@ -15,7 +15,7 @@ class CharacterClassRadioButtons(Container):
     def compose(self) -> ComposeResult:
         with RadioSet(id="character_class") as radio_set:
                 for character_class in CharacterClassType:
-                    yield RadioButton(character_class.value, value=character_class.name)
+                    yield RadioButton(character_class.value, name=character_class.name)
 
 
 class WelcomeScreenButtons(Container):
