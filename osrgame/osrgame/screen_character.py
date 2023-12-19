@@ -36,40 +36,55 @@ class CharacterScreen(Screen):
     def on_mount(self) -> None:
         """Perform actions when the widget is mounted."""
         self.query_one(Log).border_subtitle = "LOG"
-        self.query_one(CharacterStatsBox).pc_name = self.app.adventure.active_party.active_character.name
-        self.query_one(CharacterStatsBox).pc_class = self.app.adventure.active_party.active_character.character_class
-        self.query_one(CharacterStatsBox).pc_level = self.app.adventure.active_party.active_character.character_class.current_level
-        self.query_one(CharacterStatsBox).pc_hp = self.app.adventure.active_party.active_character.character_class.hp
-        self.query_one(CharacterStatsBox).pc_ac = self.app.adventure.active_party.active_character.armor_class
+        self.query_one(
+            CharacterStatsBox
+        ).pc_name = self.app.adventure.active_party.active_character.name
+        self.query_one(
+            CharacterStatsBox
+        ).pc_class = self.app.adventure.active_party.active_character.character_class
+        self.query_one(
+            CharacterStatsBox
+        ).pc_level = (
+            self.app.adventure.active_party.active_character.character_class.current_level
+        )
+        self.query_one(
+            CharacterStatsBox
+        ).pc_hp = self.app.adventure.active_party.active_character.character_class.hp
+        self.query_one(
+            CharacterStatsBox
+        ).pc_ac = self.app.adventure.active_party.active_character.armor_class
         self.query_one(AbilityTable).update_table()
         self.query_one(SavingThrowTable).update_table()
-        self.query_one(ItemTable).items = self.app.adventure.active_party.active_character.inventory.all_items
+        self.query_one(
+            ItemTable
+        ).items = self.app.adventure.active_party.active_character.inventory.all_items
 
     @on(Button.Pressed, "#btn_new_character")
-    def default_button_pressed(self) -> None:
+    def btn_new_character(self) -> None:
+        self.query_one(Log).write_line(f"Creating a new character...")
         self.action_new_character()
 
     @on(Button.Pressed, "#btn_delete_character")
-    def default_button_pressed(self) -> None:
+    def btn_delete_character(self) -> None:
         self.action_delete_character()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+    @on(Button.Pressed, "#btn_roll_abilities")
+    def btn_roll_abilities(self) -> None:
         pc = self.app.adventure.active_party.active_character
-        if event.button.id == "btn_roll_abilities":
-            self.reroll()
-            self.query_one(CharacterStatsBox).pc_ac = pc.armor_class
+        self.reroll()
+        self.query_one(CharacterStatsBox).pc_ac = pc.armor_class
 
-        elif event.button.id == "btn_roll_hp":
-            hp_roll = pc.roll_hp()
-            pc.character_class.max_hp = max(hp_roll.total_with_modifier, 1)
-            pc.character_class.hp = pc.character_class.max_hp
-            roll_string = hp_roll.pretty_print()
-            self.query_one(Log).write_line(roll_string)
-            self.query_one(CharacterStatsBox).pc_hp = pc.character_class.max_hp
+    @on(Button.Pressed, "#btn_roll_hp")
+    def btn_roll_hp(self) -> None:
+        pc = self.app.adventure.active_party.active_character
+        pc.character_class.roll_hp()
+        self.query_one(CharacterStatsBox).pc_hp = pc.character_class.hp
 
-        elif event.button.id == "btn_save_character":
-            pc.save_character()
-            self.query_one(Log).write_line("Character saved.")
+    @on(Button.Pressed, "#btn_save_character")
+    def btn_save_character(self) -> None:
+        pc = self.app.adventure.active_party.active_character
+        pc.save_character()
+        self.query_one(Log).write_line(f"Character {pc.name} saved.")
 
     def action_clear_log(self) -> None:
         """An action to clear the log."""
@@ -82,7 +97,9 @@ class CharacterScreen(Screen):
     def action_next_character(self) -> None:
         """An action to switch to the next character in the party."""
         self.app.adventure.active_party.set_next_character_as_active()
-        self.query_one(Log).write_line(f"Active character is now {self.app.adventure.active_party.active_character.name}.")
+        self.query_one(Log).write_line(
+            f"Active character is now {self.app.adventure.active_party.active_character.name}."
+        )
         self.on_mount()
 
     def action_delete_character(self) -> None:
@@ -90,7 +107,9 @@ class CharacterScreen(Screen):
         character_to_remove = self.app.adventure.active_party.active_character
         self.action_next_character()
         self.app.adventure.active_party.remove_character(character_to_remove)
-        self.query_one(Log).write_line(f"Character {character_to_remove.name} removed from party.")
+        self.query_one(Log).write_line(
+            f"Character {character_to_remove.name} removed from party."
+        )
 
     def on_event(self, event: Event) -> Coroutine[Any, Any, None]:
         """Handle events."""
