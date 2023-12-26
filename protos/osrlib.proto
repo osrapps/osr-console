@@ -2,9 +2,12 @@ syntax = "proto3";
 
 package osrlib;
 
-// AdventureProto represents the entire adventure in the game. It is the top-level
-// structure that includes an ID, name, descriptive text, introduction to the adventure,
-// a collection of dungeons, and the party of player characters. This proto encapsulates
+// AdventureProto represents and entire adventure in the game. It's the top-level
+// structure that a player character party plays through. Adventures have an ID,
+// name, descriptive text, and introduction appropriate for direct presentation
+// to the player or to help with AI-based text generation. Each adventure has a
+// a collection of dungeons that the party of player characters explores, fighting
+// monsters, getting treasure, and gaining experience. The AdventureProto contains
 // all necessary data to define an adventure's state and progression.
 message AdventureProto {
     string id = 1; // Unique identifier for the adventure.
@@ -15,8 +18,8 @@ message AdventureProto {
     PartyProto party = 6; // The party of player characters participating in the adventure.
 }
 
-// DungeonProto represents a dungeon in the game. It includes the dungeon's name,
-// a descriptive text, and a collection of locations within it. The 'start_location_id'
+// DungeonProto represents a dungeon in an adventure. It includes the dungeon's name,
+// its descriptive text, and a collection of locations. The 'start_location_id'
 // points to the initial location where players begin their exploration. Each dungeon
 // is uniquely identified by its 'id', allowing for distinct instances of dungeons
 // in the game world.
@@ -25,12 +28,12 @@ message DungeonProto {
     string name = 2; // Name of the dungeon.
     string description = 3; // Detailed description of the dungeon.
     repeated LocProto locations = 4; // Collection of locations within the dungeon.
-    int32 start_location_id = 5; // ID of the initial location where the party starts upon first loading the dungeon.
+    int32 start_location_id = 5; // ID of the location the party starts upon first loading the dungeon.
 }
 
-// DimensionsProto defines the physical dimensions of a location in the dungeon.
-// It specifies the width and length of the area in feet, which can be used to
-// visualize the space or calculate movement and ranges within the game.
+// DimensionsProto defines the physical dimensions of a location in a dungeon.
+// It specifies the width and length of the area in feet and can be used in
+// location descriptions or to determine encounter range.
 message DimensionsProto {
     int32 width = 1; // The width of the location in feet.
     int32 length = 2; // The length of the location in feet.
@@ -51,7 +54,8 @@ message LocProto {
 
 // ExitProto describes an exit point from a location, indicating the direction
 // of the exit and the destination location it leads to. The 'locked' attribute
-// signifies whether the exit is accessible or needs to be unlocked.
+// signifies whether the exit can be freely traversed or requires unlocking
+// before use.
 message ExitProto {
     string direction = 1; // Direction of the exit (e.g., N, S, E, W).
     int32 destination = 2; // ID of the destination location the exit leads to.
@@ -59,8 +63,8 @@ message ExitProto {
 }
 
 // EncounterProto represents a specific encounter within a dungeon location.
-// It includes details about the encounter such as its name, description,
-// the monsters involved, potential treasure, and its completion status.
+// It includes details about the encounter like its name, description, the
+// monsters involved (if any), potential treasure, and its completion status.
 message EncounterProto {
     string name = 1; // Name of the encounter.
     string description = 2; // Description of the encounter.
@@ -70,8 +74,8 @@ message EncounterProto {
 }
 
 // MonsterProto describes a monster encountered in the game. It includes
-// various attributes like armor class, hit dice, and other combat-related
-// details that define the monster's capabilities in encounters.
+// attributes like armor class, hit dice, and other combat-related details
+// that define the monster's capabilities in encounters.
 message MonsterProto {
     string name = 1; // Name of the monster.
     string description = 2; // Description of the monster.
@@ -175,15 +179,15 @@ enum ItemType {
 
 // PlayerCharacterProto represents a player character in the game.
 // It encapsulates all the key attributes of a character, such as their name,
-// class, level, health points, and experience. It also includes the character's
+// class, level, hit points, and experience. It also includes the character's
 // abilities and inventory, making it a comprehensive representation of
 // a player's avatar in the game.
 message PlayerCharacterProto {
     string name = 1; // The character's name.
     CharacterClassType character_class_type = 2; // Class type of the character.
     int32 level = 3; // The character's current level.
-    int32 max_hp = 4; // The character's maximum health points.
-    int32 hp = 5; // The character's current health points.
+    int32 max_hp = 4; // The character's maximum hit points.
+    int32 hp = 5; // The character's current hit points.
     int32 experience_points = 6; // The character's total experience points.
     map<string, AbilityProto> abilities = 7; // A map of the character's abilities.
     InventoryProto inventory = 8; // The character's inventory.
