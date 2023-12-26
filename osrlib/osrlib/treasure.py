@@ -1,3 +1,4 @@
+from typing import Dict, NamedTuple, Union
 from osrlib.dice_roller import roll_dice
 from osrlib.enums import ItemType, TreasureType
 from osrlib.item import Item, Weapon, Armor
@@ -5,7 +6,6 @@ from osrlib.item import Item, Weapon, Armor
 from enum import Enum
 
 
-# Define enums for the types of treasure.
 class CoinType(Enum):
     COPPER = "copper"
     SILVER = "silver"
@@ -18,6 +18,9 @@ class OtherType(Enum):
     GEMS_JEWELRY = "gems_jewelry"
     MAGIC_ITEMS = "magic_items"
 
+class Treasure(NamedTuple):
+    coins: Dict[CoinType, int]
+    other: Dict[OtherType, Union[str, int]]
 
 # Example of a treasure type structure using the enums and dice notation.
 treasure_types = [
@@ -113,11 +116,11 @@ treasure_types = [
     {
         TreasureType.H,
         {
-            CoinType.COPPER: {"percent_chance": 25, "amount": "3d6"},
+            CoinType.COPPER: {"percent_chance": 25, "amount": "3d8"},
             CoinType.SILVER: {"percent_chance": 50, "amount": "1d100"},
-            CoinType.ELECTRUM: {"percent_chance": 50, "amount": "1d6"},
-            CoinType.GOLD: {"percent_chance": 50, "amount": "1d20"},
-            CoinType.PLATINUM: {"percent_chance": 25, "amount": "1d10"},
+            CoinType.ELECTRUM: {"percent_chance": 50, "amount": "10d4"},
+            CoinType.GOLD: {"percent_chance": 50, "amount": "10d6"},
+            CoinType.PLATINUM: {"percent_chance": 25, "amount": "5d4"},
             OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "1d100"},
             OtherType.MAGIC_ITEMS: {
                 "percent_chance": 15,
@@ -131,9 +134,9 @@ treasure_types = [
             CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
             CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
             CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 30, "amount": "1d8"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "2d12"},
+            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
+            CoinType.PLATINUM: {"percent_chance": 30, "amount": "1d8"},
+            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "2d6"},
             OtherType.MAGIC_ITEMS: {"percent_chance": 15, "description": "Any 1"},
         },
     },
@@ -152,17 +155,17 @@ treasure_types = [
     {
         TreasureType.K,
         {
-            CoinType.COPPER: {"percent_chance": 50, "amount": "2d8"},
-            CoinType.SILVER: {"percent_chance": 25, "amount": "1d12"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 50, "amount": "1d6"},
+            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
+            CoinType.SILVER: {"percent_chance": 30, "amount": "1d6"},
+            CoinType.ELECTRUM: {"percent_chance": 10, "amount": "1d2"},
+            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
             CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 15, "amount": "1d4"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
+            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
+            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": "0"},
         },
     },
     {
-        TreasureType.L,
+        TreasureType.L, # TODO: Resume from here.
         {
             CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
             CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
@@ -299,72 +302,45 @@ treasure_types = [
 ]
 
 
-def get_treasure(treasure_type: TreasureType):
-    """Get a collection of items appropriate for the specified treasure type.
-
-    Typical use of this method is to pass it the treasure_type attribute value of a MonsterStatBlock instance
-    when determining the treasure to award the party for defeating a monster.
+def get_treasure(treasure_type: TreasureType) -> Treasure:
+    """
+    Calculates the treasure based on the defined treasure types and computes the total value in gold pieces.
 
     Args:
-        treasure_type (TreasureType): The type of treasure to get.
+        treasure_type (TreasureType): The type of treasure to calculate.
 
     Returns:
-        list: A list of the items to be awarded as treasure to the party.
+        Treasure: A named tuple containing the coins and other treasure items.
     """
-    treasure_items = []
-    if treasure_type == TreasureType.NONE:
-        return None
-    elif treasure_type == TreasureType.A:
-        pass
-    elif treasure_type == TreasureType.B:
-        pass
-    elif treasure_type == TreasureType.C:
-        pass
-    elif treasure_type == TreasureType.D:
-        pass
-    elif treasure_type == TreasureType.E:
-        pass
-    elif treasure_type == TreasureType.F:
-        pass
-    elif treasure_type == TreasureType.G:
-        pass
-    elif treasure_type == TreasureType.H:
-        pass
-    elif treasure_type == TreasureType.I:
-        pass
-    elif treasure_type == TreasureType.J:
-        pass
-    elif treasure_type == TreasureType.K:
-        pass
-    elif treasure_type == TreasureType.L:
-        pass
-    elif treasure_type == TreasureType.M:
-        pass
-    elif treasure_type == TreasureType.N:
-        pass
-    elif treasure_type == TreasureType.O:
-        pass
-    elif treasure_type == TreasureType.P:
-        pass
-    elif treasure_type == TreasureType.Q:
-        pass
-    elif treasure_type == TreasureType.R:
-        pass
-    elif treasure_type == TreasureType.S:
-        pass
-    elif treasure_type == TreasureType.T:
-        pass
-    elif treasure_type == TreasureType.U:
-        pass
-    elif treasure_type == TreasureType.V:
-        pass
-    elif treasure_type == TreasureType.W:
-        pass
-    elif treasure_type == TreasureType.X:
-        pass
-    elif treasure_type == TreasureType.Y:
-        pass
-    elif treasure_type == TreasureType.Z:
-        pass
+    treasure_details = treasure_types[treasure_type]
+    treasure_haul = {
+        "coins": {},
+        "other": {}
+    }
+    total_gp_value = 0  # Initialize the total gold pieces value
 
-    return treasure_items
+    for item_type, details in treasure_details.items():
+        # Use roll_dice for chance determination
+        chance_roll = roll_dice('1d100').total
+        if chance_roll <= details["percent_chance"]:
+            # Roll dice to determine the amount
+            amount_roll = roll_dice(details["amount"])
+            amount = amount_roll.total
+            if isinstance(item_type, CoinType):
+                treasure_haul["coins"][item_type] = amount
+                # Update the total value in gold pieces
+                total_gp_value += amount * item_type.exchange_rate
+            else:
+                treasure_haul["other"][item_type] = details.get("description", amount)
+
+    # Add the total_gp_value to the treasure haul
+    treasure_haul["total_gp_value"] = total_gp_value
+
+    return Treasure(**treasure_haul)
+
+# Example usage:
+treasure = get_treasure(TreasureType.A)
+print(f"Treasure haul: {treasure}")
+# Calculate XP from the total gold pieces value
+xp_from_treasure = treasure.total_gp_value
+print(f"XP from treasure: {xp_from_treasure}")

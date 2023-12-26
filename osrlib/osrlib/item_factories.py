@@ -1,3 +1,5 @@
+import random
+
 from osrlib.item import Armor, Item, Weapon
 from osrlib.enums import CharacterClassType, ItemType
 
@@ -318,20 +320,26 @@ def equip_party(party: "Party"):
         elif character.character_class.class_type == CharacterClassType.MAGIC_USER:
             equip_magic_user(character)
 
-# Usage example:
-try:
-    dagger = WeaponFactory.create_weapon("Dagger")
-    print(dagger)
 
-    bow = WeaponFactory.create_weapon("Short Bow")
-    print(bow)
+def get_random_item(item_type: ItemType, magical: bool = False):
+    """
+    Gets a randomn (optionally magic) item from the given category.
 
-    thief_tools = EquipmentFactory.create_item("Thieves' Tools")
-    print(thief_tools)
+    Args:
+        item_type (ItemType): The category of item to get.
+        magic (bool): Whether to get a magical version of the item.
 
-    not_real = EquipmentFactory.create_item("Not Real")
-    print(not_real)
-except ValueError as e:
-    print(e)
-except ItemDataNotFoundError as e:
-    print(e)
+    Returns:
+        Item: An instance of the selected item.
+    """
+    if item_type == ItemType.ARMOR:
+        data = magic_armor_data if magical else armor_data
+        item_name = random.choice(list(data.keys()))
+        return ArmorFactory.create_armor(item_name)
+    elif item_type == ItemType.WEAPON:
+        data = magic_weapon_data if magical else weapon_data
+        item_name = random.choice(list(data.keys()))
+        return WeaponFactory.create_weapon(item_name)
+    # TODO: Add support for SPELL, EQUIPMENT, and MAGIC_ITEM
+    else:
+        raise ValueError(f"No item selection logic for {item_type}")
