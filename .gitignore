@@ -162,3 +162,38 @@ cython_debug/
 # Miscellaneous
 .DS_Store
 test_db.json
+
+
+### Golang ###
+
+# Binaries and executables
+*/bin/*
+*.exe
+*.exe~
+*.dll
+*.dylib
+
+# Go build output
+*.o
+*.a
+
+# Local test coverage output
+*.out
+
+# Dependency stuff
+/vendor/
+Gopkg.lock
+go.sum
+
+# IDE and editor
+.vscode/
+*.swp
+*.swo
+
+# OS-generated
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,226 @@
+syntax = "proto3";
+
+package osrlib;
+
+// AdventureProto represents the entire adventure in the game. It is the top-level
+// structure that includes an ID, name, descriptive text, introduction to the adventure,
+// a collection of dungeons, and the party of player characters. This proto encapsulates
+// all necessary data to define an adventure's state and progression.
+message AdventureProto {
+    string id = 1; // Unique identifier for the adventure.
+    string name = 2; // Name of the adventure.
+    string description = 3; // Description of the adventure.
+    string introduction = 4; // Introduction text for the adventure.
+    repeated DungeonProto dungeons = 5; // Collection of dungeons in the adventure.
+    PartyProto party = 6; // The party of player characters participating in the adventure.
+}
+
+// DungeonProto represents a dungeon in the game. It includes the dungeon's name,
+// a descriptive text, and a collection of locations within it. The 'start_location_id'
+// points to the initial location where players begin their exploration. Each dungeon
+// is uniquely identified by its 'id', allowing for distinct instances of dungeons
+// in the game world.
+message DungeonProto {
+    string id = 1; // Unique identifier for the dungeon.
+    string name = 2; // Name of the dungeon.
+    string description = 3; // Detailed description of the dungeon.
+    repeated LocProto locations = 4; // Collection of locations within the dungeon.
+    int32 start_location_id = 5; // ID of the initial location where the party starts upon first loading the dungeon.
+}
+
+// DimensionsProto defines the physical dimensions of a location in the dungeon.
+// It specifies the width and length of the area in feet, which can be used to
+// visualize the space or calculate movement and ranges within the game.
+message DimensionsProto {
+    int32 width = 1; // The width of the location in feet.
+    int32 length = 2; // The length of the location in feet.
+}
+
+// LocProto represents a specific location within the dungeon. It includes an
+// identifier, spatial dimensions, exits leading to other locations, and any
+// encounters that may occur there. The 'is_visited' flag indicates whether
+// the location has been explored by the party.
+message LocProto {
+    int32 id = 1; // Unique identifier for the location.
+    DimensionsProto dimensions = 2; // Physical dimensions of the location.
+    repeated ExitProto exits = 3; // Exits from the location.
+    repeated string keywords = 4; // Descriptive keywords for the location.
+    EncounterProto encounter = 5; // Encounter present at the location, if any.
+    bool is_visited = 6; // Flag indicating if the location has been visited.
+}
+
+// ExitProto describes an exit point from a location, indicating the direction
+// of the exit and the destination location it leads to. The 'locked' attribute
+// signifies whether the exit is accessible or needs to be unlocked.
+message ExitProto {
+    string direction = 1; // Direction of the exit (e.g., N, S, E, W).
+    int32 destination = 2; // ID of the destination location the exit leads to.
+    bool locked = 3; // Indicates if the exit is locked.
+}
+
+// EncounterProto represents a specific encounter within a dungeon location.
+// It includes details about the encounter such as its name, description,
+// the monsters involved, potential treasure, and its completion status.
+message EncounterProto {
+    string name = 1; // Name of the encounter.
+    string description = 2; // Description of the encounter.
+    MonsterProto monsters = 3; // Monster involved in the encounter.
+    repeated string treasure = 4; // List of treasures found in the encounter.
+    bool is_ended = 5; // Indicates if the encounter has been resolved.
+}
+
+// MonsterProto describes a monster encountered in the game. It includes
+// various attributes like armor class, hit dice, and other combat-related
+// details that define the monster's capabilities in encounters.
+message MonsterProto {
+    string name = 1; // Name of the monster.
+    string description = 2; // Description of the monster.
+    int32 armor_class = 3; // Armor class of the monster.
+    string hit_dice = 4; // Hit dice of the monster.
+    int32 movement = 5; // Movement speed of the monster.
+    int32 num_special_abilities = 6; // Number of special abilities of the monster.
+    int32 attacks_per_round = 7; // Number of attacks per round by the monster.
+    string damage_per_attack = 8; // Damage per attack by the monster.
+    string num_appearing = 9; // Number of this type of monster that appear.
+    string save_as_class = 10; // Class type for saving throws.
+    int32 save_as_level = 11; // Level for calculating saving throws.
+    int32 morale = 12; // Morale rating of the monster.
+    TreasureType treasure_type = 13; // Type of treasure the monster carries.
+    string alignment = 14; // Alignment of the monster.
+}
+
+// TreasureType represents different categories of treasure found within the game.
+// Each type, from A to V, signifies a specific kind of treasure, which can be used
+// to determine the rewards for encounters or discoveries in the dungeon.
+enum TreasureType {
+    NONE = 0;
+    A = 1; // Group treasure type A
+    B = 2; // Group treasure type B
+    C = 3; // Group treasure type C
+    D = 4; // Group treasure type D
+    E = 5; // Group treasure type E
+    F = 6; // Group treasure type F
+    G = 7; // Group treasure type G
+    H = 8; // Group treasure type H
+    I = 9; // Group treasure type I
+    J = 10; // Group treasure type J
+    K = 11; // Group treasure type K
+    L = 12; // Group treasure type L
+    M = 13; // Group treasure type M
+    N = 14; // Group treasure type N
+    O = 15; // Group treasure type O
+    P = 16; // Individual treasure type P
+    Q = 17; // Individual treasure type Q
+    R = 18; // Individual treasure type R
+    S = 19; // Individual treasure type S
+    T = 20; // Individual treasure type T
+    U = 21; // Individual treasure type U
+    V = 22; // Individual treasure type V
+}
+
+// Describes treasure found in an encounter.
+message TreasureProto {
+    // TODO: Define fields for TreasureProto
+}
+
+// PartyProto represents a party in the game, which is a collection of player characters.
+// A party has a name and consists of up to seven characters. Each character is represented
+// as a PlayerCharacterProto. This structure allows the player to manage a group of characters
+// as a single unit in the game, with each character contributing their unique skills and abilities.
+message PartyProto {
+    string name = 1; // The name of the party.
+    repeated PlayerCharacterProto characters = 2; // The collection of player characters in the party.
+}
+
+// CharacterClassType represents the class of a player character.
+// This enum corresponds to the classes available in the game,
+// such as Cleric, Dwarf, Elf, etc. Each class has unique attributes
+// and abilities that define the role and skills of a character in the game.
+enum CharacterClassType {
+    CLERIC = 0;
+    DWARF = 1;
+    ELF = 2;
+    FIGHTER = 3;
+    HALFLING = 4;
+    MAGIC_USER = 5;
+    THIEF = 6;
+    COMMONER = 7;
+}
+
+// AbilityType represents the type of ability a character possesses.
+// Abilities like Strength, Intelligence, Wisdom, etc., are crucial
+// for determining a character's competence in various actions and tasks
+// within the game. Each ability has a score that affects gameplay.
+enum AbilityType {
+    STRENGTH = 0;
+    INTELLIGENCE = 1;
+    WISDOM = 2;
+    DEXTERITY = 3;
+    CONSTITUTION = 4;
+    CHARISMA = 5;
+}
+
+// ItemType represents the type of item, categorizing it into
+// Armor, Weapon, Spell, Equipment, Magic Item, or a Normal item.
+// This classification helps in determining the usability and
+// application of each item in the game.
+enum ItemType {
+    ARMOR = 0;
+    WEAPON = 1;
+    SPELL = 2;
+    EQUIPMENT = 3;
+    MAGIC_ITEM = 4;
+    ITEM = 5;
+}
+
+// PlayerCharacterProto represents a player character in the game.
+// It encapsulates all the key attributes of a character, such as their name,
+// class, level, health points, and experience. It also includes the character's
+// abilities and inventory, making it a comprehensive representation of
+// a player's avatar in the game.
+message PlayerCharacterProto {
+    string name = 1; // The character's name.
+    CharacterClassType character_class_type = 2; // Class type of the character.
+    int32 level = 3; // The character's current level.
+    int32 max_hp = 4; // The character's maximum health points.
+    int32 hp = 5; // The character's current health points.
+    int32 experience_points = 6; // The character's total experience points.
+    map<string, AbilityProto> abilities = 7; // A map of the character's abilities.
+    InventoryProto inventory = 8; // The character's inventory.
+}
+
+// AbilityProto represents a specific ability of a character.
+// Each ability, identified by its type, has a score that quantifies
+// the character's prowess in that specific area. Abilities impact various
+// aspects of gameplay, like combat effectiveness, skill checks, and more.
+message AbilityProto {
+    AbilityType ability_type = 1; // The type of ability.
+    int32 score = 2; // The score of the ability, quantifying the character's skill.
+}
+
+// InventoryProto represents a character's inventory.
+// It contains a list of items that the character possesses,
+// along with the owner's name. The inventory is crucial for
+// managing the character's equipment and resources.
+message InventoryProto {
+    repeated ItemProto items = 1; // A list of items in the inventory.
+    string owner = 2; // The name of the inventory's owner.
+}
+
+// ItemProto represents an individual item in the game.
+// Each item has a type, a value in gold pieces, and other attributes
+// like damage die for weapons or armor class modifier for armor.
+// Items can be equipped by characters, depending on their class and item type.
+message ItemProto {
+    string name = 1; // The name of the item.
+    ItemType item_type = 2; // The type of item (e.g., weapon, armor).
+    repeated string usable_by_classes = 3; // List of classes that can use this item.
+    int32 max_equipped = 4; // Maximum number of this item that can be equipped.
+    bool is_equipped = 5; // Indicates if the item is currently equipped.
+    int32 gp_value = 6; // The item's value in gold pieces.
+    string to_hit_damage_die = 7; // Damage die for the item, if applicable (for weapons).
+    int32 range = 8; // Range of the item, if applicable (for ranged weapons).
+    int32 ac_modifier = 9; // Armor class modifier, if applicable (for armor).
+}
+
+
