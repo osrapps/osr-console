@@ -1,9 +1,8 @@
 """Dice roller module for rolling dice based on the nDn or Dn notation, supporting modifiers."""
-import random
-import re
+import random, re
 from collections import namedtuple
 
-# TODO: Change total_with_modifier to total_without_modifier and make total the total_with_modifer
+
 class DiceRoll(
     namedtuple(
         "RollResultBase",
@@ -15,6 +14,7 @@ class DiceRoll(
     Args:
         namedtuple (RollResult): The named tuple containing the number of dice, number of sides, base roll, modifier, total roll with modifier, and the individual rolls.
     """
+
     def __str__(self):
         """
         Returns a string representation of the dice roll based on the ndn notation, including modifiers if applicable.
@@ -31,8 +31,7 @@ class DiceRoll(
             return base
 
     def pretty_print(self):
-        """
-        Returns a human-readable string representation of the dice roll, including the total roll and any modifiers.
+        """Returns a human-readable string representation of the dice roll, including the total roll and any modifiers.
 
         Returns:
             str: A string describing the dice roll and its outcome (e.g., 'Rolled 3d6 and got 11 (11)', 'Rolled 1d20+3 and got 9 (6 + 3)').
@@ -44,11 +43,15 @@ class DiceRoll(
 
 
 def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
-    """
-    Rolls dice based on the nDn or Dn notation, supporting modifiers.
+    """Rolls dice based on the nDn or Dn notation and factors in optional modifiers. Also accepts a string representing a single integer value.
+
+    To guarantee the result of the roll, specify a single string-formatted integer for ``notation``. For example, to
+    guarantee a roll of 20, pass "20" in the ``notation`` parameter. The ``RollResult`` that's returned will always be a
+    single roll on a die whose number of sides is the ``notation`` value as are its ``RollResult.total`` and
+    ``RollResult.total_with_modifier`` attribute values.
 
     Args:
-        notation (str): The dice notation in ndn format with optional modifiers (e.g., '3d6', '1d20+5', '2d8-4').
+        notation (str): A string representation of a dice roll in ndn format with optional modifiers like '3d6', '1d20+5', or '2d8-4'. Or specify single integer as string like '1', '20', or '18'.
         modifier (int): An optional additional integer modifier to add to the roll. Defaults to 0.
         drop_lowest (bool): Whether to drop the lowest dice roll. Defaults to False.
 
@@ -68,21 +71,31 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
         >>> result = roll_dice('4d6', drop_lowest=True)
         >>> print(result.pretty_print())
     """
-    rand_gen = random.SystemRandom()
+    notation = notation.replace(" ", "").lower()
 
-    notation = notation.replace(" ", "")
-    notation = _add_modifier_to_dice_notation(notation, modifier)
+    try:
+        # First check to see if the notation string is a single integer passed as a string.
+        # We need to support calls that pass in a specific value in order to guarantee that
+        # the "roll" returns that value. You might do this in scenarios like specifying a
+        # set number of monsters in an encounter or number of gold pieces in a reward. This
+        # also enables unit tests need a consistent roll results for their test cases.
+        num_sides = int(notation)
+        return DiceRoll(1, num_sides, num_sides, 0, num_sides, [num_sides])
+    except ValueError:
+        pass
 
     match = re.match(r"(\d*)d(\d+)([+-]\d+)?", notation, re.IGNORECASE)
+    if not match:
+        raise ValueError(
+            "Invalid number of dice and sides. Use dn or ndn format like 'd6', '3d6', '3d6+2', or '3d6-2'."
+        )
 
-    num_dice, num_sides, modifier = match.groups()
+    num_dice, num_sides, notation_modifier = match.groups()
     num_dice = int(num_dice) if num_dice else 1
     num_sides = int(num_sides)
-    modifier = int(modifier) if modifier else 0
+    modifier += int(notation_modifier) if notation_modifier else 0
 
-    if num_sides not in [1, 2, 3, 4, 6, 8, 10, 12, 20, 100]:
-        raise ValueError("Invalid number of dice sides. Choose from 1, 2, 3, 4, 6, 8, 10, 12, 20, 100.")
-
+    rand_gen = random.SystemRandom()
     die_rolls = [rand_gen.randint(1, num_sides) for _ in range(num_dice)]
 
     if drop_lowest and len(die_rolls) > 1:
@@ -91,37 +104,6 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
     total = sum(die_rolls)
     total_with_modifier = total + modifier
 
-    return DiceRoll(num_dice, num_sides, total, modifier, total_with_modifier, die_rolls)
-
-
-def _add_modifier_to_dice_notation(notation: str, modifier: int) -> str:
-    """
-    Adds a modifier to a dice notation string.
-
-    Args:
-        notation (str): Existing dice notation string, like '1d6' or '1d6+1'.
-        modifier (int): The integer modifier to add.
-
-    Returns:
-        str: The modified dice notation string.
-
-    Raises:
-        ValueError: If the input notation is invalid.
-    """
-    match = re.match(r"(\d*)d(\d+)([+-]\d+)?", notation, re.IGNORECASE)
-    if not match:
-        raise ValueError(
-            "Invalid number of dice and sides. Use dn or ndn format like 'd6', '3d6', '3d6+2', or '3d6-2'."
-        )
-
-    num_dice, num_sides, existing_modifier = match.groups()
-
-    existing_modifier = int(existing_modifier) if existing_modifier else 0
-
-    new_modifier = existing_modifier + modifier
-    if new_modifier == 0:
-        return f"{num_dice}d{num_sides}"
-    elif new_modifier > 0:
-        return f"{num_dice}d{num_sides}+{new_modifier}"
-    else:
-        return f"{num_dice}d{num_sides}{new_modifier}"
+    return DiceRoll(
+        num_dice, num_sides, total, modifier, total_with_modifier, die_rolls
+    )
