@@ -1,305 +1,229 @@
 from typing import Dict, NamedTuple, Union
+from dataclasses import dataclass
 from osrlib.dice_roller import roll_dice
-from osrlib.enums import ItemType, TreasureType
+from osrlib.enums import ItemType, TreasureType, CoinType
 from osrlib.item import Item, Weapon, Armor
 
 from enum import Enum
 
 
-class CoinType(Enum):
-    COPPER = "copper"
-    SILVER = "silver"
-    ELECTRUM = "electrum"
-    GOLD = "gold"
-    PLATINUM = "platinum"
+@dataclass
+class TreasureDetail:
+    chance: float  # Probability as a float between 0 and 1
+    amount: str  # Dice notation for the amount
+    magical: bool = False  # Whether the item should be magical
 
-
-class OtherType(Enum):
-    GEMS_JEWELRY = "gems_jewelry"
-    MAGIC_ITEMS = "magic_items"
 
 class Treasure(NamedTuple):
     coins: Dict[CoinType, int]
-    other: Dict[OtherType, Union[str, int]]
+    other: Dict[ItemType, Union[str, int]]
 
-# Example of a treasure type structure using the enums and dice notation.
-treasure_types = [
-    {
-        TreasureType.A,
-        {
-            CoinType.COPPER: {"percent_chance": 25, "amount": "1d6"},
-            CoinType.SILVER: {"percent_chance": 30, "amount": "1d6"},
-            CoinType.ELECTRUM: {"percent_chance": 20, "amount": "1d4"},
-            CoinType.GOLD: {"percent_chance": 35, "amount": "2d6"},
-            CoinType.PLATINUM: {"percent_chance": 25, "amount": "1d2"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "6d6"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 30, "description": "Any 3"},
-        },
+
+TreasureContent = Dict[Union[CoinType, ItemType], TreasureDetail]
+
+
+treasure_types: Dict[TreasureType, TreasureContent] = {
+    TreasureType.A: {
+        CoinType.COPPER: TreasureDetail(chance=0.25, amount="1d6"),
+        CoinType.SILVER: TreasureDetail(chance=0.30, amount="1d6"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.20, amount="1d4"),
+        CoinType.GOLD: TreasureDetail(chance=0.35, amount="2d6"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.25, amount="1d2"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.50, amount="6d6"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.30, amount="3", magical=True),
     },
-    {
-        TreasureType.B,
-        {
-            CoinType.COPPER: {"percent_chance": 50, "amount": "1d8"},
-            CoinType.SILVER: {"percent_chance": 25, "amount": "1d6"},
-            CoinType.ELECTRUM: {"percent_chance": 25, "amount": "1d4"},
-            CoinType.GOLD: {"percent_chance": 25, "amount": "1d3"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 25, "amount": "1d6"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 10,
-                "description": "1 sword, armor, or weapon",
-            },
-        },
+    TreasureType.B: {
+        CoinType.COPPER: TreasureDetail(chance=0.50, amount="1d8"),
+        CoinType.SILVER: TreasureDetail(chance=0.25, amount="1d6"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.25, amount="1d4"),
+        CoinType.GOLD: TreasureDetail(chance=0.25, amount="1d3"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.25, amount="1d6"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.10, amount="1", magical=True),
     },
-    {
-        TreasureType.C,
-        {
-            CoinType.COPPER: {"percent_chance": 20, "amount": "1d12"},
-            CoinType.SILVER: {"percent_chance": 30, "amount": "1d4"},
-            CoinType.ELECTRUM: {"percent_chance": 10, "amount": "1d4"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 25, "amount": "1d4"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 10, "description": "Any 2"},
-        },
+    TreasureType.C: {
+        CoinType.COPPER: TreasureDetail(chance=0.20, amount="1d12"),
+        CoinType.SILVER: TreasureDetail(chance=0.30, amount="1d4"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.10, amount="1d4"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.25, amount="1d4"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.10, amount="2", magical=True),
     },
-    {
-        TreasureType.D,
-        {
-            CoinType.COPPER: {"percent_chance": 10, "amount": "1d8"},
-            CoinType.SILVER: {"percent_chance": 15, "amount": "1d12"},
-            CoinType.GOLD: {"percent_chance": 60, "amount": "1d6"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 30, "amount": "1d8"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 15,
-                "description": "Any 2 + 1 potion",
-            },
-        },
+    TreasureType.D: {
+        CoinType.COPPER: TreasureDetail(chance=0.10, amount="1d8"),
+        CoinType.SILVER: TreasureDetail(chance=0.15, amount="1d12"),
+        CoinType.GOLD: TreasureDetail(chance=0.60, amount="1d6"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.30, amount="1d8"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.15, amount="2+1", magical=True),  # Assuming "2+1" refers to the total count
     },
-    {
-        TreasureType.E,
-        {
-            CoinType.COPPER: {"percent_chance": 5, "amount": "1d10"},
-            CoinType.SILVER: {"percent_chance": 30, "amount": "1d12"},
-            CoinType.ELECTRUM: {"percent_chance": 25, "amount": "1d4"},
-            CoinType.GOLD: {"percent_chance": 25, "amount": "1d8"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 10, "amount": "1d10"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 25,
-                "description": "Any 3 + 1 scroll",
-            },
-        },
+    TreasureType.E: {
+        CoinType.COPPER: TreasureDetail(chance=0.05, amount="1d10"),
+        CoinType.SILVER: TreasureDetail(chance=0.30, amount="1d12"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.25, amount="1d4"),
+        CoinType.GOLD: TreasureDetail(chance=0.25, amount="1d8"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.10, amount="1d10"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.25, amount="3+1", magical=True),  # Assuming "3+1" refers to the total count
     },
-    {
-        TreasureType.F,
-        {
-            CoinType.SILVER: {"percent_chance": 10, "amount": "2d10"},
-            CoinType.ELECTRUM: {"percent_chance": 20, "amount": "1d8"},
-            CoinType.GOLD: {"percent_chance": 45, "amount": "1d12"},
-            CoinType.PLATINUM: {"percent_chance": 30, "amount": "1d3"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 20, "amount": "2d12"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 30,
-                "description": "Any 3 except weapons, + 1 potion, + 1 scroll",
-            },
-        },
+    TreasureType.F: {
+        CoinType.SILVER: TreasureDetail(chance=0.10, amount="2d10"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.20, amount="1d8"),
+        CoinType.GOLD: TreasureDetail(chance=0.45, amount="1d12"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.30, amount="1d3"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.20, amount="2d12"),
+        ItemType.MAGIC_ITEM: TreasureDetail(
+            chance=0.30,
+            amount="Any 3 except weapons, + 1 potion, + 1 scroll",
+        ),
     },
-    {
-        TreasureType.G,
-        {
-            CoinType.GOLD: {"percent_chance": 50, "amount": "10d4"},
-            CoinType.PLATINUM: {"percent_chance": 50, "amount": "1d6"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 25, "amount": "3d6"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 35,
-                "description": "Any 4 + 1 scroll",
-            },
-        },
+    TreasureType.G: {
+        CoinType.GOLD: TreasureDetail(chance=0.50, amount="10d4"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.50, amount="1d6"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.25, amount="3d6"),
+        ItemType.MAGIC_ITEM: TreasureDetail(
+            chance=0.35,
+            amount="Any 4 + 1 scroll",
+        ),
     },
-    {
-        TreasureType.H,
-        {
-            CoinType.COPPER: {"percent_chance": 25, "amount": "3d8"},
-            CoinType.SILVER: {"percent_chance": 50, "amount": "1d100"},
-            CoinType.ELECTRUM: {"percent_chance": 50, "amount": "10d4"},
-            CoinType.GOLD: {"percent_chance": 50, "amount": "10d6"},
-            CoinType.PLATINUM: {"percent_chance": 25, "amount": "5d4"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "1d100"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 15,
-                "description": "Any 4 + 1 potion + 1 scroll",
-            },
-        },
+    TreasureType.H: {
+        CoinType.COPPER: TreasureDetail(chance=0.25, amount="3d8"),
+        CoinType.SILVER: TreasureDetail(chance=0.50, amount="1d100"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.50, amount="10d4"),
+        CoinType.GOLD: TreasureDetail(chance=0.50, amount="10d6"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.25, amount="5d4"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.50, amount="1d100"),
+        ItemType.MAGIC_ITEM: TreasureDetail(
+            chance=0.15,
+            amount="Any 4 + 1 potion + 1 scroll",
+        ),
     },
-    {
-        TreasureType.I,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 30, "amount": "1d8"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "2d6"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 15, "description": "Any 1"},
-        },
+    TreasureType.I: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.30, amount="1d8"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.50, amount="2d6"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.15, amount="Any 1"),
     },
-    {
-        TreasureType.J,
-        {
-            CoinType.COPPER: {"percent_chance": 25, "amount": "1d4"},
-            CoinType.SILVER: {"percent_chance": 10, "amount": "1d3"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.J: {
+        CoinType.COPPER: TreasureDetail(chance=0.25, amount="1d4"),
+        CoinType.SILVER: TreasureDetail(chance=0.10, amount="1d3"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.K,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 30, "amount": "1d6"},
-            CoinType.ELECTRUM: {"percent_chance": 10, "amount": "1d2"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": "0"},
-        },
+    TreasureType.K: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0.30, amount="1d6"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.10, amount="1d2"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount="0"),
     },
-    {
-        TreasureType.L, # TODO: Resume from here.
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 100, "amount": "1d100"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "1d6"},
-            OtherType.MAGIC_ITEMS: {
-                "percent_chance": 30,
-                "description": "Any 1 + 1 potion",
-            },
-        },
+    TreasureType.L: {  # TODO: Resume from here.
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=1.00, amount="1d100"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.50, amount="1d6"),
+        ItemType.MAGIC_ITEM: TreasureDetail(
+            chance=0.30,
+            amount="Any 1 + 1 potion",
+        ),
     },
-    {
-        TreasureType.M,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 40, "amount": "2d8"},
-            CoinType.PLATINUM: {"percent_chance": 50, "amount": "5d30"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 55, "amount": "5d20"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.M: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0.40, amount="2d8"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.50, amount="5d30"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.55, amount="5d20"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.N,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 45, "amount": "2d12"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 40, "description": "2d8 potions"},
-        },
+    TreasureType.N: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.45, amount="2d12"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.40, amount="2d8 potions"),
     },
-    {
-        TreasureType.O,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 50, "amount": "1d4 scrolls"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.O: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.50, amount="1d4 scrolls"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.P,
-        {
-            CoinType.COPPER: {"percent_chance": 100, "amount": "4d6"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.P: {
+        CoinType.COPPER: TreasureDetail(chance=1.00, amount="4d6"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.Q,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 100, "amount": "3d6"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.Q: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=1.00, amount="3d6"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.R,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 100, "amount": "2d6"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.R: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=1.00, amount="2d6"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.S,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 100, "amount": "2d4"},
-            CoinType.PLATINUM: {"percent_chance": 0, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.S: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=1.00, amount="2d4"),
+        CoinType.PLATINUM: TreasureDetail(chance=0, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.T,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 0, "amount": "0"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 0, "amount": "0"},
-            CoinType.PLATINUM: {"percent_chance": 100, "amount": "1d6"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 0, "amount": "0"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 0, "description": ""},
-        },
+    TreasureType.T: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0, amount="0"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0, amount="0"),
+        CoinType.PLATINUM: TreasureDetail(chance=1.00, amount="1d6"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0, amount="0"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0, amount=""),
     },
-    {
-        TreasureType.U,
-        {
-            CoinType.COPPER: {"percent_chance": 10, "amount": "1d100"},
-            CoinType.SILVER: {"percent_chance": 10, "amount": "1d100"},
-            CoinType.ELECTRUM: {"percent_chance": 0, "amount": "0"},
-            CoinType.GOLD: {"percent_chance": 5, "amount": "1d100"},
-            CoinType.PLATINUM: {"percent_chance": 100, "amount": "0"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 5, "amount": "1d4"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 2, "description": "Any 1"},
-        },
+    TreasureType.U: {
+        CoinType.COPPER: TreasureDetail(chance=0.10, amount="1d100"),
+        CoinType.SILVER: TreasureDetail(chance=0.10, amount="1d100"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0, amount="0"),
+        CoinType.GOLD: TreasureDetail(chance=0.05, amount="1d100"),
+        CoinType.PLATINUM: TreasureDetail(chance=1.00, amount="0"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.05, amount="1d4"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=2, amount="Any 1"),
     },
-    {
-        TreasureType.V,
-        {
-            CoinType.COPPER: {"percent_chance": 0, "amount": "0"},
-            CoinType.SILVER: {"percent_chance": 10, "amount": "1d100"},
-            CoinType.ELECTRUM: {"percent_chance": 5, "amount": "1d100"},
-            CoinType.GOLD: {"percent_chance": 10, "amount": "1d100"},
-            CoinType.PLATINUM: {"percent_chance": 5, "amount": "1d100"},
-            OtherType.GEMS_JEWELRY: {"percent_chance": 10, "amount": "1d4"},
-            OtherType.MAGIC_ITEMS: {"percent_chance": 5, "description": "Any 1"},
-        },
+    TreasureType.V: {
+        CoinType.COPPER: TreasureDetail(chance=0, amount="0"),
+        CoinType.SILVER: TreasureDetail(chance=0.10, amount="1d100"),
+        CoinType.ELECTRUM: TreasureDetail(chance=0.05, amount="1d100"),
+        CoinType.GOLD: TreasureDetail(chance=0.10, amount="1d100"),
+        CoinType.PLATINUM: TreasureDetail(chance=0.05, amount="1d100"),
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=0.10, amount="1d4"),
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=0.05, amount="Any 1"),
     },
-]
+}
 
 
 def get_treasure(treasure_type: TreasureType) -> Treasure:
@@ -313,15 +237,12 @@ def get_treasure(treasure_type: TreasureType) -> Treasure:
         Treasure: A named tuple containing the coins and other treasure items.
     """
     treasure_details = treasure_types[treasure_type]
-    treasure_haul = {
-        "coins": {},
-        "other": {}
-    }
+    treasure_haul = {"coins": {}, "other": {}}
     total_gp_value = 0  # Initialize the total gold pieces value
 
     for item_type, details in treasure_details.items():
         # Use roll_dice for chance determination
-        chance_roll = roll_dice('1d100').total
+        chance_roll = roll_dice("1d100").total
         if chance_roll <= details["percent_chance"]:
             # Roll dice to determine the amount
             amount_roll = roll_dice(details["amount"])
@@ -337,6 +258,7 @@ def get_treasure(treasure_type: TreasureType) -> Treasure:
     treasure_haul["total_gp_value"] = total_gp_value
 
     return Treasure(**treasure_haul)
+
 
 # Example usage:
 treasure = get_treasure(TreasureType.A)

@@ -69,6 +69,7 @@ class ItemType(Enum):
         "Potion, ring, or other item imbued with magical properties",
     )
     ITEM = ("Normal item", "Normal (non-magical) item")
+    GEMS_JEWELRY = ("Gems and jewelry", "Precious stones and fine jewelry.")
 
 
 class OpenAIModelVersion(Enum):
@@ -114,3 +115,32 @@ class TreasureType(Enum):
     X = "X"
     Y = "Y"
     Z = "Z"
+
+
+class CoinType(Enum):
+    COPPER = ("copper", 0.01)
+    SILVER = ("silver", 0.1)
+    ELECTRUM = ("electrum", 0.5)
+    GOLD = ("gold", 1)
+    PLATINUM = ("platinum", 5)
+    
+    def __init__(self, description: str, exchange_rate: float):
+        self.description = description
+        self.exchange_rate = exchange_rate
+
+    @staticmethod
+    def value_in_gold(coin_amounts: dict) -> float:
+        """
+        Calculate the combined value in gold pieces based on the coin amounts.
+
+        Args:
+        coin_amounts (dict): A dictionary with CoinType as keys and amounts as values.
+
+        Returns:
+        float: The total value in gold pieces.
+
+        Example usage:
+        >>> CoinType.value_in_gold({CoinType.COPPER: 1000, CoinType.SILVER: 100})
+        20.0
+        """
+        return sum(coin_type.exchange_rate * amount for coin_type, amount in coin_amounts.items())
