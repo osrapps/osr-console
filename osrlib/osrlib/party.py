@@ -262,7 +262,7 @@ class Party:
         The character must be a member of the party before you can set them as the active character.
 
         Args:
-            character (PlayerCharacter): The party member to set as the active or currently selected character
+            character (PlayerCharacter): The party member to set as the active or currently selected character.
 
         Raises:
             CharacterNotInPartyError: Raised if the character is not in the party.
@@ -280,34 +280,48 @@ class Party:
     def set_next_character_as_active(self):
         """Set the next character in the party as active.
 
-        If the currently active character is the last in the list,
-        this method sets the first character in the list as active.
+        If the party has no members, the active character is set to None.
+
+        Example:
+
+                .. code-block:: python
+                    party.set_next_character_as_active()
         """
         if not self.members or len(self.members) == 0:
             # Handle the case where there are no members in the party
-            raise NoMembersInPartyError("No members in party.")
+            logger.debug(f"Party has no members, setting active character to 'None'.")
+            self.active_character = None
+            return
+        elif len(self.members) == 1:
+            # Handle the case where there is only one member in the party
+            logger.debug(f"Party has only one member, setting active character to '{self.members[0].name}'.")
+            self.active_character = self.members[0]
+            return
 
         current_active_index = self.get_character_index(self.active_character)
         next_index = (current_active_index + 1) % len(self.members)
         next_character = self.get_character_by_index(next_index)
         self.set_active_character(next_character)
-        logger.debug(f"Set '{next_character.name}' as the next active character in the party.")
+        logger.debug(f"Set '{next_character.name}' as the active character in the party.")
 
     def remove_character(self, character: PlayerCharacter):
-        """Removes a character from the party.
+        """Removes a character from the party and sets the next character in the party as active.
+
+        If the character is the last in the party, the party's active character is set to None.
 
         Example:
         .. code-block:: python
             try:
                 party.remove_character(character)
             except CharacterNotInPartyError:
-                print(f"Character '{character.name}' wasn't in the party and thus be removed from it.")
+                print(f"Character '{character.name}' wasn't in the party and thus couldn't be removed from it.")
 
         Args:
             character (PlayerCharacter): The PC to remove from the party.
         """
         if self.is_member(character):
             self.members.remove(character)
+            logger.debug(f"Removed '{character.name}' from party.")
         else:
             raise CharacterNotInPartyError(
                 f"Character '{character.name}' not in party."
