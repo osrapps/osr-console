@@ -141,7 +141,10 @@ class DungeonMaster:
         if self.adventure is None:
             raise ValueError("There is no active adventure. Call set_active_adventure() with a valid adventure before calling start_session().")
 
-        self.client = OpenAI()
+        try:
+            self.client = OpenAI()
+        except e:
+            logger.critical(f"Error initializing OpenAI client: {e}")
 
         if not self.adventure.is_started:
             self.adventure.start_adventure()
