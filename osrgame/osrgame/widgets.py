@@ -15,7 +15,7 @@ class CharacterClassRadioButtons(Container):
     def compose(self) -> ComposeResult:
         with RadioSet(id="character_class") as radio_set:
                 for character_class in CharacterClassType:
-                    yield RadioButton(character_class.value, value=character_class.name)
+                    yield RadioButton(character_class.value, name=character_class.name)
 
 
 class WelcomeScreenButtons(Container):
@@ -31,6 +31,7 @@ class CharacterScreenButtons(Container):
         yield Button("Roll abilities", id="btn_roll_abilities", classes="button")
         yield Button("Roll HP", id="btn_roll_hp", classes="button")
         yield Button("Save character", id="btn_save_character", classes="button")
+        yield Button("Delete character", id="btn_delete_character", classes="button")
 
 class CharacterStatsBox(Container):
     """A container for the character stats like name, class, level, HP, and AC."""

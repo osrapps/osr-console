@@ -34,7 +34,8 @@ class NewCharacterModalScreen(ModalScreen):
     @on(Button.Pressed, "#btn_char_create")
     def create_button_pressed(self) -> None:
         character_name = self.query_one("#character_name").value
-        character_class_value = self.query_one(RadioSet).pressed_button.label.plain
-        character_class = CharacterClassType[character_class_value.upper()]
-        # Implement the character creation logic here
+        character_class_name = self.query_one(RadioSet).pressed_button.name
+        character_class = CharacterClassType[character_class_name]
+        character = self.app.adventure.active_party.create_character(character_name, character_class)
+        self.app.adventure.active_party.set_active_character(character)
         self.app.pop_screen()

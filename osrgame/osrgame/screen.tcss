@@ -8,9 +8,9 @@ AdventureBrowserScreen {
 
 CharacterScreen {
     layout: grid;
-    grid-size: 4;
-    grid-columns: 1.5fr 1.25fr 1fr 1fr;
-    grid-rows: 25% 25% 50%;
+    grid-size: 2;
+    grid-columns: 1.5fr 1fr;
+    grid-rows: 25% 30% 45%;
     background: $surface;
 }
 
@@ -53,30 +53,31 @@ RadioSet {
 
 #stat-block {
     padding: 1;
-    column-span: 2;
+    column-span: 1;
 }
 
 #log {
-    column-span: 2;
+    column-span: 1;
 }
 
 #ability-block {
     padding: 1;
-    column-span: 2;
+    column-span: 1;
 }
 
 #saving-throw-block {
     padding: 1;
-    column-span: 2;
+    column-span: 1;
 }
 
 #item-block {
-    column-span: 3;
+    column-span: 1;
 }
 
 #char-buttons {
     border: solid $surface-lighten-3;
-    layout: vertical;
+    layout: grid;
+    grid-size: 2;
     align: center middle;
 }
 

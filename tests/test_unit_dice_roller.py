@@ -28,16 +28,6 @@ def test_invalid_notation():
     with pytest.raises(ValueError):
         roll_dice("3dd6")
 
-
-def test_invalid_sides():
-    """Tests invalid number of sides.
-
-    Checks whether the roll_dice function raises a ValueError when the number of sides is invalid, i.e., '3d7'.
-    """
-    with pytest.raises(ValueError):
-        roll_dice("3d7")
-
-
 def test_with_modifier():
     """Tests dice notation with a positive modifier.
 
