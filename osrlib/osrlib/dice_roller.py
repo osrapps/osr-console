@@ -78,7 +78,7 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
         # We need to support calls that pass in a specific value in order to guarantee that
         # the "roll" returns that value. You might do this in scenarios like specifying a
         # set number of monsters in an encounter or number of gold pieces in a reward. This
-        # also enables unit tests need a consistent roll results for their test cases.
+        # also enables unit tests that need a consistent roll results for their test cases.
         num_sides = int(notation)
         return DiceRoll(1, num_sides, num_sides, 0, num_sides, [num_sides])
     except ValueError:
