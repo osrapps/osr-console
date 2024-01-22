@@ -111,10 +111,6 @@ class TreasureType(Enum):
     T = "T"
     U = "U"
     V = "V"
-    W = "W"
-    X = "X"
-    Y = "Y"
-    Z = "Z"
 
 
 class CoinType(Enum):
@@ -123,7 +119,7 @@ class CoinType(Enum):
     ELECTRUM = ("electrum", 0.5)
     GOLD = ("gold", 1)
     PLATINUM = ("platinum", 5)
-    
+
     def __init__(self, description: str, exchange_rate: float):
         self.description = description
         self.exchange_rate = exchange_rate
@@ -140,7 +136,18 @@ class CoinType(Enum):
         float: The total value in gold pieces.
 
         Example usage:
+        >>> # Get total value in gold pieces from a dictionary of coin amounts.
         >>> CoinType.value_in_gold({CoinType.COPPER: 1000, CoinType.SILVER: 100})
         20.0
+        >>> # Get total value in gold pieces from a dictionary with only one coin type.
+        >>> CoinType.value_in_gold({CoinType.GOLD: 100})
+        100.0
+        >>> # Get the coin type from a string, then get the total value in gold pieces.
+        >>> coin_type_string = CoinType.GOLD.name
+        >>> coin_type_string
+        'GOLD'
+        >>> coins = {CoinType[coin_type_string]: 100}
+        >>> CoinType.value_in_gold(coins)
+        100.0
         """
         return sum(coin_type.exchange_rate * amount for coin_type, amount in coin_amounts.items())

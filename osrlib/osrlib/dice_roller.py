@@ -43,33 +43,31 @@ class DiceRoll(
 
 
 def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False):
-    """Rolls dice based on the nDn or Dn notation and factors in optional modifiers. Also accepts a string representing a single integer value.
+    """Rolls dice based on the nDn or Dn notation and factors in optional modifiers. Also accepts a string
+    representing a single integer value.
 
-    To guarantee the result of the roll, specify a single string-formatted integer for ``notation``. For example, to
-    guarantee a roll of 20, pass "20" in the ``notation`` parameter. The ``RollResult`` that's returned will always be a
-    single roll on a die whose number of sides is the ``notation`` value as are its ``RollResult.total`` and
-    ``RollResult.total_with_modifier`` attribute values.
+    To guarantee the result of the roll, specify a single string-formatted integer for ``notation``.
+    For example, to guarantee a roll of 20, pass "20" as the ``notation`` parameter. The ``RollResult``
+    returned when you pass an integer-as-string like this will always be a single roll on a die whose
+    number of sides is the ``notation`` value you passed, and its ``RollResult.total`` and
+    ``RollResult.total_with_modifier`` attribute values will also be the ``notation`` value you passed.
+
+    Examples:
+        # TODO: Add examples, one each of a roll with no modifier, with modififer, and a guaranteed roll.
 
     Args:
-        notation (str): A string representation of a dice roll in ndn format with optional modifiers like '3d6', '1d20+5', or '2d8-4'. Or specify single integer as string like '1', '20', or '18'.
+        notation (str): A string representation of a dice roll in ndn format with optional modifiers
+                        like '3d6', '1d20+5', or '2d8-4'. Or a string representing an integer, like
+                        '1', '20', or '18'.
         modifier (int): An optional additional integer modifier to add to the roll. Defaults to 0.
         drop_lowest (bool): Whether to drop the lowest dice roll. Defaults to False.
 
     Returns:
-        DiceRoll: A named tuple containing the number of dice, number of sides, base roll, modifier, total roll with modifier, and the individual rolls.
+        DiceRoll: A named tuple containing the number of dice, number of sides, base roll, modifier,
+                  total roll with modifier, and the individual rolls.
 
     Raises:
         ValueError: If the notation or dice sides are invalid.
-
-    Example usage:
-        >>> result = roll_dice('3d6')
-        >>> print(result.pretty_print())
-
-        >>> result = roll_dice('1d20+5')
-        >>> print(result.pretty_print())
-
-        >>> result = roll_dice('4d6', drop_lowest=True)
-        >>> print(result.pretty_print())
     """
     notation = notation.replace(" ", "").lower()
 
