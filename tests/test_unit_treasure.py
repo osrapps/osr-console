@@ -6,14 +6,16 @@ from osrlib.treasure import Treasure, TreasureDetail, TreasureType
 def test_treasure_total_gold_piece_value():
     custom_type = {
         CoinType.GOLD: TreasureDetail(
+            # Always 10 GP
             chance=100, amount="10", magical=False
-        ),  # 10 gold coins
+        ),
         CoinType.SILVER: TreasureDetail(
+            # Always 100 SP
             chance=100, amount="100", magical=False
-        ),  # 100 silver coins
+        ),
     }
     treasure = Treasure.from_custom_type(custom_type)
-    expected_total_gp = 20  # 10 gold + 100 silver converted to gold (10 + 10)
+    expected_total_gp = 20  # 10 GP + 100 SP (10 SP = 1 GP)
     assert treasure.total_gp_value == expected_total_gp
 
 
@@ -21,8 +23,9 @@ def test_treasure_from_custom_type():
     # Define a custom treasure type with specific items
     custom_type = {
         CoinType.GOLD: TreasureDetail(
+            # Always 5 GP
             chance=100, amount="5", magical=False
-        ),  # Always 5 gold coins
+        ),
         ItemType.MAGIC_ITEM: TreasureDetail(
             chance=50, amount="1", magical=True
         ),  # 50% chance of 1 magic item
