@@ -1,5 +1,5 @@
 from enum import Enum
-
+from math import ceil
 
 class AbilityType(Enum):
     STRENGTH = "Strength"
@@ -111,10 +111,6 @@ class TreasureType(Enum):
     T = "T"
     U = "U"
     V = "V"
-    W = "W"
-    X = "X"
-    Y = "Y"
-    Z = "Z"
 
 
 class CoinType(Enum):
@@ -123,24 +119,29 @@ class CoinType(Enum):
     ELECTRUM = ("electrum", 0.5)
     GOLD = ("gold", 1)
     PLATINUM = ("platinum", 5)
-    
+
     def __init__(self, description: str, exchange_rate: float):
         self.description = description
         self.exchange_rate = exchange_rate
 
     @staticmethod
-    def value_in_gold(coin_amounts: dict) -> float:
-        """
-        Calculate the combined value in gold pieces based on the coin amounts.
+    def value_in_gold(coin_amounts: dict) -> int:
+        """Calculate the combined value in gold pieces based on the coin amounts, rounded up to the nearest integer.
 
         Args:
-        coin_amounts (dict): A dictionary with CoinType as keys and amounts as values.
+            coin_amounts (dict): A dictionary with CoinType as key and quantity of that type as value.
 
         Returns:
-        float: The total value in gold pieces.
+            int: The total value in gold pieces, rounded up to the nearest integer.
 
-        Example usage:
-        >>> CoinType.value_in_gold({CoinType.COPPER: 1000, CoinType.SILVER: 100})
-        20.0
+        Examples:
+            >>> CoinType.value_in_gold({CoinType.COPPER: 1000, CoinType.SILVER: 100})
+            20
+            >>> CoinType.value_in_gold({CoinType.GOLD: 100})
+            100
+            >>> coin_type_string = CoinType.GOLD.name
+            >>> coins = {CoinType[coin_type_string]: 100}
+            >>> CoinType.value_in_gold(coins)
+            100
         """
-        return sum(coin_type.exchange_rate * amount for coin_type, amount in coin_amounts.items())
+        return ceil(sum(coin_type.exchange_rate * amount for coin_type, amount in coin_amounts.items()))
