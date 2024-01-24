@@ -45,7 +45,7 @@ class TreasureDetail:
 
 
 class Treasure:
-    """Represents a treasure haul within the game, encapsulating various types of loot.
+    """Represents a treasure haul within the game, encapsulating various physical item rewards.
 
     ``Treasure`` manages the generation and valuation of treasures comprising coins, gems, jewelry, and magical items.
     The treasure is generated based on predefined types, each corresponding to different probabilities and amounts
@@ -55,13 +55,6 @@ class Treasure:
     Attributes:
         items (Dict[Union[CoinType, ItemType], int]): A dictionary holding the treasure items. The keys are instances
             of either CoinType or ItemType enumerations, and the values are integers representing the quantity of each item.
-
-    Methods:
-        __init__(treasure_type: TreasureType = None): Initializes a new Treasure instance, optionally generating
-            treasure contents based on the provided type.
-        total_gp_value(): Property that calculates and returns the total value of the treasure in gold pieces.
-        from_treasure_type(treasure_type: TreasureType): Class method to create a new Treasure instance with contents
-            generated based on the specified TreasureType.
 
     Example:
         >>> treasure = Treasure.from_treasure_type(TreasureType.A)
