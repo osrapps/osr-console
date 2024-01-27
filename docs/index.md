@@ -1,17 +1,9 @@
-# Welcome to MkDocs
+# OSR Console
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+OSR Console is an experimental turn-based dungeon crawler RPG in the old-school renaissance (OSR) style for your terminal.
 
-## Commands
+## Packages
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+- [osrlib](osrlib.md) - Turn-based RPG game engine library.
+- [osrgame](osrgame.md) - Demo console application built with the [Textual](https://textual.textualize.io/) TUI framework.
+- [tests](tests.md) - Pytest-based unit and integration tests for `osrlib`.
