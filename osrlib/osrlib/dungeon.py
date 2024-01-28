@@ -84,14 +84,16 @@ class Location:
         encounter (Encounter): An optional encounter that exists within this location.
 
     Example:
-        >>> exit1 = Exit(Direction.NORTH, 2)
-        >>> exit2 = Exit(Direction.SOUTH, 1)
-        >>> location1 = Location(1, 10, 10, [exit1])
-        >>> location2 = Location(2, 8, 8, [exit2], keywords=["rust", "armory"])
-        >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
-        >>> # Validate the dungeon before proceeding with the game logic
-        >>> dungeon.validate_dungeon()
-        True
+    ```python
+     >>> exit1 = Exit(Direction.NORTH, 2)
+     >>> exit2 = Exit(Direction.SOUTH, 1)
+     >>> location1 = Location(1, 10, 10, [exit1])
+     >>> location2 = Location(2, 8, 8, [exit2], keywords=["rust", "armory"])
+     >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
+     >>> # Validate the dungeon before proceeding with the game logic
+     >>> dungeon.validate_connection_locations()
+     True
+    ```
     """
 
     def __init__(
@@ -213,14 +215,17 @@ class Dungeon:
         locations (List[Location]): List of locations within the dungeon. A location must have at least one exit, and all exits must have valid destinations within the dungeon. No locations should be islands unless the dungeon only contains that single location.
 
     Example:
-        >>> location1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)], keywords=["rust", "armory"])
-        >>> location2 = Location(2, 3, 40, [Exit(Direction.SOUTH, 1)], keywords=["cold", "corridor", "narrow"])
-        >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
-        >>> if dungeon.validate_dungeon():
-        ...     start_location = dungeon.set_start_location(1)
-        ...     new_location = dungeon.move(Direction.NORTH)
-        ...     new_location.id
-        2
+
+    ```python
+    >>> location1 = Location(1, 10, 10, [Exit(Direction.NORTH, 2)], keywords=["rust", "armory"])
+    >>> location2 = Location(2, 3, 40, [Exit(Direction.SOUTH, 1)], keywords=["cold", "corridor", "narrow"])
+    >>> dungeon = Dungeon("Example Dungeon", "An example dungeon.", [location1, location2])
+    >>> if dungeon.validate_connection_locations():
+    ...     start_location = dungeon.set_start_location(1)
+    ...     new_location = dungeon.move(Direction.NORTH)
+    ...     new_location.id
+    2
+    ```
     """
 
     def __init__(

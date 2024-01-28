@@ -4,6 +4,9 @@ site_description: Adventures in turn-based text
 site_url: https://osrapps.github.io/osr-console
 repo_name: osr-console
 repo_url: https://github.com/osrapps/osr-console
+watch:
+  - "docs/"
+  - "osrlib/osrlib/"
 
 theme:
   name: material
@@ -29,18 +32,19 @@ theme:
         name: Switch to light mode
 
   font:
-    text: Sora
+    #text: Sora # BIG!
     #text: PT Sans Caption
-    #text: Actor
+    text: Actor
     #text: Alef
     #text: Palanquin
 
-    code: Martian Mono
+    #code: Martian Mono # BIG!
     #code: JetBrains Mono
     #code: BIZ UDPGothic
     #code: Palanquin Dark
     #code: Oxygen Mono
     #code: IBM Plex Mono
+    code: Chivo Mono
 
   features:
     - navigation.instant
@@ -74,4 +78,30 @@ markdown_extensions:
   - pymdownx.superfences
 
 extra_css:
-  - 'main.css'
+  - "main.css"
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [osrlib]
+          import:
+            - https://docs.python.org/3/objects.inv
+          options:
+            docstring_options:
+              ignore_init_summary: true
+            docstring_section_style: list
+            filters: ["!^_"]
+            heading_level: 2
+            inherited_members: false
+            merge_init_into_class: true
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_source: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
+            unwrap_annotated: true

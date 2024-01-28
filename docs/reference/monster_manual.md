@@ -1,0 +1,1 @@
+::: osrlib.monster_manual

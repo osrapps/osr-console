@@ -106,12 +106,14 @@ class CharacterClass:
 
         Example:
 
+        ```python
             >>> pc = PlayerCharacter(name="Sckricko", character_class=CharacterClassType.WARRIOR)
             >>> pc.character_class.xp = 2000  # Manually setting XP to meet level-up criteria
             >>> hp_modifier = pc.abilities[AbilityTypes.CONSTITUTION].modifiers[ModifierTypes.HP]
             >>> new_level = pc.character_class.level_up(hp_modifier)
             >>> new_level.level_num
             2
+        ```
 
         Args:
             hp_modifier (int): Hit point bonus or penalty to apply to the HP roll when leveling.

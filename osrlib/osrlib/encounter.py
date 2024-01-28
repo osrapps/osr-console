@@ -10,16 +10,19 @@ from osrlib.dice_roller import roll_dice
 
 
 class Encounter:
-    """An encounter represents something the party discovers, confronts, or experiences within a location in a dungeon.
+    """An encounter represents something the party discovers, confronts, or experiences at a
+    [Location][osrlib.dungeon.Location] in a [Dungeon][osrlib.dungeon.Dungeon].
 
-    An encounter typically represents a group of monsters the party must fight, but it can also represent a trap, a
-    puzzle, or other non-combat encounter.
+    An encounter typically represents a group of monsters the party can fight, but it could also just be a notable
+    location or other non-combat encounter in which the party receives information or perhaps a quest piece for reaching
+    that [Location][osrlib.dungeon.Location].
 
     Attributes:
         name (str): The name or ID of the encounter.
         description (str): The description of the encounter (location, environment, etc.).
         monsters (MonsterParty): The party of monsters in the encounter.
-        treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor, quest pieces, or gold pieces (or gems or other valuables). Optional.
+        treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor,
+                         quest pieces, or gold pieces (or gems or other valuables). Optional.
         turn_order (deque): A deque of the combatants in the encounter, sorted by initiative roll.
         is_started (bool): Whether the encounter has started.
         is_ended (bool): Whether the encounter has ended.
@@ -38,7 +41,8 @@ class Encounter:
             name (str): The name or ID of the encounter.
             description (str): The description of the encounter (location, environment, etc.). Optional.
             monsters (MonsterParty): The party of monsters in the encounter. Optional.
-            treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor, quest pieces, or gold pieces (or gems or other valuables). Optional.
+            treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor,
+                             quest pieces, or gold pieces (or gems or other valuables). Optional.
         """
         self.name = name
         self.description = description
@@ -69,6 +73,26 @@ class Encounter:
         return "\n".join(self.log)
 
     def start_encounter(self, party: Party):
+        """Start the encounter with the given party.
+
+        This method initiates the encounter and sets up conditions like determining surprise and starting combat if the
+        encounter contains a hostile [MonsterParty][osrlib.monster.MonsterParty]. If so, it compares the surprise rolls
+        of the player's party and the monster party to decide which party is surprised, then proceeds to start combat
+        with its `_start_combat` private method if combat is necessary. If there are no monsters, the encounter proceeds
+        as a non-combat scenario.
+
+        Args:
+            party (Party): The player's party involved in the encounter.
+
+        Example:
+        ```python
+        # Assuming 'encounter' is an instance of Encounter and 'player_party' is an instance of Party
+        encounter.start_encounter(player_party)
+
+        # This initiates the encounter, determining surprise, starting combat if applicable,
+        # and logging the start of the encounter.
+        ```
+        """
         self.is_started = True
         logger.debug(f"Starting encounter '{self.name}'...")
         self.log_mesg(pylog.last_message)
@@ -150,8 +174,9 @@ class Encounter:
             )
             attack_roll = (
                 attacker.get_attack_roll()
-            )  # TODO: Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_attack_roll()
-            # TODDO: attack_item = attacker.inventory.get_equipped_item_by_type(attack_roll.attack_type)
+            )
+            # TODO: Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_attack_roll()
+            # TODO: attack_item = attacker.inventory.get_equipped_item_by_type(attack_roll.attack_type)
             weapon = attacker.inventory.get_equipped_weapon().name.lower()
 
             # Natural 20 always hits and a 1 always misses
@@ -207,6 +232,27 @@ class Encounter:
         self.combat_queue.append(attacker)
 
     def end_encounter(self):
+        """Ends an encounter that was previously started with `start_encounter()`.
+
+        This method concludes the encounter, performing actions like determining the outcome if it was a combat
+        encounter (whether the player's party or the monsters won) and awarding experience points, if applicable.
+        It sets the `is_started` and `is_ended` flags appropriately to indicate that the encounter has concluded,
+        and if the player's party won, awards experience points as dictated by the MonsterParty's `xp_value` to
+        the party.
+
+        After calling `end_encounter()` is when you can consider the encounter "over," and when you'd typically
+        record or otherwise process the play-by-play encounter log available through its `get_encounter_log()`
+        method. It's also when you could check to see if any PCs in the player's party have gained a level, and
+        perform appopriate actions in your UI (for example) if so.
+
+        Example:
+        ```python
+        # Assuming 'encounter' is an instance of Encounter, this ends the encounter and
+        # awards experience points to the party if appropriate, such as if they defeated
+        # a monsters, gained treasure, or both.
+        encounter.end_encounter()
+        ```
+        """
         logger.debug(f"Ending encounter '{self.name}'...")
 
         if self.pc_party:
@@ -240,7 +286,8 @@ class Encounter:
             Encounter: A random encounter.
         """
 
-        # Get a random monster type from the stats blocks in the monster_manual module. The monster type is based dungeon level and the first number in the monster's hit dice (e.g., the 1 in 1d8 or the 2 in 2d8).
+        # Get a random monster type from the stats blocks in the monster_manual module. The monster type is based
+        # dungeon level and the first number in the monster's hit dice (e.g., the 1 in 1d8 or the 2 in 2d8).
         monsters_of_level = [
             monster
             for monster in monster_stats_blocks
@@ -264,10 +311,15 @@ class Encounter:
             dict: A dictionary representation of the Encounter instance.
 
         Example:
-            # Assuming 'encounter' is an instance of Encounter
-            encounter_dict = encounter.to_dict()
-            # The encounter_dict can now be used to store the state of the Encounter
-            # and can be passed to the 'from_dict' method to recreate the encounter
+        ```python
+        # Assuming 'encounter' is an instance of Encounter
+        encounter_dict = encounter.to_dict()
+
+        # The encounter_dict could now be used to store the state of the Encounter,
+        # for example by converting the dict to JSON or storing in a database.
+        # You could also pass encounter_dict the from_dict() method to recreate
+        # the encounter.
+        ```
         """
         encounter_dict = {
             "name": self.name,
@@ -280,22 +332,29 @@ class Encounter:
 
     @classmethod
     def from_dict(cls, encounter_dict: dict) -> 'Encounter':
-        """Deserialize a dictionary into an Encounter instance.
+        """Deserialize a dictionary into an [Encounter][osrlib.encounter.Encounter] instance.
 
-        This class method creates a new instance of Encounter using the data provided in a dictionary.
-        The dictionary should contain keys corresponding to the attributes of an Encounter, including a serialized
-        MonsterParty instance. If 'is_ended' is True, the end_encounter() method will be called.
+        This class method creates a new instance of `Encounter` using the data in the dictionary.
+        The dictionary should contain keys corresponding to the attributes of an Encounter, including
+        a serialized [MonsterParty][osrlib.monster.MonsterParty] instance if there was one in the
+        `Encounter` when it was serialized. If the `is_ended` attribute of the `Encounter` being
+        deserialized with `from_dict` is `True`, the `Encounter`'s `end_encounter()` method is
+        called as part of the deserialization process.
+
+        Example:
+
+        ```python
+        # Assuming 'encounter_dict' is a previously serialized Encounter dictionary
+        encounter = Encounter.from_dict(encounter_dict)
+
+        # The 'encounter' is now a rehydrated instance of the Encounter class
+        ```
 
         Args:
             encounter_dict (dict): A dictionary containing the encounter's attributes.
 
         Returns:
             Encounter: An instance of Encounter initialized with the data from the dictionary.
-
-        Example:
-            # Assuming 'encounter_dict' is a previously serialized Encounter dictionary
-            encounter = Encounter.from_dict(encounter_dict)
-            # The 'encounter' is now a rehydrated instance of the Encounter class
         """
         try:
             name = encounter_dict["name"]
