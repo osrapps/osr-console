@@ -124,9 +124,10 @@ class Strength(Ability):
     It primarily influences hand-to-hand combat and opening doors.
 
     Modifiers:
-        TO_HIT (ModifierType.TO_HIT): Modifies melee (hand-to-hand) attack rolls.
-        DAMAGE (ModifierType.DAMAGE): Modifies damage in melee combat.
-        OPEN_DOORS (ModifierType.OPEN_DOORS): Modifies chances of opening stuck doors.
+
+    - TO_HIT (`ModifierType.TO_HIT`): Modifies melee (hand-to-hand) attack rolls.
+    - DAMAGE (`ModifierType.DAMAGE`): Modifies damage in melee combat.
+    - OPEN_DOORS (`ModifierType.OPEN_DOORS`): Modifies chances of opening stuck doors.
     """
 
     def __init__(self, score: int):
@@ -148,9 +149,10 @@ class Strength(Ability):
         """Initialize Strength-specific ability modifiers.
 
         Modifiers:
-            TO_HIT (ModifierType.TO_HIT): Modifies melee (hand-to-hand) attack rolls.
-            DAMAGE (ModifierType.DAMAGE): Modifies damage in melee combat.
-            OPEN_DOORS (ModifierType.OPEN_DOORS): Modifies chances of opening stuck doors.
+
+        - TO_HIT (ModifierType.TO_HIT): Modifies melee (hand-to-hand) attack rolls.
+        - DAMAGE (ModifierType.DAMAGE): Modifies damage in melee combat.
+        - OPEN_DOORS (ModifierType.OPEN_DOORS): Modifies chances of opening stuck doors.
 
         Each modifier is calculated based on the strength score of the character.
         """
@@ -166,7 +168,8 @@ class Intelligence(Ability):
     magical aptitude.
 
     Modifiers:
-        LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages the
+
+    - LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages the
             character can read and write.
     """
 
@@ -197,7 +200,8 @@ class Intelligence(Ability):
         """Initialize Intelligence-specific ability modifiers.
 
         Modifiers:
-            LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages
+
+        - LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages
             the character can read and write.
 
         The modifier is calculated based on the intelligence score of the character.
@@ -211,7 +215,8 @@ class Wisdom(Ability):
     Wisdom measures a character's common sense, intuition, and willpower.
 
     Modifiers:
-        SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells and
+
+    - SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells and
         magical effects.
     """
 
@@ -243,9 +248,10 @@ class Dexterity(Ability):
     Dexterity measures agility, reflexes, and coordination.
 
     Modifiers:
-        TO_HIT (ModifierType.TO_HIT): Modifies ranged attack rolls.
-        AC (ModifierType.AC): Modifies armor class (lower is better).
-        INITIATIVE (ModifierType.INITIATIVE): Modifies initiative rolls.
+
+    - TO_HIT (ModifierType.TO_HIT): Modifies ranged attack rolls.
+    - AC (ModifierType.AC): Modifies armor class (lower is better).
+    - INITIATIVE (ModifierType.INITIATIVE): Modifies initiative rolls.
     """
 
     def __init__(self, score: int):
@@ -286,9 +292,10 @@ class Dexterity(Ability):
         """Initialize Dexterity-specific ability modifiers.
 
         Modifiers:
-            TO_HIT (ModifierType.TO_HIT): Modifies ranged attack rolls.
-            AC (ModifierType.AC): Modifies armor class (lower is better).
-            INITIATIVE (ModifierType.INITIATIVE): Modifies initiative rolls.
+
+        - TO_HIT (ModifierType.TO_HIT): Modifies ranged attack rolls.
+        - AC (ModifierType.AC): Modifies armor class (lower is better).
+        - INITIATIVE (ModifierType.INITIATIVE): Modifies initiative rolls.
 
         Each modifier is calculated based on the dexterity score of the character.
         """
@@ -303,7 +310,8 @@ class Constitution(Ability):
     Constitution measures stamina, endurance, and overall health.
 
     Modifiers:
-        HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling the
+
+    - HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling the
         character or when the character gains a level.
     """
 
@@ -334,7 +342,8 @@ class Charisma(Ability):
     Charisma measures force of personality, leadership ability, and physical attractiveness.
 
     Modifiers:
-        REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
+
+    - REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
     """
 
     def __init__(self, score: int):
@@ -366,7 +375,8 @@ class Charisma(Ability):
         """Initialize Charisma-specific ability modifiers.
 
         Modifiers:
-            REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
+
+        - REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
 
         The modifier is calculated based on the charisma score of the character.
         """

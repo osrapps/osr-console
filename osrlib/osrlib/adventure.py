@@ -21,11 +21,11 @@ class DungeonAlreadyExistsError(Exception):
 class Adventure:
     """An Adventure is a collection of dungeons that can be played through by a party of characters.
 
-    To start an adventure, add a party to the adventure and then call `start_adventure()`. Once an adventure has started,
-    you can't add or remove the party or its characters until you call `end_adventure()` or the all characters in the
-    party have been killed.
+    To start an adventure, add a ``Party`` to the adventure with ``set_active_party`` and then call ``start_adventure``.
+    Once you've started an adventure, you can't add or remove the party or its characters until you call ``end_adventure``
+    or all the characters in the party have been killed.
 
-    Only one party can play through an adventure at a time.
+    Only one party can play through (be added to) an adventure at a time.
 
     Attributes:
         name (str): The name of the adventure.
