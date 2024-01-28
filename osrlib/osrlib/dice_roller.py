@@ -59,9 +59,12 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False) -> Di
     """Roll dice based on the nDn or Dn notation and factor in optional modifiers.
 
     Examples:
-        roll_dice('3d6') -> DiceRoll object representing a roll of three six-sided dice.
-        roll_dice('1d20+5') -> DiceRoll object for rolling one twenty-sided die with a +5 modifier.
-        roll_dice('20') -> DiceRoll object for a guaranteed roll of 20.
+
+    ```python
+    roll_dice('3d6') # DiceRoll object representing a roll of three six-sided dice.
+    roll_dice('1d20+5') # DiceRoll object for rolling one twenty-sided die with a +5 modifier.
+    roll_dice('20') # DiceRoll object for a guaranteed roll of 20.
+    ```
 
     Args:
         notation (str): A string representation of a dice roll in ndn format with optional modifiers like '3d6',

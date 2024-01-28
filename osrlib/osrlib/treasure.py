@@ -1,6 +1,6 @@
-"""Implements the treasure generation system for a dungeon crawler RPG, inspired by the Dungeons & Dragons Basic Rules.
+"""Implements the treasure generation system inspired by a 1980's version of the world's most popular role-playing game.
 
-The system is built around the `Treasure` class, which encapsulates the logic for generating treasure hauls for the the
+The system is built around the [Treasure][osrlib.treasure.Treasure] class, which encapsulates the logic for generating treasure hauls for the the
 player's party. Central to `Treasure` class is the `_treasure_types` attribute, a detailed mapping of various treasure
 categories to their respective contents. These categories represent different types of treasure the party might obtain,
 each with specified probabilities and quantities of items like coins, gems, jewelry, and magical items.
@@ -30,14 +30,17 @@ class TreasureDetail:
         magical (bool): True if the item is magical, False otherwise (defaults to False).
 
     Example:
-        # Defining a custom treasure detail for a new treasure type
-        custom_treasure_detail = TreasureDetail(chance=40, amount="3d4", magical=True)
-        custom_treasure_type = {
-            CoinType.GOLD: custom_treasure_detail,
-            ItemType.MAGIC_ITEM: TreasureDetail(chance=25, amount="1", magical=True)
-        }
-        custom_treasure = Treasure.from_custom_type(custom_treasure_type)
-        # This creates a Treasure instance with the custom-defined treasure type
+
+    ```python
+    # Defining a custom treasure detail for a new treasure type
+    custom_treasure_detail = TreasureDetail(chance=40, amount="3d4")
+    custom_treasure_type = {
+        CoinType.GOLD: custom_treasure_detail,
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=25, amount="1", magical=True)
+    }
+    custom_treasure = Treasure.from_custom_type(custom_treasure_type)
+    # This creates a Treasure instance with the custom-defined treasure type
+    ```
     """
     chance: int  # Probability of appearing in the treasure haul
     amount: str  # Dice notation for the amount/number of coins/items
@@ -57,11 +60,14 @@ class Treasure:
             of either CoinType or ItemType enumerations, and the values are integers representing the quantity of each item.
 
     Example:
-        >>> treasure = Treasure.from_treasure_type(TreasureType.A)
-        >>> treasure.items
-        {<CoinType.GOLD: 3>: 12, <ItemType.GEMS_JEWELRY: 2>: 6}
-        >>> treasure.total_gp_value
-        12
+
+    ```python
+    >>> treasure = Treasure.from_treasure_type(TreasureType.A)
+    >>> treasure.items
+    {<CoinType.GOLD: 3>: 12, <ItemType.GEMS_JEWELRY: 2>: 6}
+    >>> treasure.total_gp_value
+    12
+    ```
     """
     items: Dict[Union[CoinType, ItemType], int]
 
@@ -263,18 +269,18 @@ class Treasure:
             Treasure: An instance of Treasure whose contents are based on the custom treasure type.
 
         Example:
-            python```
-            # Define a custom treasure type with a 50% chance of 2d6 gold pieces, 40% chance of 1d4 gems/jewelry,
-            # and 15% chance of 1 magic item.
-            custom_treasure_type = {
-                CoinType.GOLD: TreasureDetail(chance=50, amount="2d6", magical=False),
-                ItemType.GEMS_JEWELRY: TreasureDetail(chance=40, amount="1d4", magical=False),
-                ItemType.MAGIC_ITEM: TreasureDetail(chance=15, amount="1", magical=True)
-            }
-            # Creating a Treasure instance with the custom treasure type
-            custom_treasure = Treasure.from_custom_type(custom_treasure_type)
-            # The custom_treasure Treasure instance now contains items based on the custom type definition
-            ```
+
+        ```python
+        # Define a custom treasure type with a 50% chance of 2d6 gold pieces,
+        # 40% chance of 1d4 gems/jewelry, and 15% chance of 1 magic item.
+        custom_treasure_type = {
+            CoinType.GOLD: TreasureDetail(chance=50, amount="2d6", magical=False),
+            ItemType.GEMS_JEWELRY: TreasureDetail(chance=40, amount="1d4", magical=False),
+            ItemType.MAGIC_ITEM: TreasureDetail(chance=15, amount="1", magical=True)
+        }
+        # Create a Treasure instance with the custom treasure type
+        custom_treasure = Treasure.from_custom_type(custom_treasure_type)
+        ```
         """
         treasure = cls()
         for item_type, details in custom_type.items():
