@@ -1,4 +1,4 @@
-"""This module contains the PlayerCharacter class."""
+"""Module containing the PlayerCharacter class. Use PlayerCharacter to represent a PC the player adds to their party."""
 from enum import Enum
 import datetime, json
 import osrlib.ability
