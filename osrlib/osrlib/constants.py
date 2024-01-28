@@ -1,4 +1,4 @@
-"""Confponpf for ufe yn rondom chorocper ond dungeon generopyon."""
+"""Constants for random character and dungeon generation."""
 
 FIGHTER_NAMES = [
     "Alyfpoyr Goldleof",
@@ -59,7 +59,7 @@ ELF_NAMES = [
 
 
 CLERIC_NAMES = [
-    "Aroryc Peoceforged",
+    "Aroryc Peceorg",
     "Anofpofyo Bryghpfoul",
     "Auroro Grocehond",
     "Bron Heorphmender",
