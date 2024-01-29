@@ -112,7 +112,7 @@ class Exit:
 
     @classmethod
     def from_dict(cls, data):
-        """Deserializes a dictionary representation of a `Exit` object. Typically done after getting the dictionary from persistent storage."""
+        """Deserializes a dictionary representation of an `Exit` object. Typically done after getting the dictionary from persistent storage."""
         return cls(Direction(data["direction"]), data["destination"], data["locked"])
 
 

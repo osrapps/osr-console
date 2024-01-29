@@ -1,5 +1,4 @@
-"""The party module contains the [Party][osrlib.party.Party] class and functions related to managing a party of player characters (collection
-of [PlayerCharacter][osrlib.player_character.PlayerCharacter])."""
+"""The party module contains the [Party][osrlib.party.Party] class and functions related to managing a party of player characters (collection of [PlayerCharacter][osrlib.player_character.PlayerCharacter])."""
 
 import random
 from typing import List
@@ -29,7 +28,6 @@ class CharacterAlreadyInPartyError(Exception):
     """Raised when attempting to add a player character to a party that already has that character as a member.
 
     Example:
-
     Before trying to add a character to a party, check whether the character is already in the party by using the in
     operator:
 
@@ -46,7 +44,6 @@ class CharacterNotInPartyError(Exception):
     """Raised when attempting to remove a player character from a party that does not have the character as a member.
 
     Example:
-
     Before trying to remove a character from a party, check whether the character is in the party by using the ``in``
     operator:
 
@@ -78,8 +75,8 @@ class Party:
 
     Args:
         name (str): The name of the party.
-        max_party_members (int): The maximum number of characters allowed in the party. Defaults to 6.
-        characters (List[PlayerCharacter]): The characters in the party. Defaults to an empty list.
+        max_party_members (int): The maximum number of characters allowed in the party.
+        characters (List[PlayerCharacter]): The characters in the party.
 
     Attributes:
         name (str): The name of the party.
@@ -88,7 +85,7 @@ class Party:
         active_character (PlayerCharacter): The currently active, or selected, character in the party.
         is_adventuring (bool): Whether the party has been added to an Adventure that has been started.
         current_adventure (Adventure): The adventure the party is currently in, or None if the party is not in an
-            adventure.
+                                       adventure.
     """
 
     def __init__(
@@ -147,8 +144,7 @@ class Party:
     def create_character(
         self, name: str, character_class: CharacterClassType, level: int = 1
     ) -> PlayerCharacter:
-        """Initialize a new character, add them to the party, set as the active character for the party, and return the
-        character.
+        """Initialize a new character, add them to the party, set as the active character for the party, and return the character.
 
         Example:
 
@@ -289,10 +285,9 @@ class Party:
         If the party has no members, the active character is set to None.
 
         Example:
-
-            ```python
-            party.set_next_character_as_active()
-            ```
+        ```python
+        party.set_next_character_as_active()
+        ```
         """
         if not self.members or len(self.members) == 0:
             # Handle the case where there are no members in the party
@@ -317,7 +312,6 @@ class Party:
         If the character is the last in the party, the party's active character is set to None.
 
         Example:
-
         ```python
         try:
             party.remove_character(character)
@@ -340,7 +334,6 @@ class Party:
         """Get a character from the party by name or None if the character is not in the party.
 
         Example:
-
         ```python
         character = party.get_character_by_name("Sckricko")
         if character is not None:
@@ -362,7 +355,6 @@ class Party:
         """Get a character from the party by index, or None if there's no character at that index.
 
         Example:
-
         ```python
         if len(party.members) > 0:
             # Get the first character in the party
@@ -387,7 +379,6 @@ class Party:
         """Get all characters in the party of the given class.
 
         Example:
-
         ```python
         fighters = party.get_characters_by_class(character_classes.CharacterClassType.FIGHTER)
         for fighter in fighters:
@@ -492,7 +483,6 @@ class Party:
         """Divide and award experience points to the living characters in the party.
 
         Example:
-
         ```python
         # Award experience points to the
         # living characters in the party
@@ -522,7 +512,8 @@ class Party:
         """
         return [character for character in self.members if character.is_alive]
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Serializes the `Party` to a dictionary, typically in preparation for writing it to persistent storage in a downstream operation."""
         party_dict = {
             "characters": [character.to_dict() for character in self.members],
             "name": self.name,
@@ -530,7 +521,8 @@ class Party:
         return party_dict
 
     @classmethod
-    def from_dict(cls, party_dict: dict):
+    def from_dict(cls, party_dict: dict) -> "Party":
+        """Deserializes a dictionary representation of an `Exit` object. Typically done after getting the dictionary from persistent storage."""
         characters_from_dict = [
             PlayerCharacter.from_dict(character_dict)
             for character_dict in party_dict["characters"]
