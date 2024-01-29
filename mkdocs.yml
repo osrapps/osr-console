@@ -81,6 +81,7 @@ extra_css:
   - "main.css"
 
 plugins:
+  - search
   - mkdocstrings:
       handlers:
         python:

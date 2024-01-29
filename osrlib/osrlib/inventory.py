@@ -1,3 +1,5 @@
+"""The `inventory` module includes the [Inventory][osrlib.inventory.Inventory] class which backs the `inventory` attribute of a [PlayerCharacter][osrlib.player_character.PlayerCharacter]."""
+
 from collections import defaultdict
 from typing import List
 
@@ -28,15 +30,18 @@ class Inventory:
         owner (PlayerCharacter): Owner of the inventory.
 
     Example:
-        >>> pc = PlayerCharacter()
-        >>> inv = Inventory(pc)
+
+    ```python
+    >>> pc = PlayerCharacter()
+    >>> inv = Inventory(pc)
+    ```
     """
 
     def __init__(self, player_character_owner: "PlayerCharacter"):
-        """Initialize a PlayerCharacter's inventory.
+        """Creates a `PlayerCharacter` instance.
 
         Args:
-            owner (PlayerCharacter): The player character that owns the inventory.
+            player_character_owner (PlayerCharacter): The player character that owns the inventory.
         """
         self.items: defaultdict[ItemType, List[Item]] = defaultdict(list)
         self.owner = player_character_owner
@@ -146,13 +151,13 @@ class Inventory:
         else:
             raise ItemNotEquippedError(f"Can't unequip item '{item.name}' because it is not currently equipped.")
 
-    def drop_all_items(self):
+    def drop_all_items(self) -> List[Item]:
         """Remove all items from the inventory and return a collection of the items that were removed.
 
         Equipped items are unequipped prior to being removed.
 
         Returns:
-            list[Item]: List of all items that were removed.
+            List of all items that were removed.
         """
         removed_items = []
         for item in self.all_items:
@@ -165,38 +170,38 @@ class Inventory:
         return removed_items
 
     @property
-    def all_items(self):
+    def all_items(self) -> List[Item]:
         """Gets all items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of all items.
+            List of all items in the inventory.
         """
         return [item for sublist in self.items.values() for item in sublist]
 
     @property
-    def equipped_items(self):
+    def equipped_items(self) -> List[Item]:
         """Get all equipped items in the inventory.
 
         Returns:
-            list[Item]: List of equipped items. Returns an empty list if no equipped items are present.
+            List of equipped items. Returns an empty list if no equipped items are present.
         """
         return [item for item in self.all_items if item.is_equipped]
 
     @property
-    def armor(self):
+    def armor(self) -> List[Armor]:
         """Gets all armor items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of armor items. Returns an empty list if no armor items are present.
+            List of armor items. Returns an empty list if no armor items are present.
         """
         return self.items[ItemType.ARMOR]
 
     @property
-    def weapons(self):
+    def weapons(self) -> List[Weapon]:
         """Gets all weapon items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of weapon items. Returns an empty list if no weapon items are present.
+            List of weapon items. Returns an empty list if no weapon items are present.
         """
         return self.items[ItemType.WEAPON]
 
@@ -209,44 +214,45 @@ class Inventory:
         return next((weapon for weapon in self.weapons if weapon.is_equipped), Weapon("Fists", "1d1"))
 
     @property
-    def spells(self):
+    def spells(self) -> List[Spell]:
         """Gets all spell items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of spell items. Returns an empty list if no spell items are present.
+            List of spell items. Returns an empty list if no spell items are present.
         """
         return self.items[ItemType.SPELL]
 
     @property
-    def equipment(self):
+    def equipment(self) -> List[Item]:
         """Gets all equipment items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of equipment items. Returns an empty list if no equipment items are present.
+            List of equipment items. Returns an empty list if no equipment items are present.
         """
         return self.items[ItemType.EQUIPMENT]
 
     @property
-    def magic_items(self):
+    def magic_items(self) -> List[Item]:
         """Gets all magic items stored in the items defaultdict inventory property.
 
         Returns:
-            list[Item]: List of magic items. Returns an empty list if no magic items are present.
+            List of magic items. Returns an empty list if no magic items are present.
         """
         return self.items[ItemType.MAGIC_ITEM]
 
     @property
-    def misc_items(self):
+    def misc_items(self) -> List[Item]:
         """Gets all miscellaneous items stored in the items defaultdict inventory property.
 
         Miscellaneous items include items that are not armor, weapons, spells, equipment, or magic items.
 
         Returns:
-            list[Item]: List of miscellaneous items. Returns an empty list if no miscellaneous items are present.
+            List of miscellaneous items. Returns an empty list if no miscellaneous items are present.
         """
         return self.items[ItemType.ITEM]
 
     def to_dict(self) -> dict:
+        """Serializes the `Inventory` to a dictionary, typically in preparation for writing it to persistent storage in a downstream operation."""
         return {
             "items": [item.to_dict() for item in self.all_items],
             "owner": self.owner.name,
@@ -254,10 +260,11 @@ class Inventory:
 
     @classmethod
     def from_dict(cls, inventory_dict: dict, player_character_owner: "PlayerCharacter") -> "Inventory":
-        """Converts a dictionary to an inventory.
+        """Deserializes a dictionary representation of an `Inventory` object. Typically done after getting the dictionary from persistent storage.
 
         Args:
             inventory_dict (dict): Dictionary representation of the inventory.
+            player_character_owner (PlayerCharacter): The player character that owns the inventory.
         """
         player_character_owner.inventory = Inventory(player_character_owner)
 

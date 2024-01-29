@@ -1,4 +1,4 @@
-"""Classes that represent items in the game and player character (PC) inventory."""
+"""The `item` module includes classes that represent items in the game like weapons, armor, spells, and regular adventuring gear."""
 from enum import Enum
 from typing import Optional, Set
 
@@ -69,8 +69,12 @@ class Item:
         quest (Optional[Quest]): The quest that the item is a part of.
 
     Example:
-        >>> usable_by = {CharacterClassType.FIGHTER, CharacterClassType.THIEF}
-        >>> item = Item("Sword", ItemType.WEAPON, usable_by, max_equipped=1, gp_value=10)
+
+    ```python
+    # Create an item that is a sword usable by fighters and thieves
+    usable_by = {CharacterClassType.FIGHTER, CharacterClassType.THIEF}
+    item = Item("Sword", ItemType.WEAPON, usable_by, max_equipped=1, gp_value=10)
+    ```
     """
 
     def __init__(
@@ -223,7 +227,11 @@ class Armor(Item):
         and a negative number increases AC (bad). Defaults to 1.
 
     Example:
-        >>> armor = Armor("Plate Mail", ac_modifier=7)
+
+    ```python
+    # Create a suit of plate mail
+    armor = Armor("Plate Mail", ac_modifier=7)
+    ```
     """
 
     def __init__(self, name: str, ac_modifier: int = -1, **kwargs):
@@ -267,6 +275,9 @@ class Armor(Item):
 class Weapon(Item):
     """Represents a weapon item in the game.
 
+    The Weapon class extends the Item class to represent weapons in the game. It specifies damage die and may have a
+    range indicating how far it can attack. Melee weapons typically have `None` as their range value.
+
     Args:
         name (str): The name of the weapon.
         to_hit_damage_die (str, optional): The to-hit and damage roll for the weapon. Defaults to '1d4'.
@@ -277,14 +288,13 @@ class Weapon(Item):
         damage_die (str): The damage die for the weapon, formatted like '1d8', '2d4', '1d6+1', etc.
         range (Optional[int]): The range of the weapon in feet.
 
-    Note:
-        The Weapon class extends the Item class to represent weapons in the game.
-        It specifies damage die and may have a range indicating how far it can attack.
-        Melee weapons typically have `None` as their range value.
-
     Example:
-        >>> sword = Weapon(name="Longsword", to_hit_damage_die="1d8")
-        >>> enchanted_bow = Weapon(name="Longbow of Accuracy", to_hit_damage_die="1d8+1", range=150)
+
+    ```python
+    # Create a sword and a longbow +1
+    sword = Weapon(name="Longsword", to_hit_damage_die="1d8")
+    enchanted_bow = Weapon(name="Longbow of Accuracy", to_hit_damage_die="1d8+1", range=150)
+    ```
     """
 
     def __init__(
@@ -351,8 +361,12 @@ class Spell(Item):
         instantaneous spell.
 
     Example:
-        >>> fireball = Spell(name="Fireball", spell_level=3, damage_die="8d6", range=150, duration_minutes=None)
-        >>> heal = Spell(name="Heal", spell_level=6, damage_die=None, range=None, duration_minutes=10)
+
+    ```python
+    # Create two spells, one of 3rd-level (fireball) and another of 6th-level (heal)
+    fireball = Spell(name="Fireball", spell_level=3, damage_die="8d6", range=150, duration_minutes=None)
+    heal = Spell(name="Heal", spell_level=6, damage_die=None, range=None, duration_minutes=10)
+    ```
     """
 
     def __init__(

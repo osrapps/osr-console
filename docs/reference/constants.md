@@ -6,3 +6,5 @@
 ::: osrlib.constants.HALFLING_NAMES
 ::: osrlib.constants.MAGIC_USER_NAMES
 ::: osrlib.constants.THIEF_NAMES
+::: osrlib.constants.ADVENTURE_NAMES
+::: osrlib.constants.DUNGEON_NAMES

@@ -1,5 +1,4 @@
-"""The Party module contains the Party class and functions related to managing a party of player characters (collection
-of type PlayerCharacter)."""
+"""The party module contains the [Party][osrlib.party.Party] class and functions related to managing a party of player characters (collection of [PlayerCharacter][osrlib.player_character.PlayerCharacter])."""
 
 import random
 from typing import List
@@ -29,12 +28,13 @@ class CharacterAlreadyInPartyError(Exception):
     """Raised when attempting to add a player character to a party that already has that character as a member.
 
     Example:
-        Before trying to add a character to a party, check whether the character is already in the party by using the in
-        operator:
+    Before trying to add a character to a party, check whether the character is already in the party by using the in
+    operator:
 
-        .. code-block:: python
-            if not party.is_member(some_new_character):
-                party.add_character(some_new_character)
+    ```python
+    if not party.is_member(some_new_character):
+        party.add_character(some_new_character)
+    ```
     """
 
     pass
@@ -44,12 +44,13 @@ class CharacterNotInPartyError(Exception):
     """Raised when attempting to remove a player character from a party that does not have the character as a member.
 
     Example:
-        Before trying to remove a character from a party, check whether the character is in the party by using the ``in``
-        operator:
+    Before trying to remove a character from a party, check whether the character is in the party by using the ``in``
+    operator:
 
-        .. code-block:: python
-            if character in party:
-            party.remove_character(character)
+    ```python
+    if character in party:
+        party.remove_character(character)
+    ```
     """
 
     pass
@@ -74,8 +75,8 @@ class Party:
 
     Args:
         name (str): The name of the party.
-        max_party_members (int): The maximum number of characters allowed in the party. Defaults to 6.
-        characters (List[PlayerCharacter]): The characters in the party. Defaults to an empty list.
+        max_party_members (int): The maximum number of characters allowed in the party.
+        characters (List[PlayerCharacter]): The characters in the party.
 
     Attributes:
         name (str): The name of the party.
@@ -84,7 +85,7 @@ class Party:
         active_character (PlayerCharacter): The currently active, or selected, character in the party.
         is_adventuring (bool): Whether the party has been added to an Adventure that has been started.
         current_adventure (Adventure): The adventure the party is currently in, or None if the party is not in an
-            adventure.
+                                       adventure.
     """
 
     def __init__(
@@ -143,14 +144,14 @@ class Party:
     def create_character(
         self, name: str, character_class: CharacterClassType, level: int = 1
     ) -> PlayerCharacter:
-        """Initialize a new character, add them to the party, set as the active character for the party, and return the
-        character.
+        """Initialize a new character, add them to the party, set as the active character for the party, and return the character.
 
         Example:
-            Create a new character and add them to the party:
 
-            .. code-block:: python
-                party.create_character("Sckricko", character_classes.CharacterClassType.FIGHTER, 1)
+        ```python
+        # Create a new character and add them to the party
+        party.create_character("Sckricko", character_classes.CharacterClassType.FIGHTER, 1)
+        ```
 
         Args:
             name (str): The name of the character.
@@ -182,16 +183,17 @@ class Party:
         A character can be added to a party only once, and a party has a maximum number of characters.
 
         Example:
-            Add a character to a party and allow them to be set as the active character:
 
-            .. code-block:: python
-                fighter = PlayerCharacter("Sckricko", character_classes.CharacterClassType.FIGHTER, 1)
-                thief = PlayerCharacter("Slick", character_classes.CharacterClassType.THIEF, 1)
-                party.add_character(fighter)  # sets the character as active for the party character by default
-                party.add_character(thief, set_as_active_character=False)  # don't set the character as active for the
-                                                                        # party
-                if party.active_character == fighter:
-                    print(f"Character '{character.name}' is the active character in the party.")
+        ```python
+        # Add a character to a party and allow them to be set as the active character
+        fighter = PlayerCharacter("Sckricko", character_classes.CharacterClassType.FIGHTER, 1)
+        thief = PlayerCharacter("Slick", character_classes.CharacterClassType.THIEF, 1)
+        party.add_character(fighter) # sets the character as active for the party character by default
+        party.add_character(thief, set_as_active_character=False) # don't set the character as active for the party
+
+        if party.active_character == fighter:
+            print(f"Character '{character.name}' is the active character in the party.")
+        ```
 
         Args:
             character (PlayerCharacter): The PC to add to the party.
@@ -240,13 +242,13 @@ class Party:
 
         Example:
 
-            Check whether a character is in the party:
-
-            .. code-block:: python
-                if party.is_member(some_player_character):
-                    print(f"{some_name} is in the party.")
-                else:
-                    print(f"{some_name} is not in the party.")
+        ```python
+        # Check whether a character is in the party
+        if party.is_member(some_player_character):
+            print(f"{some_name} is in the party.")
+        else:
+            print(f"{some_name} is not in the party.")
+        ```
 
         Args:
             character (PlayerCharacter): The character to check for.
@@ -283,9 +285,9 @@ class Party:
         If the party has no members, the active character is set to None.
 
         Example:
-
-                .. code-block:: python
-                    party.set_next_character_as_active()
+        ```python
+        party.set_next_character_as_active()
+        ```
         """
         if not self.members or len(self.members) == 0:
             # Handle the case where there are no members in the party
@@ -310,11 +312,12 @@ class Party:
         If the character is the last in the party, the party's active character is set to None.
 
         Example:
-        .. code-block:: python
-            try:
-                party.remove_character(character)
-            except CharacterNotInPartyError:
-                print(f"Character '{character.name}' wasn't in the party and thus couldn't be removed from it.")
+        ```python
+        try:
+            party.remove_character(character)
+        except CharacterNotInPartyError:
+            print(f"Character '{character.name}' wasn't in the party and thus couldn't be removed from it.")
+        ```
 
         Args:
             character (PlayerCharacter): The PC to remove from the party.
@@ -331,11 +334,11 @@ class Party:
         """Get a character from the party by name or None if the character is not in the party.
 
         Example:
-
-                .. code-block:: python
-                    character = party.get_character_by_name("Sckricko")
-                    if character is not None:
-                        print(f"Character '{character.name}' has {character.hit_points} hit points.")
+        ```python
+        character = party.get_character_by_name("Sckricko")
+        if character is not None:
+            print(f"Character '{character.name}' has {character.hit_points} hit points.")
+        ```
 
         Args:
             name (str): The name of the character to return.
@@ -352,14 +355,14 @@ class Party:
         """Get a character from the party by index, or None if there's no character at that index.
 
         Example:
+        ```python
+        if len(party.members) > 0:
+            # Get the first character in the party
+            first_character = party.get_character_by_index(0)
 
-            .. code-block:: python
-                if len(party.members) > 0:
-                    # Get the first character in the party
-                    first_character = party.get_character_by_index(0)
-
-                    # Get the last character in the party
-                    last_character = party.get_character_by_index(-1)
+            # Get the last character in the party
+            last_character = party.get_character_by_index(-1)
+        ```
 
         Args:
             index (int): The index of the character to return.
@@ -376,11 +379,11 @@ class Party:
         """Get all characters in the party of the given class.
 
         Example:
-
-            .. code-block:: python
-                fighters = party.get_characters_by_class(character_classes.CharacterClassType.FIGHTER)
-                for fighter in fighters:
-                    print(fighter.name)
+        ```python
+        fighters = party.get_characters_by_class(character_classes.CharacterClassType.FIGHTER)
+        for fighter in fighters:
+            print(fighter.name)
+        ```
 
         Args:
             character_class (character_classes.CharacterClassType): The class of characters to return.
@@ -399,14 +402,15 @@ class Party:
 
         Example:
 
-                Get the index of a character in the party without checking whether the character is in the party (not
-                recommended):
+        Get the index of a character in the party without checking whether the character is in the party (not
+        recommended):
 
-                .. code-block:: python
-                    character = party.get_character_by_name("Sckricko")
-                    if party.is_member(character):
-                        index = party.get_character_index(character)
-                        print(f"Character '{character.name}' is number {index + 1} in the party's marching order.")
+        ```python
+        character = party.get_character_by_name("Sckricko")
+        if party.is_member(character):
+            index = party.get_character_index(character)
+            print(f"Character '{character.name}' is number {index + 1} in the party's marching order.")
+        ```
 
         Args:
             character (PlayerCharacter): The character to get the index of
@@ -438,11 +442,13 @@ class Party:
 
         Example:
 
-            .. code-block:: python
-                # Move a character from fourth in line (index 3) to the front of the party at index 0.
-                character = party.get_character_by_name("Sckricko")
-                if party.is_member(character):
-                    party.move_character_to_index(character, 0)
+        ```python
+        # Move a character from fourth in line (index 3) to the
+        # front of the party at index 0.
+        character = party.get_character_by_name("Sckricko")
+        if party.is_member(character):
+            party.move_character_to_index(character, 0)
+        ```
 
         Args:
             character (PlayerCharacter): The character to move.
@@ -477,11 +483,11 @@ class Party:
         """Divide and award experience points to the living characters in the party.
 
         Example:
-
-            Award experience points to the living characters in the party:
-
-            .. code-block:: python
-                party.award_xp(100)
+        ```python
+        # Award experience points to the
+        # living characters in the party
+        party.award_xp(100)
+        ```
 
         Args:
             xp (int): The number of experience points to award to each character in the party.
@@ -506,7 +512,8 @@ class Party:
         """
         return [character for character in self.members if character.is_alive]
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Serializes the `Party` to a dictionary, typically in preparation for writing it to persistent storage in a downstream operation."""
         party_dict = {
             "characters": [character.to_dict() for character in self.members],
             "name": self.name,
@@ -514,7 +521,8 @@ class Party:
         return party_dict
 
     @classmethod
-    def from_dict(cls, party_dict: dict):
+    def from_dict(cls, party_dict: dict) -> "Party":
+        """Deserializes a dictionary representation of an `Exit` object. Typically done after getting the dictionary from persistent storage."""
         characters_from_dict = [
             PlayerCharacter.from_dict(character_dict)
             for character_dict in party_dict["characters"]
