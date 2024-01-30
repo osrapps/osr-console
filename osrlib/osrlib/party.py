@@ -28,10 +28,9 @@ class CharacterAlreadyInPartyError(Exception):
     """Raised when attempting to add a player character to a party that already has that character as a member.
 
     Example:
-    Before trying to add a character to a party, check whether the character is already in the party by using the in
-    operator:
 
     ```python
+    # Check whether the character is in the party before adding them
     if not party.is_member(some_new_character):
         party.add_character(some_new_character)
     ```
@@ -41,14 +40,13 @@ class CharacterAlreadyInPartyError(Exception):
 
 
 class CharacterNotInPartyError(Exception):
-    """Raised when attempting to remove a player character from a party that does not have the character as a member.
+    """Raised when attempting to remove a character from a party when that character isn't in the party.
 
     Example:
-    Before trying to remove a character from a party, check whether the character is in the party by using the ``in``
-    operator:
 
     ```python
-    if character in party:
+    # Check for membership before removing a character from the party
+    if party.is_member(character):
         party.remove_character(character)
     ```
     """
@@ -238,7 +236,7 @@ class Party:
         return character
 
     def is_member(self, character: PlayerCharacter) -> bool:
-        """Returns True if the character is in the party.
+        """Returns `True` if the character is in the party.
 
         Example:
 
@@ -254,7 +252,7 @@ class Party:
             character (PlayerCharacter): The character to check for.
 
         Returns:
-            bool: True if the character is in the party, False otherwise.
+            bool: `True` if the character is in the party, otherwise `False`.
         """
         return character in self.members
 
