@@ -192,7 +192,7 @@ class Location:
         logger.debug(json_location)
         return json_location
 
-    def get_exit(self, direction: Direction):
+    def get_exit(self, direction: Direction) -> Exit:
         """Returns the exit in the specified direction, if it exists.
 
         Args:

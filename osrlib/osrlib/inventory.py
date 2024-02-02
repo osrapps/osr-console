@@ -66,7 +66,7 @@ class Inventory:
                 f"Can't add item '{item.name}' to inventory of '{self.owner.name}' because it's already in their inventory."
             )
 
-    def get_item(self, item: Item):
+    def get_item(self, item: Item) -> Item:
         """Gets an item from the inventory.
 
         Args:
@@ -85,14 +85,14 @@ class Inventory:
                 f"Can't get item '{item.name}' from inventory of '{self.owner.name}' because it's not in their inventory."
             )
 
-    def remove_item(self, item: Item):
+    def remove_item(self, item: Item) -> bool:
         """Removes an item from the inventory and resets its owner to None.
 
         Args:
             item (Item): Item to remove.
 
         Returns:
-            bool: True if the item was successfully removed.
+            bool: Whether the item was successfully removed from the inventory.
 
         Raises:
             Exception: If the item is currently equipped.
@@ -111,14 +111,14 @@ class Inventory:
                 f"Can't remove item '{item.name}' from inventory of '{self.owner.name}' because it's not in their inventory."
             )
 
-    def equip_item(self, item: Item):
+    def equip_item(self, item: Item) -> bool:
         """Equips an item if it can be equipped.
 
         Args:
             item (Item): Item to equip.
 
         Returns:
-            bool: True if the item was successfully equipped. False if the item could not be equipped.
+            bool: Whether the item was successfully equipped.
 
         Raises:
             ItemNotUsableError: If the item is not usable by the owner's character class.
@@ -133,14 +133,14 @@ class Inventory:
         else:
             raise ItemNotUsableError(f"Can't equip item '{item.name}' because it is not usable by {self.owner.name}.")
 
-    def unequip_item(self, item: Item):
+    def unequip_item(self, item: Item) -> bool:
         """Unequips an item if it is currently equipped.
 
         Args:
             item (Item): Item to unequip.
 
         Returns:
-            bool: True if the item was successfully unequipped.
+            bool: Whether the item was successfully unequipped.
 
         Raises:
             Exception: If the item is not currently equipped.

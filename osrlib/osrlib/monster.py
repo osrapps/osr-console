@@ -143,7 +143,7 @@ class MonsterStatsBlock:
         self.treasure_type = treasure_type
         self.alignment = alignment
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, any]:
         """
         Serialize the MonsterStatsBlock instance to a dictionary format.
 
@@ -151,7 +151,7 @@ class MonsterStatsBlock:
         Enum values (like save_as_class) are converted to their string representations for compatibility.
 
         Returns:
-            dict: A dictionary representation of the MonsterStatsBlock instance.
+            dict[str, any]: A dictionary representation of the MonsterStatsBlock instance.
         """
         return {
             "name": self.name,
@@ -171,7 +171,7 @@ class MonsterStatsBlock:
         }
 
     @classmethod
-    def from_dict(cls, monster_stats_block_dict: dict):
+    def from_dict(cls, monster_stats_block_dict: dict) -> "MonsterStatsBlock":
         """
         Deserialize a dictionary into a MonsterStatsBlock instance.
 
@@ -277,10 +277,10 @@ class Monster:
 
     @property
     def is_alive(self):
-        """Get whether the monster is alive.
+        """Gets whether the monster is alive.
 
         Returns:
-            int: True if the monster has more than 0 hit points, otherwise False.
+            bool (bool): `True` if the monster has more than 0 hit points, otherwise `False`.
         """
         return self.hit_points > 0
 
@@ -332,7 +332,7 @@ class Monster:
         This method has no affect if the monster is already dead.
 
         Args:
-            damage (int): The amount of damage done to the monster.
+            hit_points_damage (int): The amount of damage done to the monster.
         """
         if self.is_alive:
             new_hp = self.hit_points - hit_points_damage
@@ -445,16 +445,16 @@ class MonsterParty:
         return treasure_items
 
     @property
-    def is_alive(self):
+    def is_alive(self) -> bool:
         """Get whether the monster party is alive.
 
         Returns:
-            int: True if the monster party has more than 0 hit points, otherwise False.
+            bool: `True` if at least one monster in the party has more than 0 hit points, otherwise `False`.
         """
         return any(monster.is_alive for monster in self.members)
 
     @property
-    def xp_value(self):
+    def xp_value(self) -> int:
         """Get the total XP value of the monster party.
 
         Returns:
@@ -472,7 +472,7 @@ class MonsterParty:
         )
         return roll.total_with_modifier
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, any]:
         """
         Return a dictionary representation of the monster party's MonsterStatsBlock.
 
@@ -482,7 +482,7 @@ class MonsterParty:
         to rehydrate a MonsterParty instance using the `from_dict` class method.
 
         Returns:
-            dict: A dictionary representation of the MonsterStatsBlock associated with the MonsterParty. This dictionary
+            dict[str, any]: A dictionary representation of the MonsterStatsBlock associated with the MonsterParty. This dictionary
                 contains key-value pairs representing the attributes of the MonsterStatsBlock, such as 'name',
                 'armor_class', 'hit_dice', etc.
 
@@ -500,7 +500,7 @@ class MonsterParty:
         return self.monster_stats_block.to_dict()
 
     @classmethod
-    def from_dict(cls, monster_stats_block_dict: dict):
+    def from_dict(cls, monster_stats_block_dict: dict) -> "MonsterParty":
         """
         Create a MonsterParty instance from a dictionary representing a MonsterStatsBlock.
 
@@ -510,12 +510,12 @@ class MonsterParty:
 
         Args:
             monster_stats_block_dict (dict): A dictionary containing key-value pairs representing the attributes of a
-                                            MonsterStatsBlock. The dictionary structure should correspond to the output
-                                            of the `to_dict` method of a MonsterStatsBlock instance.
+                                             MonsterStatsBlock. The dictionary structure should correspond to the output
+                                             of the `to_dict` method of a MonsterStatsBlock instance.
 
         Returns:
             MonsterParty: An instance of MonsterParty initialized with the MonsterStatsBlock created from the provided
-                        dictionary.
+                          dictionary.
 
         Raises:
             ValueError: If the dictionary does not contain the necessary information to create a valid MonsterStatsBlock.

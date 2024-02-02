@@ -40,7 +40,7 @@ class Encounter:
         Args:
             name (str): The name or ID of the encounter.
             description (str): The description of the encounter (location, environment, etc.). Optional.
-            monsters (MonsterParty): The party of monsters in the encounter. Optional.
+            monster_party (MonsterParty): The party of monsters in the encounter. Optional.
             treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor,
                              quest pieces, or gold pieces (or gems or other valuables). Optional.
         """
@@ -270,14 +270,14 @@ class Encounter:
         self.is_started = False
         self.is_ended = True
 
-    @staticmethod
-    def get_random_encounter(dungeon_level: int):
-        """Get a random encounter based on the dungeon level.
+    @classmethod
+    def get_random_encounter(cls, dungeon_level: int) -> "Encounter":
+        """Get a random encounter appropriate for the specified dungeon level.
 
-        The dungeon_level corresponds to the monster's number of hit dice, and the encounter will contain monsters of
-        the same type and at that level (number of hit dice). For example, if dungeon_level is 1, the encounter will
-        contain monsters with 1d8 (or 1d8+n) hit die. If dungeon_level is 3, the encounter will contain
-        monsters with 3 hit dice (or 3d8+n).
+        The `dungeon_level` corresponds to the monster's number of hit dice, and the encounter will contain monsters of
+        the same type and at that level (number of hit dice). For example, if `dungeon_level` is `1`, the encounter will
+        contain monsters with 1d8 or 1d8+n hit die. If `dungeon_level` is `3`, the encounter will contain
+        monsters with 3 or 3d8+n hit dice.
 
         Args:
             dungeon_level (int): The level of dungeon the encounter should be appropriate for.
@@ -295,13 +295,13 @@ class Encounter:
         ]
         monster_type = random.choice(monsters_of_level)
         monsters = MonsterParty(monster_type)
-        return Encounter(
+        return cls(
             name=monster_type.name,
             description=f"Wandering monsters.",
             monster_party=monsters,
         )
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """Serialize the Encounter instance to a dictionary format.
 
         This method converts the Encounter's attributes, including the associated MonsterParty, into a dictionary.

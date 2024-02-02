@@ -1,3 +1,14 @@
+"""The `adventure` module provides the [Adventure][osrlib.adventure.Adventure] class, which represents a scenario to be played through by the adventuring `Party`.
+
+The `Adventure` class is intended to encapsulate a set of thematically related dungeons and quests the player's
+[Party][osrlib.party.Party] can explore and complete. It's the thing a game game designer would typically present as a
+cohesive story or portion of a story for the player to experience.
+
+Classes:
+    Adventure: Manages the `Dungeon` and `Quest` collections in a game scenario and the progress of the player's `Party` through the scenario.
+    DungeonNotFoundError: Raised for missing dungeons.
+    DungeonAlreadyExistsError: Raised for duplicate dungeon additions.
+"""
 import json, os, datetime
 from osrlib.game_manager import logger
 from osrlib.dungeon import Dungeon
@@ -19,7 +30,7 @@ class DungeonAlreadyExistsError(Exception):
 
 
 class Adventure:
-    """An Adventure is a collection of dungeons that can be played through by a party of characters.
+    """An `Adventure`has a collection of dungeons that can be played through and quests that can be completed by a party of characters.
 
     To start an adventure, add a ``Party`` to the adventure with ``set_active_party`` and then call ``start_adventure``.
     Once you've started an adventure, you can't add or remove the party or its characters until you call ``end_adventure``
@@ -106,7 +117,7 @@ class Adventure:
         self.is_started = True
         logger.debug(f"Started adventure {self.name}.")
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """Convert the adventure to a dict.
 
         Returns:

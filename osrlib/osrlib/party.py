@@ -28,7 +28,6 @@ class CharacterAlreadyInPartyError(Exception):
     """Raised when attempting to add a player character to a party that already has that character as a member.
 
     Example:
-
     ```python
     # Check whether the character is in the party before adding them
     if not party.is_member(some_new_character):
@@ -43,7 +42,6 @@ class CharacterNotInPartyError(Exception):
     """Raised when attempting to remove a character from a party when that character isn't in the party.
 
     Example:
-
     ```python
     # Check for membership before removing a character from the party
     if party.is_member(character):
@@ -175,7 +173,7 @@ class Party:
         self,
         character: PlayerCharacter,
         set_as_active_character: bool = True,
-    ):
+    ) -> PlayerCharacter:
         """Add a character to the party.
 
         A character can be added to a party only once, and a party has a maximum number of characters.
@@ -384,7 +382,7 @@ class Party:
         ```
 
         Args:
-            character_class (character_classes.CharacterClassType): The class of characters to return.
+            character_class_type (character_classes.CharacterClassType): The class of characters to return.
 
         Returns:
             List[PlayerCharacter]: A list of all characters in the party of the given class.

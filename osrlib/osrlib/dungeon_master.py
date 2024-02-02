@@ -125,7 +125,7 @@ class DungeonMaster:
         """
         return {"role": "user", "content": str(message_string)}
 
-    def start_session(self):
+    def start_session(self) -> str:
         """Start a gaming session with the dungeon master in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
