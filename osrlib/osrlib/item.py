@@ -224,7 +224,7 @@ class Armor(Item):
 
     Attributes:
         ac_modifier (int): Armor class (AC) bonus or penalty provided by this armor. A positive number reduces AC (good)
-        and a negative number increases AC (bad). Defaults to 1.
+            and a negative number increases AC (bad). Defaults to 1.
 
     Example:
 
@@ -234,13 +234,13 @@ class Armor(Item):
     ```
     """
 
-    def __init__(self, name: str, ac_modifier: int = -1, **kwargs):
+    def __init__(self, name: str, ac_modifier: int = -1, **kwargs: dict[str, any]):
         """Initialize an armor item with the specified properties.
 
         Args:
             name (str): Name of the item.
             ac_modifier (int, optional): AC modifier. Lower is better. Defaults to -1.
-            **kwargs: Additional arguments to pass to the parent class.
+            **kwargs (dict[str, any]): Additional arguments to pass to the parent class.
         """
         super().__init__(name, ItemType.ARMOR, **kwargs)
         self.ac_modifier = ac_modifier
@@ -282,7 +282,7 @@ class Weapon(Item):
         name (str): The name of the weapon.
         to_hit_damage_die (str, optional): The to-hit and damage roll for the weapon. Defaults to '1d4'.
         range (Optional[int], optional): The range of the weapon in feet. Defaults to None for melee weapons.
-        **kwargs: Arbitrary keyword arguments inherited from the Item class.
+        **kwargs (dict[str, any]): Arbitrary keyword arguments inherited from the `Item` class.
 
     Attributes:
         damage_die (str): The damage die for the weapon, formatted like '1d8', '2d4', '1d6+1', etc.
@@ -302,7 +302,7 @@ class Weapon(Item):
         name: str,
         to_hit_damage_die: str = "1d4",
         range: Optional[int] = None,  # melee weapons do not have a range
-        **kwargs,
+        **kwargs: dict[str, any],
     ):
         """Initialize a weapon item with the specified properties."""
         super().__init__(name, ItemType.WEAPON, **kwargs)
@@ -350,15 +350,15 @@ class Spell(Item):
         damage_die (Optional[str], optional): The damage roll for the spell. Defaults to None.
         range (Optional[int], optional): The range of the spell in feet. Defaults to None for touch spells.
         duration_turns (Optional[int], optional): The duration of the spell in turns (1 turn = 10 minutes). Defaults to
-        None for instantaneous spells.
-        **kwargs: Arbitrary keyword arguments inherited from the Item class.
+                                                  `None` for instantaneous spells.
+        **kwargs (dict[str, any]): Arbitrary keyword arguments inherited from the `Item` class.
 
     Attributes:
         spell_level (int): The level of the spell.
         damage_die (Optional[str]): The damage die for the spell, formatted like '1d8', '2d6', etc.
         range (Optional[int]): The range of the spell in feet.
         duration_minutes (Optional[int]): The duration of the spell in minutes. Defaults to None which indicates an
-        instantaneous spell.
+                                          instantaneous spell.
 
     Example:
 
@@ -376,7 +376,7 @@ class Spell(Item):
         damage_die: Optional[str] = None,
         range: Optional[int] = None,  # 'touch' spells do not have a range
         duration_turns: Optional[int] = None,  # 'instantaneous' spells have no duration
-        **kwargs,
+        **kwargs: dict[str, any],
     ):
         """Initialize a spell item with the specified properties."""
         super().__init__(name, ItemType.SPELL, **kwargs)

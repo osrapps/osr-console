@@ -321,13 +321,13 @@ def equip_party(party: "Party"):
             equip_magic_user(character)
 
 
-def get_random_item(item_type: ItemType, magical: bool = False):
+def get_random_item(item_type: ItemType, magical: bool = False) -> Item:
     """
     Gets a randomn (optionally magic) item from the given category.
 
     Args:
         item_type (ItemType): The category of item to get.
-        magic (bool): Whether to get a magical version of the item.
+        magical (bool): Whether to get a magical version of the item.
 
     Returns:
         Item: An instance of the selected item.

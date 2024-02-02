@@ -175,7 +175,7 @@ class PlayerCharacter:
         This method has no affect if the character is already dead.
 
         Args:
-            damage (int): The amount of damage done to the PC.
+            hit_points_damage (int): The amount of damage done to the PC.
         """
         if self.is_alive:
             new_hp = self.character_class.hp - hit_points_damage

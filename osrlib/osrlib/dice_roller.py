@@ -43,7 +43,7 @@ class DiceRoll(
         else:
             return base
 
-    def pretty_print(self):
+    def pretty_print(self) -> str:
         """Return a human-readable string representation of the dice roll, including the total roll and any modifiers.
 
         Returns:
