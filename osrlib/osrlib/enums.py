@@ -88,6 +88,7 @@ class PartyReaction(Enum):
 
 
 class TreasureType(Enum):
+    """Specifies the type of treasure in a treasure haul the party might be awarded."""
     NONE = "None"
     A = "A"
     B = "B"

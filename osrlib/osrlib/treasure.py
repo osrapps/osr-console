@@ -50,7 +50,7 @@ class TreasureDetail:
 class Treasure:
     """Represents a treasure haul within the game, encapsulating various physical item rewards.
 
-    ``Treasure`` manages the generation and valuation of treasures comprising coins, gems, jewelry, and magical items.
+    `Treasure` manages the generation and valuation of treasures comprising coins, gems, jewelry, and magical items.
     The treasure is generated based on predefined types, each corresponding to different probabilities and amounts
     of items. The class provides functionalities to generate treasure based on a specified type, calculate its total
     value in gold pieces (gp), and retrieve the generated items.
@@ -62,11 +62,14 @@ class Treasure:
     Example:
 
     ```python
-    >>> treasure = Treasure.from_treasure_type(TreasureType.A)
-    >>> treasure.items
-    {<CoinType.GOLD: 3>: 12, <ItemType.GEMS_JEWELRY: 2>: 6}
-    >>> treasure.total_gp_value
-    12
+    treasure_haul_01 = Treasure.from_treasure_type(TreasureType.A)
+    treasure_haul_02 = Treasure(TreasureType.B)
+
+    print(f"Treasure haul 1: {treasure_haul_01}")
+    print(f"Treasure haul 2: {treasure_haul_02}")
+
+    xp_from_treasure = treasure_haul_01.total_gp_value + treasure_haul_02.total_gp_value
+    print(f"Total XP from treasure: {xp_from_treasure}")
     ```
     """
     items: Dict[Union[CoinType, ItemType], int]
@@ -74,6 +77,7 @@ class Treasure:
     _treasure_types: Dict[
         TreasureType, Dict[Union[CoinType, ItemType], TreasureDetail]
     ] = {
+        TreasureType.NONE: {},
         TreasureType.A: {
             CoinType.COPPER: TreasureDetail(chance=25, amount="1d6"),
             CoinType.SILVER: TreasureDetail(chance=30, amount="1d6"),
@@ -200,10 +204,9 @@ class Treasure:
     randomness of treasure discovery as set forth in some classic RPGs.
     """
 
-    def __init__(self, treasure_type: TreasureType = None):
+    def __init__(self, treasure_type: TreasureType = TreasureType.NONE):
         self.items = {}
-        if treasure_type:
-            self._generate_treasure(treasure_type)
+        self._generate_treasure(treasure_type)
 
     def _generate_treasure(self, treasure_type: TreasureType) -> None:
         """Populates the treasure's contents based on whether and how much of each valuable should be included according
@@ -289,13 +292,3 @@ class Treasure:
                 amount_roll = roll_dice(details.amount)
                 treasure.items[item_type] = amount_roll.total
         return treasure
-
-# Example usage:
-treasure_haul_01 = Treasure.from_treasure_type(TreasureType.A)
-treasure_haul_02 = Treasure(TreasureType.B)
-
-print(f"Treasure haul 1: {treasure_haul_01}")
-print(f"Treasure haul 2: {treasure_haul_02}")
-
-xp_from_treasure = treasure_haul_01.total_gp_value + treasure_haul_02.total_gp_value
-print(f"Total XP from treasure: {xp_from_treasure}")

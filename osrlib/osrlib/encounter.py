@@ -7,6 +7,7 @@ from osrlib.monster import MonsterParty
 from osrlib.monster_manual import monster_stats_blocks
 from osrlib.game_manager import logger, last_message_handler as pylog
 from osrlib.dice_roller import roll_dice
+from osrlib.treasure import Treasure, TreasureType
 
 
 class Encounter:
@@ -21,8 +22,9 @@ class Encounter:
         name (str): The name or ID of the encounter.
         description (str): The description of the encounter (location, environment, etc.).
         monsters (MonsterParty): The party of monsters in the encounter.
-        treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor,
-                         quest pieces, or gold pieces (or gems or other valuables). Optional.
+        treasure_type (TreasureType, Optional): The type of treasure available for award to the party at this location.
+                                                This treasure is in addition to any treasure associated with monsters
+                                                defeated by the party if this is a combat encounter.
         turn_order (deque): A deque of the combatants in the encounter, sorted by initiative roll.
         is_started (bool): Whether the encounter has started.
         is_ended (bool): Whether the encounter has ended.
@@ -33,7 +35,7 @@ class Encounter:
         name,
         description: str = "",
         monster_party: MonsterParty = None,
-        treasure: list = [],
+        treasure_type: TreasureType = TreasureType.NONE,
     ):
         """Initialize the encounter object.
 
@@ -41,14 +43,14 @@ class Encounter:
             name (str): The name or ID of the encounter.
             description (str): The description of the encounter (location, environment, etc.). Optional.
             monster_party (MonsterParty): The party of monsters in the encounter. Optional.
-            treasure (list): A list of the treasure in the encounter. The treasure can be any item like weapons, armor,
-                             quest pieces, or gold pieces (or gems or other valuables). Optional.
+            treasure_type (TreasureType): The type of treasure at this location available for award to the party.
         """
         self.name = name
         self.description = description
         self.monster_party = monster_party
         # self.npc = npc # TODO: Implement NPC class
-        self.treasure = treasure
+        self.treasure_type = treasure_type
+        self.treasure = Treasure(self.treasure_type)
         self.pc_party: Optional[Party] = None
         self.combat_queue: deque = deque()
         self.is_started: bool = False
@@ -255,7 +257,7 @@ class Encounter:
         """
         logger.debug(f"Ending encounter '{self.name}'...")
 
-        if self.pc_party:
+        if self.pc_party and self.monster_party:
             self.log_mesg(pylog.last_message)
             if self.pc_party.is_alive and not self.monster_party.is_alive:
                 logger.debug(
@@ -325,7 +327,7 @@ class Encounter:
             "name": self.name,
             "description": self.description,
             "monsters": self.monster_party.to_dict(),
-            "treasure": self.treasure,
+            "treasure_type": self.treasure_type.value[0], # Store only the first element of the tuple
             "is_ended": self.is_ended,
         }
         return encounter_dict
@@ -360,14 +362,16 @@ class Encounter:
             name = encounter_dict["name"]
             description = encounter_dict["description"]
             monster_party = MonsterParty.from_dict(encounter_dict["monsters"])
-            treasure = encounter_dict["treasure"]
+            treasure_type = TreasureType(
+                next(filter(lambda x: x.value[0] == encounter_dict["treasure_type"], TreasureType))
+            ) # Convert back to TreasureType enum
             is_ended = encounter_dict.get("is_ended", False)
 
             encounter = cls(
                 name,
                 description,
                 monster_party,
-                treasure,
+                treasure_type,
             )
 
             if is_ended and isinstance(is_ended, bool):

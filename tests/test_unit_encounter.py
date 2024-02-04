@@ -28,8 +28,9 @@ def test_encounter_initialization(random_monster_party):
 
     assert min_appearing <= len(encounter.monster_party.members) <= (min_appearing * max_appearing)
 
-    # Testing the XP value calculation - may need to adjust depending on your XP calculation logic
+    # Ensure the XP calc is working - should be each monsters' XP + the group XP value (if any)
     expected_xp = sum(member.xp_value for member in encounter.monster_party.members)
+    expected_xp += encounter.monster_party.treasure.total_gp_value
     assert encounter.monster_party.xp_value == expected_xp
 
 def test_encounter_to_dict(random_monster_party):
