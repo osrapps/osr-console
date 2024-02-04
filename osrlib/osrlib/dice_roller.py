@@ -29,11 +29,10 @@ class DiceRoll(
     """
 
     def __str__(self):
-        """
-        Return a string representation of the dice roll in ndn notation, including modifiers if applicable.
+        """Returns a string representation of the dice roll in `ndn` notation, including modifiers if applicable.
 
         Returns:
-            str: A string in ndn notation (e.g., '3d6', '1d20+5', '2d8-4').
+            str: A string in ndn notation like '3d6', '1d20+5', or '2d8-4'.
         """
         base = f"{self.num_dice}d{self.num_sides}"
         if self.modifier > 0:
@@ -59,7 +58,6 @@ def roll_dice(notation: str, modifier: int = 0, drop_lowest: bool = False) -> Di
     """Roll dice based on the nDn or Dn notation and factor in optional modifiers.
 
     Examples:
-
     ```python
     roll_dice('3d6') # DiceRoll object representing a roll of three six-sided dice.
     roll_dice('1d20+5') # DiceRoll object for rolling one twenty-sided die with a +5 modifier.

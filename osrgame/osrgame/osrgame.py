@@ -9,7 +9,7 @@ from screen_adventure_browser import AdventureBrowserScreen
 from osrlib.adventure import Adventure
 from osrlib.constants import ADVENTURE_NAMES, DUNGEON_NAMES
 from osrlib.dungeon import Dungeon
-from osrlib.dungeon_master import DungeonMaster
+from osrlib.dungeon_assistant import DungeonAssistant
 from osrlib.game_manager import logger
 from osrlib.party import get_default_party
 from osrlib.enums import OpenAIModelVersion
@@ -20,7 +20,7 @@ class OSRConsole(App):
     player_party = None
     adventure = None
     dungeon_master = None
-    openai_model = OpenAIModelVersion.GPT35TURBO
+    openai_model = OpenAIModelVersion.GPT4TURBO
 
     CSS_PATH = "screen.tcss"
 
@@ -95,7 +95,7 @@ class OSRConsole(App):
         if self.adventure is None:
             self.set_active_adventure(adventure=None)
 
-        self.dungeon_master = DungeonMaster(self.adventure, openai_model=self.openai_model)
+        self.dungeon_master = DungeonAssistant(self.adventure, openai_model=self.openai_model)
         dm_start_session_response = self.dungeon_master.start_session()
         logger.debug(f"DM start session response: {dm_start_session_response}")
 

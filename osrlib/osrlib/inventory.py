@@ -19,11 +19,11 @@ from osrlib.item import (
 
 
 class Inventory:
-    """A container to hold items owned by a player character (PC).
+    """A container to hold and manage items owned by a `PlayerCharacter`.
 
-    You should not create an InventoryManager directly. When you initialize a PlayerCharacter, an inventory is created as a
+    You should not create an Inventory directly. When you initialize a [PlayerCharacter][osrlib.player_character.PlayerCharacter], an inventory is created as a
     property of the PC. You can then add and remove items to and from the inventory using methods on the
-    PlayerCharacter.
+    `PlayerCharacter`.
 
     Attributes:
         item_dict (defaultdict[ItemType, List[Item]]): List of items in the inventory.
@@ -36,7 +36,6 @@ class Inventory:
     >>> inv = Inventory(pc)
     ```
     """
-
     def __init__(self, player_character_owner: "PlayerCharacter"):
         """Creates a `PlayerCharacter` instance.
 

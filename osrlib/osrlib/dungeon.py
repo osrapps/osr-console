@@ -23,8 +23,7 @@ Tip:
 
 """
 from typing import List
-from enum import Enum
-import random, json, asyncio, uuid
+import random, json, uuid
 from openai import OpenAI
 from osrlib.enums import Direction, OpenAIModelVersion
 from osrlib.game_manager import logger
@@ -186,9 +185,7 @@ class Location:
     @property
     def json(self):
         """Returns a JSON representation of the location."""
-        json_location = json.dumps(
-            self.to_dict(), default=lambda o: o.__dict__, separators=(",", ":")
-        )
+        json_location = json.dumps(self.to_dict(), default=lambda o: o.__dict__, separators=(",", ":"))
         logger.debug(json_location)
         return json_location
 
@@ -213,9 +210,7 @@ class Location:
             ValueError: If an exit already exists in the same direction.
         """
         if self.get_exit(exit.direction):
-            raise ExitAlreadyExistsError(
-                f"An exit already exists in the {exit.direction.name} direction."
-            )
+            raise ExitAlreadyExistsError(f"An exit already exists in the {exit.direction.name} direction.")
         self.exits.append(exit)
 
     def to_dict(self):
@@ -310,37 +305,40 @@ class Dungeon:
             name (str, optional): The name of the dungeon. Should be unique within an `Adventure`.
             description (str, optional): A description of the dungeon appropriate for display to the player.
             locations (List[Location], optional): The collection of locations within the dungeon.
-            start_location_id (int, optional): The `Location` in the dungeon in which the `Party` starts their exploration of the dungeon.
-            id (str, optional): The ID of the dungeon; must be unique within the `Advenure`. Defaults to `str(uuid.uuid4())`.
+            start_location_id (int, optional): The ID of the `Location` the `Party` should begin exploration of the
+                                               dungeon. If you supply this argument, the `current_party_location` is set
+                                               to this location automatically.
+            id (str, optional): The ID of the dungeon; must be unique within the `Adventure`.
         """
         self.name = name
         self.description = description
         self.locations = locations
-        self.start_location_id = start_location_id
-        self.current_location = None
-        self.set_start_location(start_location_id)  # Also sets self.current_location
+        self.current_party_location = self.set_start_location(start_location_id)
+        self.party_is_exploring = False
         self.id = id
 
     def set_start_location(self, location_id: int) -> Location:
-        """Sets the starting location for the dungeon and also sets the current location to the starting [Location][osrlib.dungeon.Location].
+        """Sets the `Location` where `Party` starts exploring the dungeon if a location with the specified ID exists within the dungeon.
+
+        If it exists, this method also sets the `current_party_location` to that location.
 
         Args:
-            location_id (int): The ID of the location to set as the starting location.
+            location_id (int): The ID of the `Location` where the party should begin their exploration of the dungeon.
 
         Returns:
             Location: The starting location if it exists, otherwise `None`.
         """
         logger.debug(f"Setting starting location to location with ID {location_id}.")
-        start_location = self.get_location_by_id(location_id)
-        if start_location:
-            self.current_location = start_location
-            logger.debug(f"Starting location set to {start_location}.")
-            return start_location
+        self.start_location = self.get_location_by_id(location_id)
+        if self.start_location:
+            logger.debug(f"Starting location set to {self.start_location}.")
+            self.current_party_location = self.start_location
+            return self.start_location
         else:
             return None
 
     def add_location(self, location: Location) -> None:
-        """Adds a location to the dungeon.
+        """Adds the location to the dungeon.
 
         Args:
             location (Location): The location to add to the dungeon.
@@ -348,9 +346,7 @@ class Dungeon:
         if location.id not in [loc.id for loc in self.locations]:
             self.locations.append(location)
         else:
-            exception = LocationAlreadyExistsError(
-                f"Location with ID {location.id} already exists in the dungeon."
-            )
+            exception = LocationAlreadyExistsError(f"Location with ID {location.id} already exists in the dungeon.")
             logger.exception(exception)
             raise exception
 
@@ -365,9 +361,7 @@ class Dungeon:
         """
         return next((loc for loc in self.locations if loc.id == location_id), None)
 
-    def get_location_by_direction(
-        self, location: Location, direction: Direction
-    ) -> Location:
+    def get_location_by_direction(self, location: Location, direction: Direction) -> Location:
         """Get the location in the specified direction from the given location.
 
         Args:
@@ -384,7 +378,7 @@ class Dungeon:
             return None
 
     def move(self, direction: Direction) -> Location:
-        """Moves the party to the location in the specified direction if there's an exit in that direction, and sets the dungeon's current location to the new location.
+        """Moves the party to the location in the specified direction if there's an exit in that direction and sets the dungeon's current location to the new location.
 
         You should set the new location's `is_visited` attribute to `True` after you've completed any processing you like
         when the party arrives at a location for the first time.
@@ -420,30 +414,28 @@ class Dungeon:
         Returns:
             Location: The location the party moved to if they were able to move in the specified direction, otherwise `None`.
         """
-        new_location = self.get_location_by_direction(self.current_location, direction)
+        new_location = self.get_location_by_direction(self.current_party_location, direction)
         if not new_location:
             logger.debug(
-                f"No location {direction.name} of {self.current_location}. The only exits are: "
-                + ", ".join(str(exit) for exit in self.current_location.exits)
+                f"No location {direction.name} of {self.current_party_location}. The only exits are: "
+                + ", ".join(str(exit) for exit in self.current_party_location.exits)
                 + "."
             )
             return None
 
-        self.current_location = new_location
+        self.current_party_location = new_location
 
         # NOTE: We do NOT set is_visited to True here because we need to give the caller the opportunity to check and
         # perform any actions that need to be done when the party enters a location for the first time. They can then
         # set is_visited to True when they're done performing those actions.
-        if self.current_location.is_visited:
+        if self.current_party_location.is_visited:
             logger.debug(
-                f"Party moved to previously visited (is_visited = True) location {self.current_location}."
+                f"Party moved to previously visited (is_visited = True) location {self.current_party_location}."
             )
         else:
-            logger.debug(
-                f"Party moved to new (is_visited = False) location {self.current_location}."
-            )
+            logger.debug(f"Party moved to new (is_visited = False) location {self.current_party_location}.")
 
-        return self.current_location
+        return self.current_party_location
 
     def validate_location_connections(self) -> bool:
         """Verifies whether every [Location][osrlib.dungeon.Location] in the dungeon is connected to at least one other location and that a connection in the opposite direction exists. For example, if location A has an exit EAST to location B, then location B must have an exit WEST to location A.
@@ -530,9 +522,7 @@ class Dungeon:
                 "content": f"{dungeon.name}\n{dungeon.description}\n{len(dungeon.locations)}",
             },
         ]
-        logger.debug(
-            f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API..."
-        )
+        logger.debug(f"Getting keywords for dungeon '{dungeon.name}' from OpenAI API...")
 
         client = OpenAI()
         openai_model = openai_model.value
@@ -544,12 +534,8 @@ class Dungeon:
         )
         llm_response = completion.choices[0].message.content
 
-        decoded_json_string = (
-            bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
-        )
-        logger.debug(
-            f"Keywords for dungeon {dungeon.name} from OpenAI API: {decoded_json_string}"
-        )
+        decoded_json_string = bytes(llm_response, "utf-8").decode("unicode_escape").strip('"')
+        logger.debug(f"Keywords for dungeon {dungeon.name} from OpenAI API: {decoded_json_string}")
         return decoded_json_string
 
     @staticmethod
@@ -616,16 +602,12 @@ class Dungeon:
                     break
 
         if description == "":
-            description = (
-                f"A randomly generated dungeon with {num_locations} locations."
-            )
+            description = f"A randomly generated dungeon with {num_locations} locations."
 
         dungeon = Dungeon(name, description, locations, start_location_id=1)
 
         if use_ai:
-            location_keywords_json = Dungeon.get_dungeon_location_keywords(
-                dungeon, openai_model
-            )
+            location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon, openai_model)
             location_keywords_dict = json.loads(location_keywords_json)
             for location_id_str, keywords in location_keywords_dict.items():
                 location_id = int(location_id_str)
@@ -645,19 +627,17 @@ class Dungeon:
             "name": self.name,
             "description": self.description,
             "locations": [location.to_dict() for location in self.locations],
-            "start_location_id": self.current_location.id,  # save the current location as the start location on load
+            "start_location_id": self.current_party_location.id,  # save the current location as the start location on load
             "id": self.id,
         }
 
     @classmethod
     def from_dict(cls, data):
-        """Returns a ``Dungeon`` instance from a dictionary representation of the dungeon. Useful as a post-deserialization step when loading from a permanent data store."""
+        """Returns a `Dungeon` instance from a dictionary representation of the dungeon. Useful as a post-deserialization step when loading from a permanent data store."""
         return cls(
             data["name"],
             data["description"],
             [Location.from_dict(location_data) for location_data in data["locations"]],
-            data[
-                "start_location_id"
-            ],  # will be the location that was current when the dungeon was saved
+            data["start_location_id"],  # will be the location that was current when the dungeon was saved
             data["id"],
         )
