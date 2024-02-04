@@ -2,9 +2,7 @@
 
 The `osrlib` package is the main rules and game engine library for OSR Console.
 
-If you want to play the game, learn how to install and start the app in [osrgame: Textual TUI for an OSR-style turn-based RPG](../osrgame/README.md).
-
-If you want contribute code to the `osrlib` package itself, read on to learn how to build and test the library.
+[Documentation](https://osrapps.github.io/osr-console/) **|** [API reference](https://osrapps.github.io/osr-console/reference/) **|** [Source code](https://github.com/osrapps/osr-console/tree/main/osrlib)
 
 ## Prerequisites
 
@@ -18,8 +16,11 @@ Use Poetry to create a Python virtual environment and install `osrlib` and its d
 
 ```sh
 # Create osrlib project venv and install its deps with Poetry
+# Run this from within the REPO_ROOT/osrlib/ directory.
 poetry install
 ```
+
+To install and run a demo application that uses `osrlib`, see [osrgame: Textual TUI backed by osrlib](https://osrapps.github.io/osr-console/osrgame/).
 
 ## Build the package
 
