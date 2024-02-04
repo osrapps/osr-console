@@ -404,7 +404,7 @@ class Dungeon:
         ...         print(f"The party moved to new location {new_location}, and here's a super detailed description...")
         ...         new_location.is_visited = True
         Party moved to new location LOC ID: 2 Size: 10'W x 10'L Exits: [NORTH:1] Keywords: ['rust', 'armory'], and here's a super detailed description...
-        >>> dungeon.current_location == new_location
+        >>> dungeon.current_party_location == new_location
         True
         ```
 
