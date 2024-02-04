@@ -20,7 +20,7 @@ class OSRConsole(App):
     player_party = None
     adventure = None
     dungeon_master = None
-    openai_model = OpenAIModelVersion.GPT4TURBO # Use any value other than NONE to enable AI
+    openai_model = OpenAIModelVersion.DEFAULT # Use any value other than NONE to enable AI
 
     CSS_PATH = "screen.tcss"
 
