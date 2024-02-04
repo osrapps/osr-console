@@ -1,7 +1,7 @@
-"""The `adventure` module provides the [Adventure][osrlib.adventure.Adventure] class, which represents a scenario to be played through by the adventuring `Party`.
+"""The `adventure` module provides the [Adventure][osrlib.adventure.Adventure] class, which represents a scenario to be played through by the adventuring [Party][osrlib.party.Party].
 
 The `Adventure` class is intended to encapsulate a set of thematically related dungeons and quests the player's
-[Party][osrlib.party.Party] can explore and complete. It's the thing a game game designer would typically present as a
+`Party` can explore and complete. It's the thing a game game designer would typically present as a
 cohesive story or portion of a story for the player to experience.
 
 Classes:

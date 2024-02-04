@@ -32,33 +32,26 @@ theme:
         name: Switch to light mode
 
   font:
-    #text: Sora # BIG!
-    #text: PT Sans Caption
     text: Actor
-    #text: Alef
-    #text: Palanquin
-
-    #code: Martian Mono # BIG!
-    #code: JetBrains Mono
-    #code: BIZ UDPGothic
-    #code: Palanquin Dark
-    #code: Oxygen Mono
-    #code: IBM Plex Mono
     code: Chivo Mono
+    #text: Sora # BIG!
+    #code: Martian Mono # BIG!
 
   features:
+    - navigation.footer
+    - navigation.indexes
     - navigation.instant
     - navigation.instant.progress
-    - navigation.tracking
-    - navigation.sections
     - navigation.prune
-    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.top
-    - navigation.footer
+    - navigation.tracking
+
     - toc.follow
 
     - search.suggest
-    - search.highlight
     - search.share
 
     - header.autohide
@@ -107,3 +100,35 @@ plugins:
             signature_crossrefs: true
             summary: true
             unwrap_annotated: true
+
+nav:
+  - About:
+    - index.md
+  - Packages:
+    - osrlib.md
+    - osrgame.md
+    - tests.md
+  - API reference:
+    - reference/index.md
+    - Modules:
+      - ability: reference/ability.md
+      - adventure: reference/adventure.md
+      - character_classes: reference/character_classes.md
+      - constants: reference/constants.md
+      - dice_roller: reference/dice_roller.md
+      - dungeon: reference/dungeon.md
+      - dungeon_assistant: reference/dungeon_assistant.md
+      - encounter: reference/encounter.md
+      - enums: reference/enums.md
+      - game_manager: reference/game_manager.md
+      - inventory: reference/inventory.md
+      - item: reference/item.md
+      - item_factories: reference/item_factories.md
+      - monster: reference/monster.md
+      - monster_manual: reference/monster_manual.md
+      - party: reference/party.md
+      - player_character: reference/player_character.md
+      - quest: reference/quest.md
+      - saving_throws: reference/saving_throws.md
+      - treasure: reference/treasure.md
+      - utils: reference/utils.md
