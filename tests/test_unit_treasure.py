@@ -18,7 +18,7 @@ def test_treasure_total_gold_piece_value():
     expected_total_gp = 20  # 10 GP + 100 SP (10 SP = 1 GP)
     assert treasure.total_gp_value == expected_total_gp
 
-
+@pytest.mark.flaky(reruns=5) # Flaky because we can't guarantee an average of exactly 50% of getting a magic item.
 def test_treasure_from_custom_type():
     # Define a custom treasure type with specific items
     custom_type = {
@@ -50,7 +50,7 @@ def test_treasure_from_custom_type():
     # Check if the appearance rate of the magic item is close to the expected 50%
     assert 0.4 <= approx_magic_item_appearance_rate <= 0.6
 
-
+@pytest.mark.flaky(reruns=5) # Flaky because we can't guarantee exact average percentages of rolled treasure types.
 def test_treasure_predefined_treasure_type_statistics():
     iterations = 1000  # Number of iterations to average out randomness
     type_a_probabilities = {

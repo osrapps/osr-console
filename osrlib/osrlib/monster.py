@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Optional
 from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.enums import CharacterClassType, TreasureType
 from osrlib.player_character import Alignment
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
 from osrlib.game_manager import logger
+from osrlib.treasure import Treasure
 
 monster_xp = {
     "Under 1": {"base": 5, "bonus": 1},  # Not handling the "under 1" hit dice case
@@ -65,7 +66,12 @@ class MonsterStatsBlock:
     MonsterParty instance, which creates instances of the monster in the party as defined by the statistics provided in
     the MonsterStatsBlock.
 
+    The 'num_appearing' parameter accepts a dice notation like '1d6' or '2d4', which is rolled on instantiation to determine the
+    actual number of monsters appearing. To specify a set number of monsters that should appear, specify a string
+    representation of an integer, like '1', '8', or '100'.
+
     Example:
+    ```python
         # Create a MonsterStatsBlock for a Goblin
         goblin_stats = MonsterStatsBlock(
             name="Goblin",
@@ -87,6 +93,7 @@ class MonsterStatsBlock:
         # Use the goblin_stats to create a MonsterParty
         goblin_party = MonsterParty(goblin_stats)
         print(f"Goblin Party: {goblin_party}")
+    ```
 
     Attributes:
         name (str): The name of the monster.
@@ -97,16 +104,12 @@ class MonsterStatsBlock:
         num_special_abilities (int): The number of special abilities the monster possesses.
         attacks_per_round (int): The number of attacks the monster can perform in a single round.
         damage_per_attack (str): The damage dealt by the monster per attack, in 'ndn' or 'ndn+n' format.
-        num_appearing (str): The dice notation for the typical number of these monsters encountered.
+        num_appearing (str): The dice notation to roll or str(int) of the number of these monsters that should appear.
         save_as_class (CharacterClassType): The class type for the monster's saving throws.
         save_as_level (int): The effective level for the monster's saving throws.
         morale (int): The morale rating of the monster, influencing its behavior in combat.
-        treasure_type (TreasureType): The type of treasure carried or guarded by the monster.
+        treasure_type (TreasureType, Optional): The type of treasure carried or guarded by the monster.
         alignment (Alignment): The moral and ethical stance of the monster.
-
-    Note:
-        The 'num_appearing' parameter uses dice notation (e.g., '1d6') and is rolled on instantiation to determine the
-        actual number of monsters appearing.
     """
 
     def __init__(
@@ -116,7 +119,7 @@ class MonsterStatsBlock:
         armor_class: int = 10,
         hit_dice: str = "1d8",
         movement: int = 120,
-        num_special_abilities=0,  # corresponds to the number of asterisks on the monster's hit dice
+        num_special_abilities=0,  # Corresponds to the number of asterisks on the monster's hit dice
         attacks_per_round=1,  # TODO: Add support for attack and damage modifiers (e.g. Cyclops has -2 on attack rolls)
         damage_per_attack="1d4",
         num_appearing="1d6",
@@ -220,6 +223,8 @@ class Monster:
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
 
+        self.treasure = Treasure(monster_stats.treasure_type)
+
         self.xp_value = self._calculate_xp(
             self.hp_roll, monster_stats.num_special_abilities
         )
@@ -229,7 +234,9 @@ class Monster:
         return f"{self.name} (HP: {self.hit_points}/{self.max_hit_points} AC: {self.armor_class} XP value: {self.xp_value})"
 
     def _calculate_xp(self, hp_roll: DiceRoll, num_special_abilities: int = 0):
-        """Get the total XP value of the monster. The XP value is based on the monster's hit dice and number of special abilities.
+        """Get the total XP value of the monster.
+
+        The monster's total XP value is based on the monster's hit dice, number of special abilities.
 
         Args:
             hp_roll (DiceRoll): The dice roll used to determine the monster's hit points. The number of hit dice is used to determine the XP value.
@@ -244,7 +251,10 @@ class Monster:
         if hp_roll.num_sides < 8:
             base_xp = monster_xp["Under 1"]["base"]
             bonus = monster_xp["Under 1"]["bonus"]
-            return base_xp + bonus * num_special_abilities
+            total_xp = base_xp + bonus * num_special_abilities
+            logger.debug(f"{self.name} XP: {total_xp} base + {self.treasure.total_gp_value} treasure")
+            total_xp += self.treasure.total_gp_value
+            return total_xp
 
         # Handle monsters with 1 hit die and up
         if hp_roll.num_dice <= 8:
@@ -270,8 +280,13 @@ class Monster:
             base_xp = monster_xp["21+"]["base"]
             bonus = monster_xp["21+"]["bonus"]
 
-        # get the total XP value
+        # Get the total XP value for the monster itself
         total_xp = base_xp + bonus * num_special_abilities
+
+        logger.debug(f"{self.name} XP: {total_xp} base + {self.treasure.total_gp_value} treasure")
+
+        # Add 1 XP per 1 GP of treasure
+        total_xp += self.treasure.total_gp_value
 
         return total_xp
 
@@ -357,9 +372,11 @@ class MonsterParty:
     Attributes:
         members (list): A list of the monsters in the monster party.
         is_alive (bool): True if at least one monster in the monster party is alive, otherwise False.
+        treasure (Treasure): The treasure owned by the group of monsters (collectively). This treasure is in addition to
+                             any treasure owned by the individuals in the monster party.
     """
 
-    def __init__(self, monster_stats_block: MonsterStatsBlock):
+    def __init__(self, monster_stats_block: MonsterStatsBlock, monster_group_treasure_type: TreasureType = TreasureType.NONE):
         """Initialize a new MonsterParty instance.
 
         The number of monsters that comprise the monster party, as well as hit points, armor class, and other
@@ -367,82 +384,21 @@ class MonsterParty:
 
         Args:
             monster_stats_block (MonsterStatsBlock): The stat block for the monsters in the party.
+            monster_group_treasure_type (TreasureType, Optional): The group treasure type for the monster party.
         """
         self.monster_stats_block = monster_stats_block
         self.members = [
             Monster(monster_stats_block)
             for _ in range(
-                # roll_dice(monster_stats_block.num_appearing).total_with_modifier
                 monster_stats_block.num_appearing
             )
         ]
-        self.treasure = self._get_treasure(monster_stats_block.treasure_type)
+        self.treasure = Treasure(monster_group_treasure_type) # TODO: Need to separate group vs. individual types
         self.is_surprised = False
 
     def __str__(self):
         """Get a string representation of the monster party."""
         return "\n".join([str(member) for member in self.members])
-
-    def _get_treasure(self, treasure_type: TreasureType):
-        """Get the treasure for the monster party based on the treasure type.
-
-        NOT YET IMPLEMENTED
-
-        Args:
-            treasure_type (TreasureType): The type of treasure to get.
-
-        Returns:
-            list: A list of the items to be awarded as treasure to the party.
-        """
-        treasure_items = []
-        if treasure_type == TreasureType.NONE:
-            return None
-        elif treasure_type == TreasureType.A:
-            pass
-        elif treasure_type == TreasureType.B:
-            pass
-        elif treasure_type == TreasureType.C:
-            pass
-        elif treasure_type == TreasureType.D:
-            pass
-        elif treasure_type == TreasureType.E:
-            pass
-        elif treasure_type == TreasureType.F:
-            pass
-        elif treasure_type == TreasureType.G:
-            pass
-        elif treasure_type == TreasureType.H:
-            pass
-        elif treasure_type == TreasureType.I:
-            pass
-        elif treasure_type == TreasureType.J:
-            pass
-        elif treasure_type == TreasureType.K:
-            pass
-        elif treasure_type == TreasureType.L:
-            pass
-        elif treasure_type == TreasureType.M:
-            pass
-        elif treasure_type == TreasureType.N:
-            pass
-        elif treasure_type == TreasureType.O:
-            pass
-        elif treasure_type == TreasureType.P:
-            pass
-        elif treasure_type == TreasureType.Q:
-            pass
-        elif treasure_type == TreasureType.R:
-            pass
-        elif treasure_type == TreasureType.S:
-            pass
-        elif treasure_type == TreasureType.T:
-            pass
-        elif treasure_type == TreasureType.U:
-            pass
-        elif treasure_type == TreasureType.V:
-            pass
-
-        return treasure_items
 
     @property
     def is_alive(self) -> bool:
@@ -455,14 +411,17 @@ class MonsterParty:
 
     @property
     def xp_value(self) -> int:
-        """Get the total XP value of the monster party.
+        """The total experience points (XP) to award for defeating the monsters in the party.
 
-        Returns:
-            int: The total XP value of the monster party.
+        The total XP is the sum of:
+
+        - Experience points for all monsters in the party, including the GP value of treasure owned by **individuals**.
+        - GP value of the `treasure` owned or guarded by the party as a **group**.
         """
-        monster_xp = sum(monster.xp_value for monster in self.members)
-        treasure_xp = 0  # TODO: sum(item.xp_value for item in self.treasure)
-        return monster_xp + treasure_xp
+        total_xp_value = 0
+        total_xp_value += sum(monster.xp_value for monster in self.members)
+        total_xp_value += self.treasure.total_gp_value
+        return total_xp_value
 
     def get_surprise_roll(self) -> int:
         """Rolls a 1d6 and returns the total for the monster party's surprise roll."""

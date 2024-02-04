@@ -45,7 +45,7 @@ class ExploreScreen(Screen):
         dm_response = self.dungeon_master.move_party(direction)
 
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_location)
+            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
 
@@ -54,11 +54,11 @@ class ExploreScreen(Screen):
     def check_for_encounter(self) -> None:
         """Check for an encounter and execute battle if there are monsters in the encounter."""
         if (
-            self.dungeon_master.adventure.active_dungeon.current_location.encounter
-            and not self.dungeon_master.adventure.active_dungeon.current_location.encounter.is_ended
+            self.dungeon_master.adventure.active_dungeon.current_party_location.encounter
+            and not self.dungeon_master.adventure.active_dungeon.current_party_location.encounter.is_ended
         ):
             encounter = (
-                self.dungeon_master.adventure.active_dungeon.current_location.encounter
+                self.dungeon_master.adventure.active_dungeon.current_party_location.encounter
             )
 
             if (
@@ -117,11 +117,11 @@ class ExploreScreen(Screen):
         self.query_one("#player_log").write_line("> Describe location")
         formatted_message = self.dungeon_master.format_user_message(
             "Please describe this location again, including specifying the exit that we entered from and which exit or exits, if any, we haven't yet explored: " \
-            + str(self.dungeon_master.adventure.active_dungeon.current_location.json)
+            + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
         )
         dm_response = self.dungeon_master.player_message(formatted_message)
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_location)
+            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")

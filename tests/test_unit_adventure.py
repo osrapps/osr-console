@@ -2,12 +2,13 @@ import pytest, os, json
 from osrlib.adventure import Adventure
 from osrlib.dungeon import Dungeon
 from osrlib.party import get_default_party
+from osrlib.enums import OpenAIModelVersion
 
 @pytest.fixture
 def sample_adventure() -> Adventure:
     # Create a small adventure with a couple dungeons
-    dungeon1 = Dungeon.get_random_dungeon("Random Dungeon 1", "First-level dungeon for test_unit_adventure.py.", num_locations=2, level=1)
-    dungeon2 = Dungeon.get_random_dungeon("Random Dungeon 2", "Second-level dungeon for test_unit_adventure.py.", num_locations=2, level=2)
+    dungeon1 = Dungeon.get_random_dungeon("Random Dungeon 1", "First-level dungeon for test_unit_adventure.py.", num_locations=2, level=1, openai_model=OpenAIModelVersion.NONE)
+    dungeon2 = Dungeon.get_random_dungeon("Random Dungeon 2", "Second-level dungeon for test_unit_adventure.py.", num_locations=2, level=2, openai_model=OpenAIModelVersion.NONE)
     return Adventure(name="Test Adventure", description="A small test adventure.", dungeons=[dungeon1, dungeon2])
 
 def test_adventure_to_dict(sample_adventure):

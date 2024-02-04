@@ -1,4 +1,13 @@
-"""Defines player character abilities."""
+"""Defines `PlayerCharacter` abilities and their modifiers.
+
+Abilities are inherent traits that every [PlayerCharacter][osrlib.player_character.PlayerCharacter] possesses in
+varying degrees. They provide different modifiers (bonuses or penalties) that can affect gameplay mechanics like dice
+rolls during game play or core aspects of the character like whether they're especially hard to hit (lower AC) because
+of a high [Dexterity][osrlib.ability.Dexterity] score or whether they know additional languages because of a high
+[Intelligence][osrlib.ability.Intelligence] score.
+
+
+"""
 
 from abc import ABC, abstractmethod
 
@@ -7,12 +16,6 @@ from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 
 class Ability(ABC):
     """Abstract base class for character abilities.
-
-    Abilities are inherent traits that every character possesses in varying degrees.
-    They provide different modifiers (bonuses or penalties) that can affect gameplay
-    mechanics like dice rolls during game play or core aspects of the character like
-    whether they're especially hard to hit (lower AC) because of a high dexterity
-    score or whether they know additional languages because of a high intelligence score.
 
     Attributes:
         score (int): The raw ability score.

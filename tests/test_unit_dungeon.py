@@ -4,6 +4,7 @@ import osrlib
 from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
 from osrlib.encounter import Encounter
 from osrlib.game_manager import logger
+from osrlib.enums import OpenAIModelVersion
 
 logger.info(osrlib.__file__)
 
@@ -142,7 +143,7 @@ def test_random_dungeon():
         "The first level of the home of the ancient wizard lich Glofarnux, its "
         "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
         num_locations=20,
-        use_ai=False,
+        openai_model=OpenAIModelVersion.NONE
     )
 
     # Validate Dungeon
@@ -159,7 +160,7 @@ def test_random_dungeon_ai():
         "The first level of the home of the ancient wizard lich Glofarnux, its "
         "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
         num_locations=20,
-        use_ai=True,
+        openai_model=OpenAIModelVersion.DEFAULT
     )
 
     # Validate Dungeon
@@ -167,7 +168,7 @@ def test_random_dungeon_ai():
 
 
 def test_dungeon_graph_integrity():
-    dungeon = Dungeon.get_random_dungeon(num_locations=20)
+    dungeon = Dungeon.get_random_dungeon(num_locations=20, openai_model=OpenAIModelVersion.NONE)
 
     def dfs(location_id, visited):
         if location_id not in visited:
@@ -191,7 +192,7 @@ def test_dungeon_graph_integrity():
 
 def test_dungeon_json():
     # Create a random dungeon
-    random_dungeon = Dungeon.get_random_dungeon(num_locations=20)
+    random_dungeon = Dungeon.get_random_dungeon(num_locations=20, openai_model=OpenAIModelVersion.NONE)
 
     # Get the JSON representation
     dungeon_json = random_dungeon.to_json()

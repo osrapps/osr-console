@@ -5,7 +5,7 @@ The tests expect an OPENAI_API_KEY environment variable has been set.
 """
 import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction
-from osrlib.dungeon_master import DungeonMaster
+from osrlib.dungeon_assistant import DungeonAssistant
 from osrlib.adventure import Adventure
 from osrlib.game_manager import logger
 
@@ -15,7 +15,7 @@ from osrlib.game_manager import logger
 def test_dungeon_master_start_session_real_api():
     adventure = Adventure("Test Adventure")
     adventure.introduction = "In a land shrouded by mist and haunted by forgotten gods, your party stands before the gaping maw of Darkfang Cavern. Rumors abound of an ancient artifact of terrible power hidden deep within, guarded by spectral knights and nightmarish beasts. Will you claim the artifact and ascend to untold glory, or fall like so many before you, your names etched into the cavern's endless walls of sorrow? The choice is yours, brave adventurers. Venture forth!"
-    dm = DungeonMaster(adventure)
+    dm = DungeonAssistant(adventure)
 
     message = dm.start_session()
     logger.debug(message)
@@ -35,7 +35,7 @@ def test_dungeon_master_move_party():
     dungeon = Dungeon("Dungeon of Bread", "An ancient lost dwarven mine.", [loc0, loc1, loc2, loc3], 9999)
     adventure.add_dungeon(dungeon)
     adventure.set_active_dungeon(dungeon)
-    dm = DungeonMaster(adventure)
+    dm = DungeonAssistant(adventure)
 
     message = dm.start_session()
     logger.debug(message)
