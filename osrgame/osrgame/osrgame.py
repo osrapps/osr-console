@@ -20,7 +20,7 @@ class OSRConsole(App):
     player_party = None
     adventure = None
     dungeon_master = None
-    openai_model = OpenAIModelVersion.GPT4TURBO
+    openai_model = OpenAIModelVersion.NONE # Use any other value to enable AI
 
     CSS_PATH = "screen.tcss"
 
@@ -78,7 +78,7 @@ class OSRConsole(App):
             dungeon = Dungeon.get_random_dungeon(random.choice(DUNGEON_NAMES),
                                                     "The first level of the home of the ancient wizard lich Glofarnux, its "
                                                     "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                    num_locations=50, use_ai=True, openai_model=self.openai_model)
+                                                    num_locations=50, openai_model=self.openai_model)
             dungeon.set_start_location(1)
 
             if dungeon.validate_location_connections():

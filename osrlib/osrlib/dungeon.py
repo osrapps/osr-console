@@ -543,7 +543,6 @@ class Dungeon:
         name: str = "Random Dungeon",
         description: str = "",
         num_locations: int = 10,
-        use_ai: bool = False,
         level: int = 1,
         openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT,
     ) -> "Dungeon":
@@ -553,7 +552,6 @@ class Dungeon:
             name (str): The name of the dungeon.
             description (str): A brief description providing context or history for the dungeon.
             num_locations (int): The number of locations to generate in the dungeon.
-            use_ai (bool): Indicates whether to use the OpenAI API to generate keywords for each [Location][osrlib.dungeon.Location] in the dungeon.
             level (int): The level of the dungeon. Determines the hit die (and thus the difficulty) of monsters in encounters in the dungeon.
             openai_model (OpenAIModelVersion): The OpenAI model to use when generating keywords for the locations in the dungeon.
 
@@ -606,7 +604,7 @@ class Dungeon:
 
         dungeon = Dungeon(name, description, locations, start_location_id=1)
 
-        if use_ai:
+        if openai_model is not OpenAIModelVersion.NONE:
             location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon, openai_model)
             location_keywords_dict = json.loads(location_keywords_json)
             for location_id_str, keywords in location_keywords_dict.items():
