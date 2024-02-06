@@ -20,7 +20,7 @@ class ExploreScreen(Screen):
         ("ctrl+s", "save_game", "Save game"),
     ]
 
-    dungeon_master = None
+    dungeon_assistant = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -30,7 +30,7 @@ class ExploreScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.dungeon_master = self.app.dungeon_master
+        self.dungeon_assistant = self.app.dungeon_assistant
         self.query_one("#player_log", Log).border_title = "Command Log"
         self.query_one("#dm_log", Log).border_title = "Adventure Log"
         self.query_one(PartyRosterTable).border_title = "Adventuring Party"
@@ -42,10 +42,10 @@ class ExploreScreen(Screen):
 
         self.query_one("#player_log").write_line(log_message)
 
-        dm_response = self.dungeon_master.move_party(direction)
+        dm_response = self.dungeon_assistant.move_party(direction)
 
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
+            ""#"> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
 
@@ -54,11 +54,11 @@ class ExploreScreen(Screen):
     def check_for_encounter(self) -> None:
         """Check for an encounter and execute battle if there are monsters in the encounter."""
         if (
-            self.dungeon_master.adventure.active_dungeon.current_party_location.encounter
-            and not self.dungeon_master.adventure.active_dungeon.current_party_location.encounter.is_ended
+            self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter
+            and not self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter.is_ended
         ):
             encounter = (
-                self.dungeon_master.adventure.active_dungeon.current_party_location.encounter
+                self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter
             )
 
             if (
@@ -71,9 +71,9 @@ class ExploreScreen(Screen):
                 # TODO: Check whether monsters were surprised, and if so, give the player a chance to flee.
                 self.query_one("#player_log").write_line("> Fight!")
 
-            encounter.start_encounter(self.dungeon_master.adventure.active_party)
+            encounter.start_encounter(self.dungeon_assistant.adventure.active_party)
             encounter_log = encounter.get_encounter_log()
-            dm_response = self.dungeon_master.summarize_battle(encounter_log)
+            dm_response = self.dungeon_assistant.summarize_battle(encounter_log)
             self.query_one("#dm_log").write_line(wrap_text(dm_response))
 
         self.query_one("#pc_party_table").update_table()
@@ -115,13 +115,13 @@ class ExploreScreen(Screen):
     def action_summarize(self) -> None:
         """An action to summarize the session."""
         self.query_one("#player_log").write_line("> Describe location")
-        formatted_message = self.dungeon_master.format_user_message(
+        formatted_message = self.dungeon_assistant.format_user_message(
             "Please describe this location again, including specifying the exit that we entered from and which exit or exits, if any, we haven't yet explored: " \
-            + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
+            + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
         )
-        dm_response = self.dungeon_master.player_message(formatted_message)
+        dm_response = self.dungeon_assistant.send_player_message(formatted_message)
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_master.adventure.active_dungeon.current_party_location)
+            ""#"> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")
@@ -133,12 +133,12 @@ class ExploreScreen(Screen):
     def action_heal_party(self) -> None:
         """An action to heal the party."""
         self.query_one("#player_log").write_line("> Heal party")
-        self.dungeon_master.adventure.active_party.heal_party()
+        self.dungeon_assistant.adventure.active_party.heal_party()
         self.query_one("#player_log").write_line("  Party healed.")
         self.query_one("#pc_party_table").update_table()
 
     def action_save_game(self) -> None:
         """An action to save the game."""
         self.query_one("#player_log").write_line("> Save adventure")
-        save_path = self.dungeon_master.adventure.save_adventure()
+        save_path = self.dungeon_assistant.adventure.save_adventure()
         self.query_one("#player_log").write_line(f"  Saved to: {save_path}")

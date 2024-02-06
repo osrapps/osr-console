@@ -502,18 +502,19 @@ class Dungeon:
         system_message = [
             {
                 "role": "system",
-                "content": "You are the Dungeon Master component in a turn-based RPG. You help players envision and "
-                "experience the environments they explore through your descriptions of the locations they visit. "
-                "You will be provided a dungeon's name, its description, and the number of locations in the dungeon. "
-                "Your task is to generate four descriptive keywords for each location that will help players "
-                "visualize and add the location to their map. Your response must be in JSON. You should consider the "
-                "dungeon's description and your previously generated locations' keywords to ensure a consistent theme "
-                "across the locations in the dungeon. Keep in mind that adjacent integers typically represent adjacent "
-                "locations in the dungeon, and their keywords should reflect that relationship. The JSON response "
-                "should be a collection of key-value pairs where the key is the location ID and the value is the "
-                "collection of keywords for that location. The JSON must include keywords for every location and no two "
-                "locations should have the same keywords. Every location must have four keywords, and the word 'whisper' "
-                "must never be used, nor should 'footsteps' or 'dripping'.",
+                "content": "You are the Dungeon Creator component in a turn-based RPG. You help adventurers picture the "
+                "locations they visit iin the game world. You will be provided a dungeon's name and description as well "
+                "as the number of locations in the dungeon. Your task is "
+                "to generate three single keywords describing each location in the dungeon. Your response must be in "
+                "in JSON. Maintain the theme of the dungeon and always consider previous location's keywords, especially "
+                "those of adjacent locations. Adjacent integers typically represent adjacent locations, and their "
+                "keywords should reflect a logical architectual relationship. The JSON response should be a collection "
+                "of key-value pairs where the key is the location ID and the value is the collection of keywords for "
+                "that location. The JSON must include keywords for every location and no two locations should share "
+                "keywords. You should only include keywords that describe characteristics of the physical environment. "
+                "Use single keywords. These keywords are banned and you should not include them or any form of them: "
+                "whisper, drip, monster, echo, stairs, staircase, door, treasure, cursed, enchanted, sinister, "
+                "ominous, mysterious, forgotten, creepy, stairway",
             },
         ]
         user_message = [

@@ -1,4 +1,4 @@
-"""The `dungeon_assistant` module contains the `DungeonAssistant` class that interfaces with the OpenAI API and performs the duties of the game's referee and guide (often called *game master* or *dungeon master* in tabletop RPGs)."""
+"""The `dungeon_assistant` module contains the `DungeonAssistant` class that interfaces with the OpenAI API and performs the duties of the game's referee and guide (*game master* or *dungeon master* in some tabletop RPGs)."""
 
 import asyncio
 from openai import OpenAI
@@ -6,30 +6,17 @@ from osrlib.adventure import Adventure
 from osrlib.enums import OpenAIModelVersion
 from osrlib.game_manager import logger
 
-# v1 Too verbose, flowery
-# dm_init_message = (
-#     "As the Dungeon Master, you weave the narrative and guide players through their adventure, creating a rich, "
-#     "immersive world. Your skill in storytelling brings to life the dungeons, landscapes, and encounters of the game. "
-#     "In this session, you manage a party of six adventurers, describing their surroundings and the outcomes of their choices "
-#     "with vivid detail. Each location in the game is unique, with its own ID and possible exits leading to new challenges. "
-#     "Your descriptions are key to the player's experience, providing them with the information needed to navigate and interact "
-#     "with the world. Remember, your role is to describe, not to direct. You bring the game world to life, setting the scene for "
-#     "the player's decisions without asking questions or dictating actions. The journey starts now, and the first message from the "
-#     "player is on its way. Respond only with 'Let's begin.' to kick off this adventure."
-# )
 
-# v2
 dm_init_message = (
-    "As the Dungeon Master, your task is to craft the narrative and guide the adventure with precision. You narrate the "
-    "journey of six adventurers through a world filled with mystery and challenge. Your descriptions should be clear and "
-    "concise, focusing on the essential details of dungeons, landscapes, and encounters. Each location in the game is "
-    "distinct, identified by a unique ID, with exits leading to further adventures. Aim to provide descriptions that are "
-    "direct and to the point, enabling the players to effectively navigate and interact with their surroundings. Your role "
-    "is to illuminate the path ahead, not to influence the choices directly. Set the scene with enough detail to engage, "
-    "but avoid overly decorative language that may distract. The adventure begins now. Await the first message from the "
-    "players and respond with 'Let's begin.' to initiate this journey."
+    "As the Dungeon Assistant, your task is to narrate the journey of six adventurers through a fantasty game setting. "
+    "Your descriptions of the locations, beings, and events in the game world should be clear and concise, focusing only "
+    "only on the essential details. Each location in the game is distinct, having a unique ID and exits leading to other "
+    "locations. Aim to provide descriptions that are direct and to the point, enabling the adventurers to effectively "
+    "navigate and interact with their surroundings. Your role is to illuminate the path ahead, not influence their "
+    "choices directly. Set the scene with enough detail to engage, but avoid overly decorative language that could "
+    "distract. The adventure begins now. Await the first message from the player, then respond only with 'Let's begin.' "
+    "to initiate this journey."
 )
-
 
 
 system_message = [
@@ -39,40 +26,38 @@ system_message = [
     },
 ]
 
-# Prefixes most player (user) messages sent to the OpenAI API.
-user_message_prefix = "Don't tell me what my party does. Don't include any questions in your response. "
-
 # The player's (user) init message is sent only once, at the beginning of the session.
 user_init_message = [
     {
         "role": "user",
-        "content": ( user_message_prefix +
-            "I'm a D&D player controlling a party of six characters (adventurers) in your Dungeons & Dragons adventure. "
-            "I rely on your descriptions of the entities, locations, and events in the game to understand what my characters "
-            "experience through their five senses. From your descriptions, I can form a picture in my mind "
-            "of the game world and its environments and inhabitants. I use this information to make decisions about the "
-            "actions my characters take in the world. Do not ask me a question."
+        "content": (
+            "I'm the leader of small party of adventurers exploring a fantasy game setting in a turn-based RPG. "
+            "I rely on your descriptions of the locations, beings, and events we encounter in the game world to inform "
+            "my decisions as I lead the party in our adventures. Avoid asking me any questions, and other than "
+            "describing actions that occurred in combat, avoid telling me what the party does - that's my job, not yours. "
         ),
     }
 ]
 
 # Prefix sent with every party movement message initiated by the player.
-user_move_prefix = ( user_message_prefix +
-    "Describe this location concisely. Include exit directions but not the size. Be brief - don't mention whether "
-    "the exits are locked. Based on your description, the player must be able to imagine an accurate representation "
-    "of the location in their mind. Don't be flowerey or overly dramatic - assume a more matter-of-fact tone. "
-    "Maintain a theme based on the adventure description and the last room you described. Here's the location data: "
+user_move_prefix = (
+    "Describe this location using precise, non-expressive terminology. Use three sentences for new locations that have "
+    "no monsters, mentioning the exits and which are unexplored, but without saying whether any are locked. Use one "
+    "sentence and omit the dimensions for previously visited locations and locations with monsters. "
+    "Avoid mentioning the location ID in all cases. "
+    "Here is the location information: "
 )
 
 battle_summary_prompt = (
-    "Briefly summarize the following battle in a single paragraph of four sentences or less. Include highlights of the battle, "
-    "for example high damage rolls (include their values) and critical hits. Use a factual, report-like tone instead of "
-    "being flowery and expressive. The last sentence should list any PCs killed and the collective XP earned by the party. "
-    "Here's the battle log: "
+    "Summarize this battle in four sentences. Include only the highlights: high and low rolls (especially critical hits), "
+    "deaths, and the weapon or spell used in the attack. Refer to adventurers only by their first names. Be direct, "
+    "assuming the tone of a military combat officer reporting to their superior. Include the total XP earned by my party "
+    "if my party won the battle. Here's the battle log: "
 )
 
+
 class DungeonAssistant:
-    """The `DungeonAssistant` is the primary interface between the player, the game engine, and the OpenAI API.
+    """The `DungeonAssistant` is the primary interface between the player, the game world's rules engine, and optionally the OpenAI API.
 
     Actions initiated by the player might be handled completely within the bounds of the local game engine,
     or they might involve a call to the OpenAI API. The `DungeonAssistant` class is responsible for determining
@@ -81,14 +66,20 @@ class DungeonAssistant:
     Attributes:
         adventure (Adventure): The adventure the `DungeonAssistant` is running.
         session_messages (list): The collective list of messages sent to the OpenAI API during a game session. Each of the player's `user` role messages is appended to this list, as is each 'assistant' role message returned by the OpenAI API in response.
-        is_started (bool): Indicates whether the game session has started. The game session starts upon first call to the `start_session()` method.
+        session_is_started (bool): Indicates whether the game session has started. The game session starts upon first call to the `start_session()` method.
     """
-    def __init__(self, adventure: Adventure = None, openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT):
+
+    def __init__(
+        self,
+        adventure: Adventure = None,
+        openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT,
+    ):
         self.adventure = None
         self.system_message = None
         self.session_messages = []
         self.client = None
-        self.openai_model = openai_model.value
+        self.openai_model = openai_model
+        self.session_is_started = False
 
         if adventure is not None:
             self.set_active_adventure(adventure)
@@ -127,20 +118,22 @@ class DungeonAssistant:
         return {"role": "user", "content": str(message_string)}
 
     def start_session(self) -> str:
-        """Start a gaming session with the dungeon master in the current adventure.
+        """Start a gaming session with the dungeon assistant in the current adventure.
 
         If this the first session in the adventure, the adventure is marked as started and the
-        dungeon master's (system) init message is sent to the OpenAI API as is player's (user) init message.
+        dungeon assistant's (system) init message is sent to the OpenAI API as is player's (user) init message.
         If it's not the first session of the adventure, only the system and user init messages are sent.
 
         Returns:
-            str: The response from the Dungeon Master (in this case, the OpenAI API) when initiating a game session. This string is appropriate for display to the player.
+            str: The response from the Dungeon Assistant (in this case, the OpenAI API) when initiating a game session. This string is appropriate for display to the player.
 
         Raises:
             ValueError: If there is no active adventure. Call set_active_adventure() with a valid adventure before calling start_session().
         """
         if self.adventure is None:
-            raise ValueError("There is no active adventure. Call set_active_adventure() with a valid adventure before calling start_session().")
+            raise ValueError(
+                "No active adventure set. Call set_active_adventure() with a valid adventure before calling start_session()."
+            )
 
         try:
             self.client = OpenAI()
@@ -151,8 +144,7 @@ class DungeonAssistant:
             self.adventure.start_adventure()
 
         completion = self.client.chat.completions.create(
-            model=self.openai_model,
-            messages=self.session_messages
+            model=self.openai_model.value, messages=self.session_messages
         )
         self.session_messages.append(completion.choices[0].message)
         self.is_started = True
@@ -160,13 +152,12 @@ class DungeonAssistant:
 
         return completion.choices[0].message.content
 
-    def player_message(self, message):
-        """Send a message from the player to the Dungeon Master and return the response."""
+    def send_player_message(self, message):
+        """Send a message from the player to the Dungeon Assistant and return the response."""
         if self.is_started:
             self.session_messages.append(message)
             completion = self.client.chat.completions.create(
-                model=self.openai_model,
-                messages=self.session_messages
+                model=self.openai_model.value, messages=self.session_messages
             )
             self.session_messages.append(completion.choices[0].message)
             return completion.choices[0].message.content
@@ -176,11 +167,16 @@ class DungeonAssistant:
         new_location = self.adventure.active_dungeon.move(direction)
         if new_location is None:
             return "No exit in that direction."
-        message_from_player = self.format_user_message(user_move_prefix + new_location.json)
-        dm_response = self.player_message(message_from_player)
+        message_from_player = self.format_user_message(
+            user_move_prefix + new_location.json
+        )
+        dm_response = self.send_player_message(message_from_player)
         new_location.is_visited = True
-        return dm_response
+        return dm_response.replace(".  ", ". ")
 
     def summarize_battle(self, battle_log) -> str:
-        message_from_player = self.format_user_message(battle_summary_prompt + battle_log)
-        return self.player_message(message_from_player)
+        message_from_player = self.format_user_message(
+            battle_summary_prompt + battle_log
+        )
+        dm_response = self.send_player_message(message_from_player)
+        return dm_response.replace(".  ", ". ")

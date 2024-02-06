@@ -158,7 +158,7 @@ def test_random_dungeon_ai():
     random_dungeon = Dungeon.get_random_dungeon(
         "Dungeon of the Mad Mage",
         "The first level of the home of the ancient wizard lich Glofarnux, its "
-        "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
+        "entrance hidden in a glade deep in the Mystic Forest.",
         num_locations=20,
         openai_model=OpenAIModelVersion.DEFAULT
     )
