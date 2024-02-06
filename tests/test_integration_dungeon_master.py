@@ -1,7 +1,8 @@
-"""
-This module contains integration tests for the DungeonMaster class.
-The tests include starting a session and moving the party in a dungeon.
-The tests expect an OPENAI_API_KEY environment variable has been set.
+"""Integration tests for the DungeonAssistant class.
+
+Tests include starting a session and moving the party in a dungeon.
+
+These tests expect an OPENAI_API_KEY environment variable has been set.
 """
 import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction

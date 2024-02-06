@@ -19,8 +19,11 @@ class OSRConsole(App):
     """The OSR Console application."""
     player_party = None
     adventure = None
-    dungeon_master = None
-    openai_model = OpenAIModelVersion.DEFAULT # Use any value other than NONE to enable AI
+    dungeon_assistant = None
+
+    # To disable AI, set this to OpenAIModelVersion.NONE
+    openai_model = OpenAIModelVersion.GPT35TURBO
+    num_dungeon_locations = 10
 
     CSS_PATH = "screen.tcss"
 
@@ -63,22 +66,19 @@ class OSRConsole(App):
             default_adventure = Adventure(random.choice(ADVENTURE_NAMES))
             default_adventure.description = "An adventure for 4-6 characters of levels 1-3."
             default_adventure.introduction = (
-                "In the heart of the cursed Mystic Forest, a tale as old as time stirs once again. Legends "
-                "speak of Glofarnux, an ancient wizard lich whose thirst for arcane knowledge knew no bounds. The entrance to the "
-                "underground complex he once called home--but for centuries been is tomb--has recently been found. Known now as the "
-                "'Dungeon of the Mad Mage,' its entrance is concealed within a seemingly natural rock outcropping in a secluded glade "
-                "deep in the Mystic Forest. Brave adventurers, your party, have summone to help unravel the mysteries in depths of "
-                "the forgotten subterranean citadel. Within its depth, echoes of the past mingle with the shadows of the present, "
-                "challenging all who dare to attempt to learn the secrets of Glofarnux and his once noble but now twisted arcane "
-                "magic. Your party stands ready in the oppressive silence of the lost glade in the Mystic Forest, just outside the "
-                "once magically concealed outcropping of rock and its now visible entrance open to the depths of the Dungeon of the "
-                "Mad Mage."
+                "Deep underground in the heart of the Mystic Forest lives Glofarnux, an ancient wizard lich "
+                "whose thirst for arcane knowledge knew no bounds. The entrance to the underground complex he once called "
+                "home--but has for centuries been his tomb--was recently found concealed in a seemingly natural rock "
+                "outcropping deep in forest. Your party of adventurers have been summoned to help unravel the mysteries "
+                "of Glofarnux's subterranean citadel by learning the secrets of Glofarnux and his once noble but now "
+                "twisted arcane magic. Your party stands ready in the oppressive silence of the forest, just outside the "
+                "once magically hidden entrance now open to the depths of the dungeon."
             )
 
             dungeon = Dungeon.get_random_dungeon(random.choice(DUNGEON_NAMES),
-                                                    "The first level of the home of the ancient wizard lich Glofarnux, its "
-                                                    "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
-                                                    num_locations=50, openai_model=self.openai_model)
+                                                    "The first level of the home of the ancient wizard lich Glofarnux, "
+                                                    "its entrance hidden in a glade deep in the Mystic Forest.",
+                                                    num_locations=self.num_dungeon_locations, openai_model=self.openai_model)
             dungeon.set_start_location(1)
 
             if dungeon.validate_location_connections():
@@ -95,13 +95,13 @@ class OSRConsole(App):
         if self.adventure is None:
             self.set_active_adventure(adventure=None)
 
-        self.dungeon_master = DungeonAssistant(self.adventure, openai_model=self.openai_model)
-        dm_start_session_response = self.dungeon_master.start_session()
+        self.dungeon_assistant = DungeonAssistant(self.adventure, openai_model=self.openai_model)
+        dm_start_session_response = self.dungeon_assistant.start_session()
         logger.debug(f"DM start session response: {dm_start_session_response}")
 
         # Move the party to the first location
-        first_exit = self.dungeon_master.adventure.active_dungeon.get_location_by_id(1).exits[0]
-        dm_first_party_move_response = self.dungeon_master.move_party(first_exit.direction)
+        first_exit = self.dungeon_assistant.adventure.active_dungeon.get_location_by_id(1).exits[0]
+        dm_first_party_move_response = self.dungeon_assistant.move_party(first_exit.direction)
         logger.debug(f"DM first PC move response: {dm_first_party_move_response}")
 
         return dm_start_session_response + "\n" + dm_first_party_move_response
