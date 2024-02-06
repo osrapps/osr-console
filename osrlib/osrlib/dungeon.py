@@ -48,12 +48,8 @@ class Exit:
                                         exits collection.
 
     Example:
-
     ```python
-    >>> exit1 = Exit(Direction.NORTH, 2)
-    >>> exit2 = Exit(Direction.SOUTH, 1)
-    >>> exit1.lock()
-    >>> exit2.unlock()
+    --8<-- "tests/test_unit_dungeon.py:dungeon_exit_create"
     ```
     """
 
@@ -484,11 +480,11 @@ class Dungeon:
         return len(validation_errors) == 0
 
     @staticmethod
-    def get_dungeon_location_keywords(
+    def _get_location_keywords_from_llm(
         dungeon: "Dungeon",
         openai_model: OpenAIModelVersion = OpenAIModelVersion.DEFAULT,
     ) -> str:
-        """Get the keywords for each [Location][osrlib.dungeon.Location] in the dungeon from the OpenAI API.
+        """Get the keywords for each `Location` in the dungeon from the OpenAI API.
 
         Provided a `Dungeon`, gets a list of keywords for its locations from the OpenAI API. The list of keywords for
         each location are formatted as a JSON collection and returned to the caller. The OpenAI language model uses the
@@ -559,6 +555,15 @@ class Dungeon:
         Returns:
             Dungeon: A randomly generated dungeon with the specified number of locations, each with a random size and
                      possibly containing an [Encounter][osrlib.encounter.Encounter].
+
+        Examples:
+        ```python
+        --8<-- "tests/test_unit_dungeon.py:dungeon_get_random_no_keywords"
+        ```
+
+        ```python
+        --8<-- "tests/test_unit_dungeon.py:dungeon_get_random_with_ai_keywords"
+        ```
         """
         if num_locations < 1:
             raise ValueError("Dungeon must have at least one location.")
@@ -605,8 +610,20 @@ class Dungeon:
 
         dungeon = Dungeon(name, description, locations, start_location_id=1)
 
+        Dungeon._populate_location_keywords(dungeon, openai_model)
+
+        return dungeon
+
+    @staticmethod
+    def _populate_location_keywords(dungeon: "Dungeon", openai_model: OpenAIModelVersion = OpenAIModelVersion.NONE):
+        """Populates each location in the dungeon with keywaords obtained from the OpenAI API.
+
+        Args:
+            dungeon (Dunegon): The `Dungeon` whose locations should be populated with keyords.
+            openai_model (OpenAIModelVersion): The version of the OpenAI model to use when generating keywords.
+        """
         if openai_model is not OpenAIModelVersion.NONE:
-            location_keywords_json = Dungeon.get_dungeon_location_keywords(dungeon, openai_model)
+            location_keywords_json = Dungeon._get_location_keywords_from_llm(dungeon, openai_model)
             location_keywords_dict = json.loads(location_keywords_json)
             for location_id_str, keywords in location_keywords_dict.items():
                 location_id = int(location_id_str)
@@ -614,13 +631,24 @@ class Dungeon:
                 if location:
                     location.keywords = keywords
 
-        return dungeon
+    def to_json(self) -> str:
+        """Gets a JSON string representation of the `Dungeon` instance.
 
-    def to_json(self):
-        """Returns a JSON representation of the dungeon."""
+        This method uses the `to_dict` method to first convert the dungeon instance into a
+        dictionary, which is then serialized into a JSON string using `json.dumps`. ]]
+
+        Returns:
+            str: A JSON string representation of the dungeon instance.
+
+        Example:
+        ```python
+        --8<-- "tests/test_unit_dungeon.py:dungeon_to_from_json"
+        ```
+        """
         return json.dumps(self.to_dict(), default=lambda o: o.__dict__)
 
-    def to_dict(self):
+
+    def to_dict(self) -> dict:
         """Returns a dictionary representation of the dungeon. Useful as a pre-serialization step when saving to a permanent data store."""
         return {
             "name": self.name,

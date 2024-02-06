@@ -77,7 +77,7 @@ class OpenAIModelVersion(Enum):
     GPT35 = "gpt-3.5"
     GPT35TURBO = "gpt-3.5-turbo-0125"
     GPT4 = "gpt-4"
-    GPT4TURBO = "gpt-4-0125-preview"
+    GPT4TURBO = "gpt-4-turbo-preview"
     NONE = None
 
 
