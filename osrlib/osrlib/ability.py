@@ -1,12 +1,22 @@
 """Defines `PlayerCharacter` abilities and their modifiers.
 
-Abilities are inherent traits that every [PlayerCharacter][osrlib.player_character.PlayerCharacter] possesses in
-varying degrees. They provide different modifiers (bonuses or penalties) that can affect gameplay mechanics like dice
-rolls during game play or core aspects of the character like whether they're especially hard to hit (lower AC) because
-of a high [Dexterity][osrlib.ability.Dexterity] score or whether they know additional languages because of a high
+An [Ability][osrlib.ability.Ability] is an inherent trait possessed by every
+[PlayerCharacter][osrlib.player_character.PlayerCharacter]. There are several ability types, each of which can provide
+modifiers (bonuses or penalties) that affect gameplay mechanics like dice rolls or other properties of the character.
+For example, a high [Dexterity][osrlib.ability.Dexterity] score can make the character harder to hit in combat due to
+an AC modifier, and the character might know an additional language or two because they also have a high
 [Intelligence][osrlib.ability.Intelligence] score.
 
+## Usage:
 
+You typically wouldn't create an instance of an [Ability][osrlib.ability.Ability] directly. Instead, you create an
+instance of [PlayerCharacter][osrlib.player_character.PlayerCharacter], and its abilities are instantiated as attributes
+of the `PlayerCharacter` instance automatically. You can then "roll" the character's ability scores by calling a method
+on `PlayerCharacter`.
+
+```python
+---8<--- "tests/test_doc_player_character.py:player_character_create"
+```
 """
 
 from abc import ABC, abstractmethod
@@ -152,12 +162,11 @@ class Strength(Ability):
         """Initialize Strength-specific ability modifiers.
 
         Modifiers:
-
         - TO_HIT (ModifierType.TO_HIT): Modifies melee (hand-to-hand) attack rolls.
         - DAMAGE (ModifierType.DAMAGE): Modifies damage in melee combat.
         - OPEN_DOORS (ModifierType.OPEN_DOORS): Modifies chances of opening stuck doors.
 
-        Each modifier is calculated based on the strength score of the character.
+        Each modifier is calculated based on the Strength score of the character.
         """
         self.modifiers[ModifierType.TO_HIT] = self._get_modifier()
         self.modifiers[ModifierType.DAMAGE] = self._get_modifier()
@@ -171,9 +180,7 @@ class Intelligence(Ability):
     magical aptitude.
 
     Modifiers:
-
-    - LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages the
-            character can read and write.
+    - LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages the character can read and write.
     """
 
     def __init__(self, score: int):
@@ -203,11 +210,10 @@ class Intelligence(Ability):
         """Initialize Intelligence-specific ability modifiers.
 
         Modifiers:
-
         - LANGUAGES (ModifierType.LANGUAGES): Modifies the number of additional languages
             the character can read and write.
 
-        The modifier is calculated based on the intelligence score of the character.
+        The modifier is calculated based on the Intelligence score of the character.
         """
         self.modifiers[ModifierType.LANGUAGES] = self._get_modifier()
 
@@ -218,9 +224,7 @@ class Wisdom(Ability):
     Wisdom measures a character's common sense, intuition, and willpower.
 
     Modifiers:
-
-    - SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells and
-        magical effects.
+    - SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells and magical effects.
     """
 
     def __init__(self, score: int):
@@ -237,10 +241,9 @@ class Wisdom(Ability):
         """Initialize Wisdom-specific ability modifiers.
 
         Modifiers:
-            SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells
-            and magical effects.
+            SAVING_THROWS (ModifierType.SAVING_THROWS): Modifies saving throws against spells and magical effects.
 
-        Each modifier is calculated based on the wisdom score of the character.
+        Each modifier is calculated based on the Wisdom score of the character.
         """
         self.modifiers[ModifierType.SAVING_THROWS] = self._get_modifier()
 
@@ -295,12 +298,11 @@ class Dexterity(Ability):
         """Initialize Dexterity-specific ability modifiers.
 
         Modifiers:
-
         - TO_HIT (ModifierType.TO_HIT): Modifies ranged attack rolls.
         - AC (ModifierType.AC): Modifies armor class (lower is better).
         - INITIATIVE (ModifierType.INITIATIVE): Modifies initiative rolls.
 
-        Each modifier is calculated based on the dexterity score of the character.
+        Each modifier is calculated based on the Dexterity score of the character.
         """
         self.modifiers[ModifierType.AC] = -self._get_modifier()
         self.modifiers[ModifierType.TO_HIT] = self._get_modifier()
@@ -314,8 +316,8 @@ class Constitution(Ability):
 
     Modifiers:
 
-    - HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling the
-        character or when the character gains a level.
+    - HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling the character or when the
+                            character gains a level.
     """
 
     def __init__(self, score: int):
@@ -331,10 +333,10 @@ class Constitution(Ability):
         """Initialize Constitution-specific ability modifiers.
 
         Modifiers:
-            HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling
-            the character or when the character gains a level.
+            HP (ModifierType.HP): Modifies hit point (HP) rolls. For example, when initially rolling the character or
+                                  when the character gains a level.
 
-        The modifier is calculated based on the constitution score of the character.
+        The modifier is calculated based on the Constitution score of the character.
         """
         self.modifiers[ModifierType.HP] = self._get_modifier()
 
@@ -345,7 +347,6 @@ class Charisma(Ability):
     Charisma measures force of personality, leadership ability, and physical attractiveness.
 
     Modifiers:
-
     - REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
     """
 
@@ -378,9 +379,8 @@ class Charisma(Ability):
         """Initialize Charisma-specific ability modifiers.
 
         Modifiers:
-
         - REACTION (ModifierType.REACTION): Modifies reaction rolls when interacting with NPCs.
 
-        The modifier is calculated based on the charisma score of the character.
+        The modifier is calculated based on the Charisma score of the character.
         """
         self.modifiers[ModifierType.REACTION] = self._get_modifier()

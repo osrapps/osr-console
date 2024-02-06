@@ -267,7 +267,7 @@ class PlayerCharacter:
             )
 
     def roll_hp(self) -> DiceRoll:
-        """Rolls the character's hit points, taking into account their Constitution modifier, if any.
+        """Rolls the character's hit dice and applies their Constitution modifier, if any.
 
         The total value of the roll with modifier can be negative after if the roll was low and the character has a
         negative Constitution modifier. You should clamp the value to 1 before applying it to the character's HP.
