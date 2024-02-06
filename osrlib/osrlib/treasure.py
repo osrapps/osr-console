@@ -88,10 +88,10 @@ class Treasure:
             ItemType.MAGIC_ITEM: TreasureDetail(chance=30, amount="3", magical=True),
         },
         TreasureType.B: {
-            CoinType.COPPER: TreasureDetail(chance=50, amount="1d8"),
-            CoinType.SILVER: TreasureDetail(chance=25, amount="1d6"),
-            CoinType.ELECTRUM: TreasureDetail(chance=25, amount="1d4"),
-            CoinType.GOLD: TreasureDetail(chance=25, amount="1d3"),
+            CoinType.COPPER: TreasureDetail(chance=50, amount="1000d8"),
+            CoinType.SILVER: TreasureDetail(chance=25, amount="1000d6"),
+            CoinType.ELECTRUM: TreasureDetail(chance=25, amount="1000d4"),
+            CoinType.GOLD: TreasureDetail(chance=25, amount="1000d3"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=25, amount="1d6"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=10, amount="1", magical=True),
         },
@@ -207,6 +207,29 @@ class Treasure:
     def __init__(self, treasure_type: TreasureType = TreasureType.NONE):
         self.items = {}
         self._generate_treasure(treasure_type)
+
+    def __str__(self) -> str:
+        """Returns a string representation of the treasure in a multi-line format, showing each type of treasure with its quantity on separate lines, followed by the total value in gold pieces (GP) on a separate line.
+
+        Returns:
+            str: A multi-line description of the treasure's contents and total GP value.
+        """
+        lines = []
+        for item_type, amount in self.items.items():
+            if isinstance(item_type, CoinType):
+                lines.append(f"{item_type.name.capitalize()}: {amount}")
+            elif isinstance(item_type, ItemType):
+                # Adjusting item name formatting to be more readable
+                item_name = item_type.name.replace('_', ' ').capitalize()
+                lines.append(f"{item_name}: {amount}")
+            else:
+                # Fallback for any item types not accounted for
+                lines.append(f"Unknown item: {amount}")
+
+        total_value = self.total_gp_value
+        lines.append(f"Value (GP): {total_value}")
+
+        return "\n".join(lines)
 
     def _generate_treasure(self, treasure_type: TreasureType) -> None:
         """Populates the treasure's contents based on whether and how much of each valuable should be included according
