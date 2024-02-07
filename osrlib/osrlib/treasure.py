@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from osrlib.dice_roller import roll_dice
 from osrlib.enums import ItemType, TreasureType, CoinType
 from osrlib.item import Item, Weapon, Armor
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 from enum import Enum
 
@@ -57,7 +57,8 @@ class Treasure:
 
     Attributes:
         items (Dict[Union[CoinType, ItemType], int]): A dictionary holding the treasure items. The keys are instances
-            of either CoinType or ItemType enumerations, and the values are integers representing the quantity of each item.
+                                                      of either CoinType or ItemType enumerations, and the values are
+                                                      integers representing the quantity of each item.
 
     Example:
 
@@ -79,11 +80,11 @@ class Treasure:
     ] = {
         TreasureType.NONE: {},
         TreasureType.A: {
-            CoinType.COPPER: TreasureDetail(chance=25, amount="1d6"),
-            CoinType.SILVER: TreasureDetail(chance=30, amount="1d6"),
-            CoinType.ELECTRUM: TreasureDetail(chance=20, amount="1d4"),
-            CoinType.GOLD: TreasureDetail(chance=35, amount="2d6"),
-            CoinType.PLATINUM: TreasureDetail(chance=25, amount="1d2"),
+            CoinType.COPPER: TreasureDetail(chance=25, amount="1000d6"),
+            CoinType.SILVER: TreasureDetail(chance=30, amount="1000d6"),
+            CoinType.ELECTRUM: TreasureDetail(chance=20, amount="1000d4"),
+            CoinType.GOLD: TreasureDetail(chance=35, amount="2000d6"),
+            CoinType.PLATINUM: TreasureDetail(chance=25, amount="1000d2"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=50, amount="6d6"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=30, amount="3", magical=True),
         },
@@ -96,73 +97,73 @@ class Treasure:
             ItemType.MAGIC_ITEM: TreasureDetail(chance=10, amount="1", magical=True),
         },
         TreasureType.C: {
-            CoinType.COPPER: TreasureDetail(chance=20, amount="1d12"),
-            CoinType.SILVER: TreasureDetail(chance=30, amount="1d4"),
-            CoinType.ELECTRUM: TreasureDetail(chance=10, amount="1d4"),
+            CoinType.COPPER: TreasureDetail(chance=20, amount="1000d12"),
+            CoinType.SILVER: TreasureDetail(chance=30, amount="1000d4"),
+            CoinType.ELECTRUM: TreasureDetail(chance=10, amount="1000d4"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=25, amount="1d4"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=10, amount="2", magical=True),
         },
         TreasureType.D: {
-            CoinType.COPPER: TreasureDetail(chance=10, amount="1d8"),
-            CoinType.SILVER: TreasureDetail(chance=15, amount="1d12"),
-            CoinType.GOLD: TreasureDetail(chance=60, amount="1d6"),
+            CoinType.COPPER: TreasureDetail(chance=10, amount="1000d8"),
+            CoinType.SILVER: TreasureDetail(chance=15, amount="1000d12"),
+            CoinType.GOLD: TreasureDetail(chance=60, amount="1000d6"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=30, amount="1d8"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=15, amount="3", magical=True),
         },
         TreasureType.E: {
-            CoinType.COPPER: TreasureDetail(chance=5, amount="1d10"),
-            CoinType.SILVER: TreasureDetail(chance=30, amount="1d12"),
-            CoinType.ELECTRUM: TreasureDetail(chance=25, amount="1d4"),
-            CoinType.GOLD: TreasureDetail(chance=25, amount="1d8"),
+            CoinType.COPPER: TreasureDetail(chance=5, amount="1000d10"),
+            CoinType.SILVER: TreasureDetail(chance=30, amount="1000d12"),
+            CoinType.ELECTRUM: TreasureDetail(chance=25, amount="1000d4"),
+            CoinType.GOLD: TreasureDetail(chance=25, amount="1000d8"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=10, amount="1d10"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=25, amount="4", magical=True),
         },
         TreasureType.F: {
-            CoinType.SILVER: TreasureDetail(chance=10, amount="2d10"),
-            CoinType.ELECTRUM: TreasureDetail(chance=20, amount="1d8"),
-            CoinType.GOLD: TreasureDetail(chance=45, amount="1d12"),
-            CoinType.PLATINUM: TreasureDetail(chance=30, amount="1d3"),
+            CoinType.SILVER: TreasureDetail(chance=10, amount="2000d10"),
+            CoinType.ELECTRUM: TreasureDetail(chance=20, amount="1000d8"),
+            CoinType.GOLD: TreasureDetail(chance=45, amount="1000d12"),
+            CoinType.PLATINUM: TreasureDetail(chance=30, amount="1000d3"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=20, amount="2d12"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=30, amount="5", magical=True),
         },
         TreasureType.G: {
-            CoinType.GOLD: TreasureDetail(chance=50, amount="10d4"),
-            CoinType.PLATINUM: TreasureDetail(chance=50, amount="1d6"),
+            CoinType.GOLD: TreasureDetail(chance=50, amount="10000d4"),
+            CoinType.PLATINUM: TreasureDetail(chance=50, amount="1000d6"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=25, amount="3d6"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=35, amount="5", magical=True),
         },
         TreasureType.H: {
-            CoinType.COPPER: TreasureDetail(chance=25, amount="3d8"),
-            CoinType.SILVER: TreasureDetail(chance=50, amount="1d100"),
-            CoinType.ELECTRUM: TreasureDetail(chance=50, amount="10d4"),
-            CoinType.GOLD: TreasureDetail(chance=50, amount="10d6"),
-            CoinType.PLATINUM: TreasureDetail(chance=25, amount="5d4"),
+            CoinType.COPPER: TreasureDetail(chance=25, amount="3000d8"),
+            CoinType.SILVER: TreasureDetail(chance=50, amount="1000d100"),
+            CoinType.ELECTRUM: TreasureDetail(chance=50, amount="10000d4"),
+            CoinType.GOLD: TreasureDetail(chance=50, amount="10000d6"),
+            CoinType.PLATINUM: TreasureDetail(chance=25, amount="5000d4"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=50, amount="1d100"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=15, amount="6", magical=True),
         },
         TreasureType.I: {
-            CoinType.PLATINUM: TreasureDetail(chance=30, amount="1d8"),
+            CoinType.PLATINUM: TreasureDetail(chance=30, amount="1000d8"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=50, amount="2d6"),
             ItemType.MAGIC_ITEM: TreasureDetail(chance=15, amount="1", magical=True),
         },
         TreasureType.J: {
-            CoinType.COPPER: TreasureDetail(chance=25, amount="1d4"),
-            CoinType.SILVER: TreasureDetail(chance=10, amount="1d3"),
+            CoinType.COPPER: TreasureDetail(chance=25, amount="1000d4"),
+            CoinType.SILVER: TreasureDetail(chance=10, amount="1000d3"),
         },
         TreasureType.K: {
-            CoinType.SILVER: TreasureDetail(chance=30, amount="1d6"),
-            CoinType.ELECTRUM: TreasureDetail(chance=10, amount="1d2"),
+            CoinType.SILVER: TreasureDetail(chance=30, amount="1000d6"),
+            CoinType.ELECTRUM: TreasureDetail(chance=10, amount="1000d2"),
         },
         TreasureType.L: {
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=50, amount="1d4"),
         },
         TreasureType.M: {
-            CoinType.GOLD: TreasureDetail(chance=40, amount="2d4"),
-            CoinType.PLATINUM: TreasureDetail(chance=50, amount="5d6"),
+            CoinType.GOLD: TreasureDetail(chance=40, amount="2000d4"),
+            CoinType.PLATINUM: TreasureDetail(chance=50, amount="5000d6"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=55, amount="5d4"),
         },
         TreasureType.N: {
-            ItemType.MAGIC_ITEM: TreasureDetail(chance=40, amount="2d4", magical=True),
+            ItemType.MAGIC_ITEM: TreasureDetail(chance=40, amount="2000d4", magical=True),
         },
         TreasureType.O: {
             ItemType.MAGIC_ITEM: TreasureDetail(chance=50, amount="1d4", magical=True),
@@ -232,8 +233,7 @@ class Treasure:
         return " | ".join(lines)
 
     def _generate_treasure(self, treasure_type: TreasureType) -> None:
-        """Populates the treasure's contents based on whether and how much of each valuable should be included according
-        to the treasure type.
+        """Populates the treasure's contents based on whether and how much of each valuable should be included according to the treasure type.
 
         Args:
             treasure_type (TreasureType): The type of treasure for which to calculate its contents.

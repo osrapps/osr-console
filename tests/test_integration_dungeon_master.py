@@ -8,7 +8,7 @@ import pytest
 from osrlib.dungeon import Dungeon, Location, Exit, Direction
 from osrlib.dungeon_assistant import DungeonAssistant
 from osrlib.adventure import Adventure
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 @pytest.mark.optin
 @pytest.mark.flaky(reruns=0, reruns_delay=0)

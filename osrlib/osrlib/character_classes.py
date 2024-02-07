@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 from osrlib.dice_roller import DiceRoll, roll_dice
 from osrlib.enums import CharacterClassType
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 
 class ClassLevel:

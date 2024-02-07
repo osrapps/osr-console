@@ -1,12 +1,9 @@
-import logging
-
 import pytest
 
 from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 from osrlib.item import Armor
 from osrlib.player_character import PlayerCharacter
-
-logger = logging.getLogger(__name__)
+from osrlib.utils import logger
 
 CLASSES_THAT_CAN_USE_ALL_ARMOR = {
     CharacterClassType.FIGHTER,

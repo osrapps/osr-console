@@ -1,12 +1,11 @@
 import pytest
-from unittest.mock import Mock
 from osrlib.monster import MonsterStatsBlock, CharacterClassType, TreasureType, Alignment
 
 @pytest.fixture
 def default_monster_stats_block():
     return MonsterStatsBlock(name="Test Monster")
 
-def test_initialization_with_default_values(default_monster_stats_block):
+def test_initialization_with_default_values(default_monster_stats_block: MonsterStatsBlock):
     assert default_monster_stats_block.name == "Test Monster"
     assert default_monster_stats_block.description == ""
     assert default_monster_stats_block.armor_class == 10
@@ -54,7 +53,7 @@ def test_initialization_with_custom_values():
     assert custom_monster.treasure_type == TreasureType.A
     assert custom_monster.alignment == Alignment.CHAOTIC
 
-def test_to_dict(default_monster_stats_block):
+def test_to_dict(default_monster_stats_block: MonsterStatsBlock):
     monster_dict = default_monster_stats_block.to_dict()
     assert monster_dict["name"] == "Test Monster"
     assert monster_dict["description"] == ""

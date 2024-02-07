@@ -1,14 +1,8 @@
 import json
 import pytest
-import osrlib
-from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
+from osrlib.dungeon import Dungeon, Location, Exit, Direction
 from osrlib.encounter import Encounter
-from osrlib.game_manager import logger
 from osrlib.enums import OpenAIModelVersion
-
-
-logger.info(osrlib.__file__)
-
 
 @pytest.fixture
 def sample_dungeon():

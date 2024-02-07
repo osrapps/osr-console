@@ -26,7 +26,7 @@ from typing import List
 import random, json, uuid
 from openai import OpenAI
 from osrlib.enums import Direction, OpenAIModelVersion
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.encounter import Encounter
 from osrlib.dice_roller import roll_dice
 

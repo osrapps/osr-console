@@ -1,4 +1,8 @@
-import os, platform, textwrap, re
+import os
+import platform
+import textwrap
+import re
+import logging
 from pathlib import Path
 
 from osrlib.ability import ModifierType
@@ -149,3 +153,25 @@ def get_data_dir_path(app_name: str) -> Path:
         raise ValueError("Unsupported operating system.")
 
     return base_dir / sanitize_path_element(app_name)
+
+class LastMessageHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.last_message = None
+
+    def emit(self, record):
+        self.last_message = self.format(record)
+
+    def format(self, record):
+        # Return only the message part of the log record
+        return record.getMessage()
+
+# Configure logging
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s][%(module)s::%(funcName)s] %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+last_message_handler = LastMessageHandler()
+logger.addHandler(last_message_handler)

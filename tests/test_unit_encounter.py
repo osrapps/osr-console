@@ -3,7 +3,7 @@ import random
 from osrlib.encounter import Encounter
 from osrlib.monster import MonsterParty
 from osrlib.monster_manual import monster_stats_blocks
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 @pytest.fixture
 def random_monster_party():

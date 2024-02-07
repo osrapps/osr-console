@@ -1,7 +1,7 @@
 import pytest, os, json
 from osrlib.adventure import Adventure
 from osrlib.dungeon import Dungeon
-from osrlib.party import get_default_party
+from osrlib.party import Party
 from osrlib.enums import OpenAIModelVersion
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def sample_adventure() -> Adventure:
     return Adventure(name="Test Adventure", description="A small test adventure.", dungeons=[dungeon1, dungeon2])
 
 def test_adventure_to_dict(sample_adventure):
-    default_party = get_default_party()
+    default_party = Party.get_default_party()
     sample_adventure.set_active_party(default_party)
     sample_adventure.set_active_dungeon(sample_adventure.dungeons[0])
 
@@ -26,7 +26,7 @@ def test_adventure_to_dict(sample_adventure):
     assert adventure_dict["active_party"]["name"] == default_party.name
 
 def test_adventure_from_dict(sample_adventure):
-    default_party = get_default_party()
+    default_party = Party.get_default_party()
     sample_adventure.set_active_party(default_party)
     sample_adventure.set_active_dungeon(sample_adventure.dungeons[0])
 
@@ -46,7 +46,7 @@ def test_save_adventure(sample_adventure, tmp_path):
     """
     Test that an adventure can be successfully saved to a JSON file.
     """
-    default_party = get_default_party()
+    default_party = Party.get_default_party()
     sample_adventure.set_active_party(default_party)
     sample_adventure.set_active_dungeon(sample_adventure.dungeons[0])
 
@@ -66,7 +66,7 @@ def test_load_adventure(sample_adventure, tmp_path):
     """
     Test that an adventure can be successfully loaded from a JSON file.
     """
-    default_party = get_default_party()
+    default_party = Party.get_default_party()
     sample_adventure.set_active_party(default_party)
     sample_adventure.set_active_dungeon(sample_adventure.dungeons[0])
 

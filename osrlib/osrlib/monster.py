@@ -3,7 +3,7 @@ from osrlib.dice_roller import roll_dice, DiceRoll
 from osrlib.enums import CharacterClassType, TreasureType
 from osrlib.player_character import Alignment
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.treasure import Treasure
 
 monster_xp = {

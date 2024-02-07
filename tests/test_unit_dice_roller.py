@@ -1,13 +1,8 @@
-import logging
 from unittest.mock import patch
 
 import pytest
 
 from osrlib.dice_roller import DiceRoll, roll_dice
-
-logger = logging.getLogger(__name__)
-logger.debug("Testing dice_roller.py")
-
 
 def test_valid_notation():
     """Tests valid dice notation.

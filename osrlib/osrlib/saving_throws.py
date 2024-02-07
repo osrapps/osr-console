@@ -1,5 +1,5 @@
 from osrlib.enums import CharacterClassType, AttackType
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 saving_throws = {
     CharacterClassType.CLERIC: {

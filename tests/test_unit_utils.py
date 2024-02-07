@@ -1,10 +1,6 @@
-import logging
-
 from osrlib.ability import ModifierType
 from osrlib.utils import format_modifiers
-
-logger = logging.getLogger(__name__)
-
+from osrlib.utils import logger
 
 def test_format_modifiers():
     """Test function for the format_modifiers() utility function.
