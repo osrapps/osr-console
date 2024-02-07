@@ -207,6 +207,7 @@ class Treasure:
     def __init__(self, treasure_type: TreasureType = TreasureType.NONE):
         self.items = {}
         self._generate_treasure(treasure_type)
+        self.treasure_type = treasure_type
 
     def __str__(self) -> str:
         """Returns a string representation of the treasure in a multi-line format, showing each type of treasure with its quantity on separate lines, followed by the total value in gold pieces (GP) on a separate line.
@@ -215,6 +216,8 @@ class Treasure:
             str: A multi-line description of the treasure's contents and total GP value.
         """
         lines = []
+        lines.append(f"{str(self.treasure_type)} ({self.total_gp_value} GP value)")
+
         for item_type, amount in self.items.items():
             if isinstance(item_type, CoinType):
                 lines.append(f"{item_type.name.capitalize()}: {amount}")
@@ -226,10 +229,7 @@ class Treasure:
                 # Fallback for any item types not accounted for
                 lines.append(f"Unknown item: {amount}")
 
-        total_value = self.total_gp_value
-        lines.append(f"Value (GP): {total_value}")
-
-        return "\n".join(lines)
+        return " | ".join(lines)
 
     def _generate_treasure(self, treasure_type: TreasureType) -> None:
         """Populates the treasure's contents based on whether and how much of each valuable should be included according
@@ -243,7 +243,12 @@ class Treasure:
             chance_roll = roll_dice("1d100").total
             if chance_roll <= details.chance:
                 amount_roll = roll_dice(details.amount)
-                self.items[item_type] = amount_roll.total
+                if isinstance(item_type, CoinType):
+                    self.items[item_type] = amount_roll.total_with_modifier
+                else:
+                    # TODO: Create the items and add them to a List[Item]
+                    # For now, do the same as for coinage
+                    self.items[item_type] = amount_roll.total_with_modifier
 
     @property
     def total_gp_value(self) -> int:

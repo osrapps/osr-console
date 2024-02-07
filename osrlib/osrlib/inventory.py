@@ -37,7 +37,7 @@ class Inventory:
     ```
     """
     def __init__(self, player_character_owner: "PlayerCharacter"):
-        """Creates a `PlayerCharacter` instance.
+        """Creates an `Inventory` instance and assigns the specified `PlayerCharacter` as its owner.
 
         Args:
             player_character_owner (PlayerCharacter): The player character that owns the inventory.

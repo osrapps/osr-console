@@ -89,7 +89,7 @@ class Item:
         """Initialize an item with the specified properties.
 
         Don't call the methods on this class directory. Instead, use a PlayerCharacter's InventoryManager (pc.inventory)
-        to add/remove this item from a PC's inventor or add it to a Quest.
+        to add/remove this item to/from a PC's inventory or add it to a Quest.
 
         Args:
             name (str): Name of the item.

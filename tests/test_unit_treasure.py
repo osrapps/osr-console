@@ -1,7 +1,17 @@
 import pytest
 from osrlib.enums import CoinType, ItemType
 from osrlib.treasure import Treasure, TreasureDetail, TreasureType
+from osrlib.game_manager import logger
 
+def test_create_all_treasure_types():
+    # Loop through the TreasureType enum and create Treasure instances for every type
+    for t in TreasureType:
+        treasure = Treasure(t)
+
+        assert isinstance(treasure, Treasure), "Failed to create instance of type 'Treasure'"
+        assert treasure.treasure_type == t, "Treasure type does not match the expected enum value."
+
+        logger.debug(treasure)
 
 def test_treasure_total_gold_piece_value():
     custom_type = {
