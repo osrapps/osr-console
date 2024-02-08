@@ -151,7 +151,7 @@ class ArmorFactory:
 
     @staticmethod
     def create_armor(armor_name: str):
-        armor_info = armor_data.get(armor_name)
+        armor_info = (armor_data | magic_armor_data).get(armor_name)
         if armor_info:
             return Armor(
                 name=armor_name,
@@ -181,11 +181,11 @@ class EquipmentFactory:
 
 
 class WeaponFactory:
-    """Factory class to create items of type ``Weapon``."""
+    """Factory class to create items of type `Weapon`."""
 
     @staticmethod
     def create_weapon(weapon_name: str):
-        weapon_info = weapon_data.get(weapon_name)
+        weapon_info = (weapon_data| magic_weapon_data).get(weapon_name)
         if weapon_info:
             return Weapon(
                 name=weapon_name,
@@ -194,7 +194,6 @@ class WeaponFactory:
                 usable_by_classes=weapon_info["usable_by"],
                 range=weapon_info.get("range"),
             )
-
         else:
             raise ItemDataNotFoundError(weapon_name)
 
@@ -340,6 +339,5 @@ def get_random_item(item_type: ItemType, magical: bool = False) -> Item:
         data = magic_weapon_data if magical else weapon_data
         item_name = random.choice(list(data.keys()))
         return WeaponFactory.create_weapon(item_name)
-    # TODO: Add support for SPELL, EQUIPMENT, and MAGIC_ITEM
     else:
         raise ValueError(f"No item selection logic for {item_type}")

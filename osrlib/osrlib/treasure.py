@@ -5,11 +5,13 @@ player's party. Central to `Treasure` class is the `_treasure_types` attribute, 
 categories to their respective contents. These categories represent different types of treasure the party might obtain,
 each with specified probabilities and quantities of items like coins, gems, jewelry, and magical items.
 """
-from typing import Dict, NamedTuple, Union
+import random
+from typing import Dict, Union, List
 from dataclasses import dataclass
 from osrlib.dice_roller import roll_dice
 from osrlib.enums import ItemType, TreasureType, CoinType
-from osrlib.item import Item, Weapon, Armor
+from osrlib.item import Item
+from osrlib.item_factories import get_random_item
 from osrlib.utils import logger
 
 from enum import Enum
@@ -74,6 +76,7 @@ class Treasure:
     ```
     """
     items: Dict[Union[CoinType, ItemType], int]
+    magic_items: List[Item]
 
     _treasure_types: Dict[
         TreasureType, Dict[Union[CoinType, ItemType], TreasureDetail]
@@ -86,7 +89,8 @@ class Treasure:
             CoinType.GOLD: TreasureDetail(chance=35, amount="2000d6"),
             CoinType.PLATINUM: TreasureDetail(chance=25, amount="1000d2"),
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=50, amount="6d6"),
-            ItemType.MAGIC_ITEM: TreasureDetail(chance=30, amount="3", magical=True),
+            ItemType.ARMOR: TreasureDetail(chance=30, amount="1", magical=True),
+            ItemType.WEAPON: TreasureDetail(chance=30, amount="1", magical=True),
         },
         TreasureType.B: {
             CoinType.COPPER: TreasureDetail(chance=50, amount="1000d8"),
@@ -207,6 +211,7 @@ class Treasure:
 
     def __init__(self, treasure_type: TreasureType = TreasureType.NONE):
         self.items = {}
+        self.magic_items = []
         self._generate_treasure(treasure_type)
         self.treasure_type = treasure_type
 
@@ -245,10 +250,10 @@ class Treasure:
                 amount_roll = roll_dice(details.amount)
                 if isinstance(item_type, CoinType):
                     self.items[item_type] = amount_roll.total_with_modifier
-                else:
-                    # TODO: Create the items and add them to a List[Item]
-                    # For now, do the same as for coinage
-                    self.items[item_type] = amount_roll.total_with_modifier
+                elif item_type == ItemType.ARMOR or item_type == ItemType.WEAPON:
+                    magic_item = get_random_item(item_type, magical=True)
+                    self.magic_items.append(magic_item)
+                    logger.debug(f"Added {magic_item} to {treasure_type}")
 
     @property
     def total_gp_value(self) -> int:

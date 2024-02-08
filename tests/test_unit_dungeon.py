@@ -137,7 +137,7 @@ def test_random_dungeon():
         description="The first level of the home of the ancient wizard lich Glofarnux, its "
                     "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
         num_locations=20,
-        openai_model=OpenAIModelVersion.DEFAULT,
+        openai_model=OpenAIModelVersion.NONE,
     )
 
     # Validate Dungeon

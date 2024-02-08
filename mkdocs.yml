@@ -120,7 +120,6 @@ nav:
       - dungeon_assistant: reference/dungeon_assistant.md
       - encounter: reference/encounter.md
       - enums: reference/enums.md
-      - game_manager: reference/game_manager.md
       - inventory: reference/inventory.md
       - item: reference/item.md
       - item_factories: reference/item_factories.md
