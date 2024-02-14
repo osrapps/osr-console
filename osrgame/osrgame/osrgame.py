@@ -10,8 +10,8 @@ from osrlib.adventure import Adventure
 from osrlib.constants import ADVENTURE_NAMES, DUNGEON_NAMES
 from osrlib.dungeon import Dungeon
 from osrlib.dungeon_assistant import DungeonAssistant
-from osrlib.game_manager import logger
-from osrlib.party import get_default_party
+from osrlib.utils import logger
+from osrlib.party import Party
 from osrlib.enums import OpenAIModelVersion
 
 
@@ -86,7 +86,7 @@ class OSRConsole(App):
 
             default_adventure.add_dungeon(dungeon)
             default_adventure.set_active_dungeon(dungeon)
-            default_adventure.set_active_party(get_default_party())
+            default_adventure.set_active_party(Party.get_default_party())
             self.adventure = default_adventure
 
     def start_session(self) -> str:

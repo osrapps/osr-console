@@ -1,13 +1,17 @@
 import pytest
-from osrlib import party, player_character, character_classes
+from osrlib.enums import CharacterClassType
+from osrlib.party import Party
+from osrlib.party import CharacterNotInPartyError
+from osrlib.party import PartyAtCapacityError
+from osrlib.player_character import PlayerCharacter
 
 
 @pytest.fixture
 def setup_party():
-    empty_test_party = party.Party("The B-Team", 3)
-    character1 = player_character.PlayerCharacter("Sckricko", character_classes.CharacterClassType.FIGHTER, 1)
-    character2 = player_character.PlayerCharacter("Mazpar", character_classes.CharacterClassType.MAGIC_USER, 1)
-    character3 = player_character.PlayerCharacter("Slick", character_classes.CharacterClassType.THIEF, 1)
+    empty_test_party =  Party("The B-Team", 3)
+    character1 = PlayerCharacter("Sckricko", CharacterClassType.FIGHTER, 1)
+    character2 = PlayerCharacter("Mazpar", CharacterClassType.MAGIC_USER, 1)
+    character3 = PlayerCharacter("Slick", CharacterClassType.THIEF, 1)
     return empty_test_party, character1, character2, character3
 
 
@@ -23,8 +27,8 @@ def test_add_character_at_capacity(setup_party):
 
     # Fill the party to max_capacity - 1 with uniquely named characters
     for i in range(max_capacity - 1):
-        new_character = player_character.PlayerCharacter(
-            f"Test Character {i}", character_classes.CharacterClassType.FIGHTER, 1
+        new_character = PlayerCharacter(
+            f"Test Character {i}", CharacterClassType.FIGHTER, 1
         )
         test_party.add_character(new_character)
 
@@ -32,7 +36,7 @@ def test_add_character_at_capacity(setup_party):
     test_party.add_character(character1)
 
     # Adding one more beyond that should raise PartyAtCapacityError
-    with pytest.raises(party.PartyAtCapacityError):
+    with pytest.raises( PartyAtCapacityError):
         test_party.add_character(character2)
 
 
@@ -45,7 +49,7 @@ def test_remove_character(setup_party):
 
 def test_remove_character_not_in_party(setup_party):
     test_party, character1, _, _ = setup_party
-    with pytest.raises(party.CharacterNotInPartyError):
+    with pytest.raises(CharacterNotInPartyError):
         test_party.remove_character(character1)
 
 
@@ -85,7 +89,7 @@ def test_get_character_index(setup_party):
 
 def test_get_character_index_not_in_party(setup_party):
     test_party, character1, _, _ = setup_party
-    with pytest.raises(party.CharacterNotInPartyError):
+    with pytest.raises(CharacterNotInPartyError):
         test_party.get_character_index(character1)
 
 
@@ -100,7 +104,7 @@ def test_move_character_to_index(setup_party):
 
 def test_move_character_to_index_not_in_party(setup_party):
     test_party, character1, _, _ = setup_party
-    with pytest.raises(party.CharacterNotInPartyError):
+    with pytest.raises(CharacterNotInPartyError):
         test_party.move_character_to_index(character1, 0)
 
 

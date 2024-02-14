@@ -5,51 +5,6 @@ from typing import Optional, Set
 from osrlib.enums import CharacterClassType, ItemType
 
 
-class ItemAlreadyHasOwnerError(Exception):
-    """Exception raised when an item already has an owner."""
-
-    pass
-
-
-class ItemAlreadyInInventoryError(Exception):
-    """Exception raised when trying to add an item to a player character's (PC) inventory already in the inventory."""
-
-    pass
-
-
-class ItemEquippedError(Exception):
-    """Exception raised when trying to equip an item the player character (PC) already has equipped."""
-
-    pass
-
-
-class ItemNotEquippedError(Exception):
-    """Exception raised when trying to unequip an item the player character (PC) doesn't have equipped."""
-
-    pass
-
-
-class ItemNotInInventoryError(Exception):
-    """Exception raised when trying to remove an item from a player character's (PC) inventory that's not in the inventory."""
-
-    pass
-
-
-class ItemNotUsableError(Exception):
-    """Exception raised when trying to use an item that the player character (PC) can't use.
-
-    The inability to use an item is typically due to a character class restriction. For example, a magic user can't use
-    a sword and a thief can't wear plate mail armor."""
-
-    pass
-
-
-class ItemAlreadyInQuestError(Exception):
-    """Exception raised when trying to assign an item to a quest that's already been assigned to a quest."""
-
-    pass
-
-
 class Item:
     """An item represents a piece of equipment, a weapon, spell, quest piece, any other item that can be owned by a player character (PC).
 
@@ -71,7 +26,7 @@ class Item:
     Example:
 
     ```python
-    # Create an item that is a sword usable by fighters and thieves
+    # Create a sword usable by Fighters and Thieves
     usable_by = {CharacterClassType.FIGHTER, CharacterClassType.THIEF}
     item = Item("Sword", ItemType.WEAPON, usable_by, max_equipped=1, gp_value=10)
     ```
@@ -89,7 +44,7 @@ class Item:
         """Initialize an item with the specified properties.
 
         Don't call the methods on this class directory. Instead, use a PlayerCharacter's InventoryManager (pc.inventory)
-        to add/remove this item from a PC's inventor or add it to a Quest.
+        to add/remove this item to/from a PC's inventory or add it to a Quest.
 
         Args:
             name (str): Name of the item.
@@ -410,3 +365,48 @@ class Spell(Item):
             max_equipped=base_item.max_equipped,
             gp_value=base_item.gp_value,
         )
+
+
+class ItemAlreadyHasOwnerError(Exception):
+    """Exception raised when an item already has an owner."""
+
+    pass
+
+
+class ItemAlreadyInInventoryError(Exception):
+    """Exception raised when trying to add an item to a player character's (PC) inventory already in the inventory."""
+
+    pass
+
+
+class ItemEquippedError(Exception):
+    """Exception raised when trying to equip an item the player character (PC) already has equipped."""
+
+    pass
+
+
+class ItemNotEquippedError(Exception):
+    """Exception raised when trying to unequip an item the player character (PC) doesn't have equipped."""
+
+    pass
+
+
+class ItemNotInInventoryError(Exception):
+    """Exception raised when trying to remove an item from a player character's (PC) inventory that's not in the inventory."""
+
+    pass
+
+
+class ItemNotUsableError(Exception):
+    """Exception raised when trying to use an item that the player character (PC) can't use.
+
+    The inability to use an item is typically due to a character class restriction. For example, a magic user can't use
+    a sword and a thief can't wear plate mail armor."""
+
+    pass
+
+
+class ItemAlreadyInQuestError(Exception):
+    """Exception raised when trying to assign an item to a quest that's already been assigned to a quest."""
+
+    pass

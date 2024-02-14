@@ -4,7 +4,7 @@ import random
 from typing import List
 
 from osrlib.player_character import PlayerCharacter
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.enums import CharacterClassType
 from osrlib.item_factories import equip_party
 from osrlib.dice_roller import roll_dice
@@ -62,6 +62,7 @@ class NoMembersInPartyError(Exception):
     """Raised when attempting an operation on a party member when the party has no members."""
 
     pass
+
 
 class Party:
     """Manages a collection of player characters (PCs) that comprise an adventuring party.
@@ -528,21 +529,22 @@ class Party:
         party.set_active_character(party.members[0])
         return party
 
-def get_default_party(party_name: str = "Default Party") -> Party:  # pragma: no cover
-    """Get a party of six (6) first-level characters: a Fighter, Elf, Dwarf, Thief, Halfling, and Magic User.
+    @staticmethod
+    def get_default_party(party_name: str = "Default Party") -> "Party":  # pragma: no cover
+        """Get a party of first-level characters of each class: a Fighter, Elf, Cleric, Dwarf, Thief, Halfling, and Magic User.
 
-    Returns:
-        Party: A party with six (6) player characters at first level (zero experience points).
-    """
-    party = Party(party_name)
-    party.create_character(random.choice(FIGHTER_NAMES), CharacterClassType.FIGHTER, 1)
-    party.create_character(random.choice(ELF_NAMES), CharacterClassType.ELF, 1)
-    party.create_character(random.choice(CLERIC_NAMES), CharacterClassType.CLERIC, 1)
-    party.create_character(random.choice(DWARF_NAMES), CharacterClassType.DWARF, 1)
-    party.create_character(random.choice(THIEF_NAMES), CharacterClassType.THIEF, 1)
-    party.create_character(random.choice(HALFLING_NAMES), CharacterClassType.HALFLING, 1)
-    party.create_character(random.choice(MAGIC_USER_NAMES), CharacterClassType.MAGIC_USER, 1)
+        Returns:
+            Party: A party of first-level player characters in each character class.
+        """
+        party = Party(party_name)
+        party.create_character(random.choice(FIGHTER_NAMES), CharacterClassType.FIGHTER, 1)
+        party.create_character(random.choice(ELF_NAMES), CharacterClassType.ELF, 1)
+        party.create_character(random.choice(CLERIC_NAMES), CharacterClassType.CLERIC, 1)
+        party.create_character(random.choice(DWARF_NAMES), CharacterClassType.DWARF, 1)
+        party.create_character(random.choice(THIEF_NAMES), CharacterClassType.THIEF, 1)
+        party.create_character(random.choice(HALFLING_NAMES), CharacterClassType.HALFLING, 1)
+        party.create_character(random.choice(MAGIC_USER_NAMES), CharacterClassType.MAGIC_USER, 1)
 
-    equip_party(party)
+        equip_party(party)
 
-    return party
+        return party

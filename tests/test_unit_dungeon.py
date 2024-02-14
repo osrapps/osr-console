@@ -1,14 +1,8 @@
 import json
 import pytest
-import osrlib
-from osrlib.dungeon import Dungeon, Location, Exit, Direction, LocationNotFoundError
+from osrlib.dungeon import Dungeon, Location, Exit, Direction
 from osrlib.encounter import Encounter
-from osrlib.game_manager import logger
 from osrlib.enums import OpenAIModelVersion
-
-
-logger.info(osrlib.__file__)
-
 
 @pytest.fixture
 def sample_dungeon():
@@ -143,7 +137,7 @@ def test_random_dungeon():
         description="The first level of the home of the ancient wizard lich Glofarnux, its "
                     "entrance hidden in a forgotten glade deep in the cursed Mystic Forest.",
         num_locations=20,
-        openai_model=OpenAIModelVersion.DEFAULT,
+        openai_model=OpenAIModelVersion.NONE,
     )
 
     # Validate Dungeon

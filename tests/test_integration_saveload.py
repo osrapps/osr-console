@@ -2,10 +2,10 @@ import os
 import pytest
 from tinydb import Query, TinyDB
 
-from osrlib.party import Party, get_default_party
+from osrlib.party import Party
 from osrlib.player_character import PlayerCharacter
 from osrlib.item import Item, ItemType, ItemNotUsableError, Armor, Weapon, Spell
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.ability import (
     Strength,
     Intelligence,
@@ -521,7 +521,7 @@ def test_player_character_saveload(db, test_fighter):
 
 
 def test_party_saveload(db):
-    pc_party = get_default_party()
+    pc_party = Party.get_default_party()
 
     # Give one party member some gear
     armor = Armor(
@@ -589,7 +589,7 @@ def test_party_saveload(db):
 
 # Test whether a "dead" party stays dead after saving and loading
 def test_party_saveload_dead(db):
-    pc_party = get_default_party()
+    pc_party = Party.get_default_party()
 
     # Kill the party
     for character in pc_party.members:

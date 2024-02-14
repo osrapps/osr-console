@@ -1,7 +1,17 @@
 import pytest
 from osrlib.enums import CoinType, ItemType
 from osrlib.treasure import Treasure, TreasureDetail, TreasureType
+from osrlib.utils import logger
 
+def test_treasure_create_all_types():
+    # Loop through the TreasureType enum and create Treasure instances for every type
+    for t in TreasureType:
+        treasure = Treasure(t)
+
+        assert isinstance(treasure, Treasure), "Failed to create instance of type 'Treasure'"
+        assert treasure.treasure_type == t, "Treasure type does not match the expected enum value."
+
+        logger.debug(treasure)
 
 def test_treasure_total_gold_piece_value():
     custom_type = {
@@ -21,18 +31,19 @@ def test_treasure_total_gold_piece_value():
 @pytest.mark.flaky(reruns=5) # Flaky because we can't guarantee an average of exactly 50% of getting a magic item.
 def test_treasure_from_custom_type():
     # Define a custom treasure type with specific items
-    custom_type = {
+    custom_treasure_type = {
         CoinType.GOLD: TreasureDetail(
             # Always 5 GP
             chance=100, amount="5", magical=False
         ),
-        ItemType.MAGIC_ITEM: TreasureDetail(
+        ItemType.WEAPON: TreasureDetail(
+            # 50% chance of 1 magic weapon
             chance=50, amount="1", magical=True
-        ),  # 50% chance of 1 magic item
+        ),
     }
 
     # Create a Treasure instance using the custom treasure type
-    custom_treasure = Treasure.from_custom_type(custom_type)
+    custom_treasure = Treasure.from_custom_type(custom_treasure_type)
 
     # Check if the treasure contains the expected items
     assert CoinType.GOLD in custom_treasure.items
@@ -40,7 +51,7 @@ def test_treasure_from_custom_type():
 
     # Since magic item appearance is probabilistic, we test it statistically
     magic_item_appearances = [
-        Treasure.from_custom_type(custom_type).items.get(ItemType.MAGIC_ITEM, 0) > 0
+        Treasure.from_custom_type(custom_treasure_type).items.get(ItemType.WEAPON, 0) > 0
         for _ in range(100)
     ]
     approx_magic_item_appearance_rate = sum(magic_item_appearances) / len(

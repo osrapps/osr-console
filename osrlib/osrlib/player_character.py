@@ -14,7 +14,7 @@ from osrlib.character_classes import CharacterClass
 from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 from osrlib.inventory import Inventory
 from osrlib.dice_roller import roll_dice, DiceRoll
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.utils import get_data_dir_path, create_dir_tree_if_not_exist
 
 
@@ -34,7 +34,9 @@ class PlayerCharacter:
         abilities (dict): A dictionary of the character's abilities.
         character_class (CharacterClass): The character's class.
         inventory (Inventory): The character's inventory.
-        xp_adjustment_percentage (int): The character's XP adjustment based on the scores of ability their prime requisite(s). This value is set when the character's class is set, or when restoring a saved character.
+        xp_adjustment_percentage (int): The character's XP adjustment based on the scores of ability their prime
+                                        requisite(s). This value is set when the character's class is set, or when
+                                        restoring a saved character.
     """
 
     def __init__(
@@ -267,7 +269,7 @@ class PlayerCharacter:
             )
 
     def roll_hp(self) -> DiceRoll:
-        """Rolls the character's hit points, taking into account their Constitution modifier, if any.
+        """Rolls the character's hit dice and applies their Constitution modifier, if any.
 
         The total value of the roll with modifier can be negative after if the roll was low and the character has a
         negative Constitution modifier. You should clamp the value to 1 before applying it to the character's HP.

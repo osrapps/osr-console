@@ -10,7 +10,7 @@ Classes:
     DungeonAlreadyExistsError: Raised for duplicate dungeon additions.
 """
 import json, os, datetime
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.dungeon import Dungeon
 from osrlib.party import Party
 from osrlib.quest import Quest

@@ -5,7 +5,7 @@ import random
 from osrlib.party import Party
 from osrlib.monster import MonsterParty
 from osrlib.monster_manual import monster_stats_blocks
-from osrlib.game_manager import logger, last_message_handler as pylog
+from osrlib.utils import logger, last_message_handler as pylog
 from osrlib.dice_roller import roll_dice
 from osrlib.treasure import Treasure, TreasureType
 

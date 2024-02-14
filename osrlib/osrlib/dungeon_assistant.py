@@ -1,10 +1,9 @@
 """The `dungeon_assistant` module contains the `DungeonAssistant` class that interfaces with the OpenAI API and performs the duties of the game's referee and guide (*game master* or *dungeon master* in some tabletop RPGs)."""
 
-import asyncio
 from openai import OpenAI
 from osrlib.adventure import Adventure
 from osrlib.enums import OpenAIModelVersion
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 
 
 dm_init_message = (

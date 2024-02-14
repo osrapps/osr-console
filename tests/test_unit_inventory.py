@@ -1,9 +1,8 @@
+import pytest
 from osrlib.inventory import Inventory
 from osrlib.item import Item
 from osrlib.player_character import PlayerCharacter, CharacterClassType
 from osrlib.item import ItemType
-import pytest
-
 
 @pytest.fixture
 def inventory():

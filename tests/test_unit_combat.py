@@ -1,9 +1,9 @@
 import pytest
 from osrlib.character_classes import CharacterClassType, class_levels
 from osrlib.encounter import Encounter
-from osrlib.game_manager import logger
+from osrlib.utils import logger
 from osrlib.monster import MonsterParty, MonsterStatsBlock
-from osrlib.party import get_default_party
+from osrlib.party import Party
 from osrlib.player_character import Alignment
 from osrlib.treasure import TreasureType
 
@@ -45,7 +45,7 @@ class_thac0[CharacterClassType.HALFLING] = class_thac0[CharacterClassType.FIGHTE
 
 @pytest.fixture
 def pc_party():
-    yield get_default_party()
+    yield Party.get_default_party()
 
 @pytest.fixture
 def goblin_party():
@@ -175,9 +175,9 @@ def test_encounter_start_and_end(pc_party, goblin_encounter):
     assert goblin_encounter.is_ended == True
 
 def test_monster_thac0(hobgoblin_encounter, kobold_encounter, cyclops_party):
-    hobgoblin_encounter.start_encounter(get_default_party())
+    hobgoblin_encounter.start_encounter(Party.get_default_party())
 
-    kobold_encounter.start_encounter(get_default_party())
+    kobold_encounter.start_encounter(Party.get_default_party())
 
     cyclops_encounter = Encounter("Cyclops", "This thing has 13 HD and a special ability.", cyclops_party)
-    cyclops_encounter.start_encounter(get_default_party())
+    cyclops_encounter.start_encounter(Party.get_default_party())

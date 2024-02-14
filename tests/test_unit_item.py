@@ -1,20 +1,14 @@
-import logging
-
 import pytest
 
 from osrlib.enums import CharacterClassType
 from osrlib.item import (
-    ItemAlreadyHasOwnerError,
     ItemAlreadyInInventoryError,
-    ItemEquippedError,
     ItemNotEquippedError,
     ItemNotInInventoryError,
-    ItemNotUsableError,
     Weapon,
 )
 from osrlib.player_character import PlayerCharacter
-
-logger = logging.getLogger(__name__)
+from osrlib.utils import logger
 
 CLASSES_THAT_CAN_USE_ALL_WEAPONS = {
     CharacterClassType.FIGHTER,

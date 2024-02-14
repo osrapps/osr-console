@@ -1,4 +1,5 @@
-import pytest, random
+import pytest
+import random
 from osrlib.monster import MonsterParty
 from osrlib.monster_manual import monster_stats_blocks
 

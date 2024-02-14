@@ -4,7 +4,10 @@ from osrlib.player_character import Alignment
 
 berserker_stats = MonsterStatsBlock(
     name="Berserker",
-    description="Berserkers are simple fighters who go mad in battle. They react normally at first, but once a battle starts they will always fight to the death, sometimes attacking their comrades in their blind rage. When fighting humans or human-like creatures, they add +2 to 'to hit' rolls due to this ferocity. They never retreat, surrender, or take prisoners. Treasure Type (B) is only found in the wilderness.",
+    description="Berserkers are fighters that go mad in battle. They react normally at first, but when battle starts, "
+    "they always fight to the death and sometimes attack their comrades in their blind rage. When fighting humans or "
+    "human-like creatures, they add +2 to 'to hit' rolls due to this ferocity. They never retreat, surrender, or take "
+    "prisoners.",
     armor_class=7,
     hit_dice="1d8+1",
     num_appearing="1d6",
@@ -15,7 +18,7 @@ berserker_stats = MonsterStatsBlock(
     save_as_class=CharacterClassType.FIGHTER,
     save_as_level=1,
     morale=12,
-    treasure_type=TreasureType.B,
+    treasure_type=TreasureType.P, # TreasureType.B is only found in wilderness
     alignment=Alignment.NEUTRAL
 )
 
@@ -72,14 +75,15 @@ carrion_crawler_stats = MonsterStatsBlock(
 
 cyclops_stats = MonsterStatsBlock(
     name="Cyclops",
-    description="A rare type of giant, the cyclops is noted for its great size and single eye in the center of its forehead. Cyclops have poor depth perception due to their single eye.",
+    description="A rare type of giant, the cyclops is noted for its great size and single eye in the center of its "
+                "forehead. Cyclops have poor depth perception due to their single eye.",
     armor_class=5,
     hit_dice="13d8",
     num_appearing="d1",
     movement=90,
     num_special_abilities=1,
     attacks_per_round=1, # TODO: Add support for attack and damage modifiers (Cyclops has -2 on attack rolls)
-    damage_per_attack="3d10",
+    damage_per_attack="3d10", # TODO: Add support for ranged attacks (Cyclops can throw rocks up to 200' at 3d6 damage)
     save_as_class=CharacterClassType.FIGHTER,
     save_as_level=13,
     morale=9,
@@ -91,12 +95,12 @@ ghoul_stats = MonsterStatsBlock(
     name="Ghoul",
     description="Ghouls are undead creatures. They are hideous, beast-like humans who attack anything living. Attacks by a ghoul will paralyze any creature of ogre-size or smaller, except elves, unless the victim saves vs. Paralysis. Once an opponent is paralyzed, the ghoul will turn and attack another opponent until either the ghoul or all the opponents are paralyzed or dead. The paralysis lasts 2-8 turns unless removed by a cure light wounds spell.",
     armor_class=6,
-    hit_dice="2d8",  # The asterisk (*) in the rule book indicates a special ability, which in this case is paralysis
-    num_appearing="1d6",  # For individual encounters
+    hit_dice="2d8",
+    num_appearing="1d6",
     movement=90,
     num_special_abilities=1,  # For the paralysis ability
     attacks_per_round=3,  # Two claws and one bite
-    damage_per_attack="1d3+1",  # Assuming the special damage applies to each attack
+    damage_per_attack="1d3+1",  # Special damage applies to each attack
     save_as_class=CharacterClassType.FIGHTER,
     save_as_level=2,
     morale=9,
