@@ -1,0 +1,24 @@
+.md-content__inner a {
+    color: #d17d00; /* Change for normal state */
+}
+
+.md-content__inner a:hover {
+    color: #ffa600; /* Change for hover state */
+}
+
+.md-nav__link {
+    color: #d17d00; /* Change for normal state */
+}
+
+.md-nav__link:hover, .md-nav__link--active {
+    color: #ffa600; /* Change for hover and active states */
+}
+
+.md-nav__item--active > .md-nav__link--active {
+    color: #ffa600; /* Replace with your desired color */
+}
+
+.md-nav__item--active > .md-nav__link,
+.md-nav__item--active .md-nav__link--active {
+    color: #ffa600; /* Replace with your desired color for active folder links */
+}
