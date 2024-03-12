@@ -21,12 +21,6 @@ class AttackType(Enum):
 
 
 class Direction(Enum):
-    """Enumeration for directions a player can go within a location.
-
-    Attributes:
-        NORTH, SOUTH, EAST, WEST, UP, DOWN: Cardinal directions and vertical movements.
-    """
-
     NORTH = "N"
     SOUTH = "S"
     EAST = "E"

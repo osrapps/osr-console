@@ -250,7 +250,7 @@ class PlayerCharacter:
         self.character_class.hp = min(new_hp, self.character_class.max_hp)
 
     def roll_abilities(self):
-        """Rolls the ability scores of the character."""
+        """Rolls the ability scores for the character."""
         self.abilities = {}
         for ability_class in [
             Strength,
