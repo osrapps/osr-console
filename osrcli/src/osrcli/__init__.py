@@ -1,3 +1,4 @@
+import json
 import os
 
 import questionary
@@ -15,64 +16,63 @@ def clear_screen():
 back = "Back"
 exit_app = "Exit"
 nav_instruction = "📜"
+nav_instruction_arrow_keys = "(use arrow keys)"
+separator_top = "==--==--==--==--=="
+separator_bottom = "------------------"
 
-pointer_finger = "👉"
-pointer_die = "🎲"
-pointer_arrow = "➡️"
-pointer_bracket = "🔹"
-pointer_diamond = "🔸"
-
-pointer_select = "➤"
-pointer_arrow_large = "➜"
-pointer_arrow_left_1 = "⬅️"
-
-qmark_menu = "📜"
-qmark_submenu = "➖"
-qmark_question = "❓"
-
-qmark_bubble = "💬"
-qmark_sword = "⚔️"
-qmark_shield = "🛡️"
-qmark_treasure = "💰"
-qmark_map = "🗺️"
-qmark_flag = "🚩"
-qmark_gear = "⚙️"
-qmark_star = "⭐"
-qmark_heart = "❤️"
-qmark_skull = "💀"
-qmark_crown = "👑"
-qmark_gem = "💎"
-qmark_key = "🔑"
-qmark_lock = "🔒"
-qmark_lightning = "⚡"
-qmark_fire = "🔥"
-qmark_ice = "❄️"
-qmark_water = "💧"
-qmark_wind = "💨"
-qmark_earth = "🌍"
-qmark_sun = "☀️"
-qmark_moon = "🌙"
-qmark_star = "⭐"
-qmark_cloud = "☁️"
-qmark_rain = "🌧️"
+icon_arrow_left = "⬅️"
+icon_arrow_right = "➡️"
+icon_bubble = "💬"
+icon_cloud = "☁️"
+icon_crown = "👑"
+icon_dash = "➖"
+icon_diamon_blue = "🔹"
+icon_diamond_orange = "🔸"
+icon_die = "🎲"
+icon_earth = "🌍"
+icon_finger = "👉"
+icon_fire = "🔥"
+icon_flag = "🚩"
+icon_gear = "⚙️"
+icon_gem = "💎"
+icon_heart = "❤️"
+icon_key = "🔑"
+icon_lightning = "⚡"
+icon_lock = "🔒"
+icon_map = "🗺️"
+icon_moon = "🌙"
+icon_questionmark = "❓"
+icon_rain = "🌧️"
+icon_scroll = "📜"
+icon_select = "➤"
+icon_shield = "🛡️"
+icon_skull = "💀"
+icon_snowflake = "❄️"
+icon_star = "⭐"
+icon_star = "⭐"
+icon_sun = "☀️"
+icon_sword = "⚔️"
+icon_treasure = "💰"
+icon_water = "💧"
+icon_wind = "💨"
 
 
 class MainMenu:
     def show(self):
         while True:
             choice = questionary.select(
-                "Welcome to OSR CLI!",
-                qmark=qmark_menu,
-                pointer=pointer_select,
+                "Welcome to OSR CLI",
+                qmark=icon_scroll,
+                pointer=icon_select,
                 instruction=nav_instruction,
                 choices=[
-                    Separator(),
+                    Separator(separator_top),
                     "Create character",
                     "Create party",
                     "Create adventure",
                     "Play adventure",
                     "Settings",
-                    Separator(),
+                    Separator(separator_bottom),
                     exit_app,
                 ],
             ).ask()
@@ -86,16 +86,17 @@ class MainMenu:
 class CreateCharacterMenu:
     def show(self):
         while True:
-            character_name = questionary.text("Character name:", qmark=qmark_submenu).ask()
+            character_name = questionary.text("Character name:", qmark=icon_dash).ask()
 
             class_choice = questionary.select(
-                "Select a class",
-                qmark=qmark_submenu,
-                pointer=pointer_select,
+                "Character class:",
+                qmark=icon_dash,
+                pointer=icon_select,
+                instruction=nav_instruction_arrow_keys,
                 choices=[
-                    Separator(),
+                    Separator(separator_top),
                     *[c.value for c in CharacterClassType],
-                    Separator(),
+                    Separator(separator_bottom),
                     back,
                 ],
             ).ask()
@@ -108,8 +109,8 @@ class CreateCharacterMenu:
                 while True:
                     reroll_choice = questionary.confirm(
                         "Reroll abilities [Y/n]",
-                        qmark=qmark_submenu,
-                        instruction=qmark_question,
+                        qmark=icon_dash,
+                        instruction=icon_questionmark,
                         default=True,
                     ).ask()
 
@@ -117,7 +118,29 @@ class CreateCharacterMenu:
                         character.roll_abilities()
                     else:
                         break
-                break
+
+                save_character = questionary.confirm(
+                    "Save character [Y/n]",
+                    qmark=icon_dash,
+                    instruction=icon_questionmark,
+                    default=True,
+                ).ask()
+                if save_character:
+                    save_file = questionary.text("File name:", qmark=icon_dash, default=character.name + ".json").ask()
+                    save_dir = questionary.path("Directory:", qmark=icon_dash).ask()
+
+                    # Expand the tilde to the user's home directory path if present
+                    save_dir = os.path.expanduser(save_dir)
+
+                    # Check if the directory exists and create it if necessary
+                    full_path = os.path.join(save_dir, save_file)
+                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+                    with open(full_path, "w") as f:
+                        f.write(json.dumps(character.to_dict(), indent=4))
+
+                    questionary.print("Character saved to " + full_path)
+                    break
             else:
                 break
 
