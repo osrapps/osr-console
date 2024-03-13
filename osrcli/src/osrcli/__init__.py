@@ -13,16 +13,18 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-back = "⬅️ Back"
+back = "⬅ Back"
 exit_app = "❌ Exit"
 nav_instruction = "📜"
 nav_instruction_arrow_keys = "(use arrow keys)"
-separator_top = "==--==--==--==--=="
-separator_bottom = "------------------"
+separator_top = "==--=="
+separator_bottom = "------"
 
 icon_arrow_left = "⬅️"
 icon_arrow_right = "➡️"
 icon_arrow_back = "🔙"
+icon_tri_left = "◀️"
+icon_select = "▶️"
 icon_bubble = "💬"
 icon_cloud = "☁️"
 icon_crown = "👑"
@@ -45,7 +47,7 @@ icon_moon = "🌙"
 icon_questionmark = "❓"
 icon_rain = "🌧️"
 icon_scroll = "📜"
-icon_select = "➤"
+icon_arrowhead_right_sm = "➤"
 icon_shield = "🛡️"
 icon_skull = "💀"
 icon_snowflake = "❄️"
@@ -68,7 +70,7 @@ class MainMenu:
                 "Welcome to OSR CLI",
                 qmark=icon_scroll,
                 pointer=icon_select,
-                instruction=nav_instruction,
+                instruction=icon_scroll,
                 choices=[
                     Separator(separator_top),
                     "Create character",
