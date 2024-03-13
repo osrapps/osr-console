@@ -70,7 +70,8 @@ class PlayerCharacter:
             f"{self.name} ({self.character_class} {self.level}) "
             f"HP: {self.hit_points}/{self.max_hit_points} "
             f"AC: {self.armor_class} "
-            f"XP: {self.xp}/{self.xp_needed_for_next_level}"
+            f"XP: {self.xp}/{self.xp_needed_for_next_level} "
+            f"{ability_str}"
         )
 
     @property

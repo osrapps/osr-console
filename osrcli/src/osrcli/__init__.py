@@ -13,8 +13,8 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-back = "Back"
-exit_app = "Exit"
+back = "⬅️ Back"
+exit_app = "❌ Exit"
 nav_instruction = "📜"
 nav_instruction_arrow_keys = "(use arrow keys)"
 separator_top = "==--==--==--==--=="
@@ -22,6 +22,7 @@ separator_bottom = "------------------"
 
 icon_arrow_left = "⬅️"
 icon_arrow_right = "➡️"
+icon_arrow_back = "🔙"
 icon_bubble = "💬"
 icon_cloud = "☁️"
 icon_crown = "👑"
@@ -55,6 +56,9 @@ icon_sword = "⚔️"
 icon_treasure = "💰"
 icon_water = "💧"
 icon_wind = "💨"
+icon_floppy_disk = "💾"
+icon_x = "❌"
+icon_prohibited = "🚫"
 
 
 class MainMenu:
@@ -86,11 +90,10 @@ class MainMenu:
 class CreateCharacterMenu:
     def show(self):
         while True:
-            character_name = questionary.text("Character name:", qmark=icon_dash).ask()
+            character_name = questionary.text("Character name:").ask()
 
             class_choice = questionary.select(
                 "Character class:",
-                qmark=icon_dash,
                 pointer=icon_select,
                 instruction=nav_instruction_arrow_keys,
                 choices=[
@@ -104,30 +107,32 @@ class CreateCharacterMenu:
             if class_choice != back:
                 character_class = CharacterClassType(class_choice)
                 character = PlayerCharacter(character_name, character_class)
-                print(character)
+                questionary.print(str(character))
 
                 while True:
                     reroll_choice = questionary.confirm(
-                        "Reroll abilities [Y/n]",
-                        qmark=icon_dash,
-                        instruction=icon_questionmark,
+                        "Reroll abilities",
+                        instruction="[Y/n]: ",
                         default=True,
                     ).ask()
 
                     if reroll_choice:
                         character.roll_abilities()
+                        questionary.print(str(character))
                     else:
                         break
 
                 save_character = questionary.confirm(
-                    "Save character [Y/n]",
-                    qmark=icon_dash,
-                    instruction=icon_questionmark,
+                    "Save character",
+                    instruction="[Y/n]: ",
                     default=True,
                 ).ask()
                 if save_character:
-                    save_file = questionary.text("File name:", qmark=icon_dash, default=character.name + ".json").ask()
-                    save_dir = questionary.path("Directory:", qmark=icon_dash).ask()
+                    save_file = questionary.text(
+                        "File name:",
+                        default=character.name.lower().replace(' ', '_').strip() + ".json",
+                    ).ask()
+                    save_dir = questionary.path("Directory:").ask()
 
                     # Expand the tilde to the user's home directory path if present
                     save_dir = os.path.expanduser(save_dir)
@@ -139,8 +144,16 @@ class CreateCharacterMenu:
                     with open(full_path, "w") as f:
                         f.write(json.dumps(character.to_dict(), indent=4))
 
-                    questionary.print("Character saved to " + full_path)
-                    break
+                    questionary.print(
+                        f"{icon_floppy_disk} Character saved to " + full_path
+                    )
+
+                    if questionary.confirm(
+                        "Create another character", instruction="[Y/n]: "
+                    ).ask():
+                        continue
+                    else:
+                        break
             else:
                 break
 

@@ -1,3 +1,7 @@
+"""Utility functions and globals for logging and working with strings, paths, and other common tasks.
+
+To enable debug logging, set the environment variable `OSR_DEBUG` to `true`. Otherwise, logging is set to INFO level.
+"""
 import os
 import platform
 import textwrap
@@ -172,6 +176,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
+if os.environ.get("OSR_DEBUG", "").lower() == "true":
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 last_message_handler = LastMessageHandler()
 logger.addHandler(last_message_handler)
