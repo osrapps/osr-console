@@ -159,7 +159,7 @@ class Party:
             PlayerCharacter: The character that was created and added to the party.
 
         Raises:
-            PartyInStartedAdventureError: If the party has been added to an adventure that has already been started.
+            PartyInStartedAdventureError: If the party is already adventuring, can't create a new character in the party.
         """
         if self.is_adventuring:
             raise PartyInStartedAdventureError(

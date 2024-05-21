@@ -327,7 +327,7 @@ class Encounter:
             "name": self.name,
             "description": self.description,
             "monsters": self.monster_party.to_dict(),
-            "treasure_type": self.treasure_type.value[0], # Store only the first element of the tuple
+            "treasure_type": self.treasure_type.value[0],
             "is_ended": self.is_ended,
         }
         return encounter_dict

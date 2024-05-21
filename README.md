@@ -1,6 +1,6 @@
 # OSR Console: Adventures in turn-based text
 
-OSR Console is a turn-based dungeon crawler RPG in the Old-School Renaissance (OSR) style for your terminal. The game's main library, `osrlib`, is written in Python, as is its user interface which uses the [Textual](https://textual.textualize.io/) TUI framework.
+OSR Console is an SDK for a turn-based dungeon crawler RPG in the Old-School Renaissance (OSR) style for your terminal. The SDK's main library, `osrlib`, is written in Python, as is the example user interface which uses the [Textual](https://textual.textualize.io/) TUI framework.
 
 ![Screenshot of the OSR Console application running in an iTerm2 window in macOS](images/character-sheet-01.png)
 
@@ -12,7 +12,7 @@ OSR Console is a turn-based dungeon crawler RPG in the Old-School Renaissance (O
 
 ## Installation
 
-This is a monorepo that houses three projects: the game's library, `osrlib`, that library's `tests`, and an example user interface, `osrgame`.
+This monorepo houses three projects: the game's library, `osrlib`, that library's `tests`, and an example user interface, `osrgame`.
 
 For more information about each, see their respective `README.md` files:
 
@@ -49,4 +49,4 @@ This screenshot shows an example of LLM-generated content in the (very much *for
 ## Credits
 
 - Project owner: [@mmacy](https://github.com/mmacy)
-- Game rules and mechanics heavily inspired by the TSR's 1981 versions of the Dungeons & Dragons Basic and Expert sets, or *D&D B/X*.
+- Game rules and mechanics heavily inspired by TSR's 1981 versions of the Dungeons & Dragons Basic and Expert sets, or *D&D B/X*.

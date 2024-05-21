@@ -102,7 +102,7 @@ class CharacterClass:
         If the character's current XP meets the next level's requirement, the character's
         current_level is populated with the next level available for the class. Hit points
         are rolled using the hit die appropriate for the character's class and are applied
-        to the character's CharacterClass instance. for additional hit points.
+        to the character's CharacterClass instance.
 
         Example:
 
