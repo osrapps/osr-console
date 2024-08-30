@@ -66,9 +66,14 @@ class Encounter:
         else:
             return f"{self.name}: {self.description} ({len(self.monster_party.members)} {self.monster_party.members[0].name if self.monster_party.members else ''})"
 
-    def log_mesg(self, message: str):
-        """Log an encounter log message."""
-        self.log.append(message)
+    def log_mesg(self, message: Optional[str]):
+        """Log an encounter message.
+
+        Args:
+            message (Optional[str]): The message to log. If None, no message is logged.
+        """
+        if message is not None:
+            self.log.append(message)
 
     def get_encounter_log(self) -> str:
         """Return the encounter log as a string."""

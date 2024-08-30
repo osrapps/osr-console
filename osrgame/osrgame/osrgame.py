@@ -22,7 +22,7 @@ class OSRConsole(App):
     dungeon_assistant = None
 
     # To disable AI, set this to OpenAIModelVersion.NONE
-    openai_model = OpenAIModelVersion.GPT35TURBO
+    openai_model = OpenAIModelVersion.DEFAULT
     num_dungeon_locations = 10
 
     CSS_PATH = "screen.tcss"
