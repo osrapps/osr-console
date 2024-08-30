@@ -67,7 +67,7 @@ class ItemType(Enum):
 
 
 class OpenAIModelVersion(Enum):
-    DEFAULT = "gpt-3.5-turbo-0125"
+    DEFAULT = "gpt-4o"
     GPT35 = "gpt-3.5"
     GPT35TURBO = "gpt-3.5-turbo-0125"
     GPT4 = "gpt-4"
