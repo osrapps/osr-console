@@ -6,15 +6,13 @@ categories to their respective contents. These categories represent different ty
 each with specified probabilities and quantities of items like coins, gems, jewelry, and magical items.
 """
 import random
-from typing import Dict, Union, List
+from typing import Callable, Dict, Union, List
 from dataclasses import dataclass
 from osrlib.dice_roller import roll_dice
 from osrlib.enums import ItemType, TreasureType, CoinType
 from osrlib.item import Item
 from osrlib.item_factories import get_random_item
 from osrlib.utils import logger
-
-from enum import Enum
 
 
 @dataclass
@@ -77,6 +75,11 @@ class Treasure:
     """
     items: Dict[Union[CoinType, ItemType], int]
     magic_items: List[Item]
+    _magic_item_generators: Dict[ItemType, Callable[[], Item]] = {
+        ItemType.ARMOR: lambda: get_random_item(ItemType.ARMOR, magical=True),
+        ItemType.WEAPON: lambda: get_random_item(ItemType.WEAPON, magical=True),
+    }
+    _valuables_value_table = [10, 50, 100, 500, 1000]
 
     _treasure_types: Dict[
         TreasureType, Dict[Union[CoinType, ItemType], TreasureDetail]
@@ -167,7 +170,7 @@ class Treasure:
             ItemType.GEMS_JEWELRY: TreasureDetail(chance=55, amount="5d4"),
         },
         TreasureType.N: {
-            ItemType.MAGIC_ITEM: TreasureDetail(chance=40, amount="2000d4", magical=True),
+            ItemType.MAGIC_ITEM: TreasureDetail(chance=40, amount="2d4", magical=True),
         },
         TreasureType.O: {
             ItemType.MAGIC_ITEM: TreasureDetail(chance=50, amount="1d4", magical=True),
@@ -212,8 +215,9 @@ class Treasure:
     def __init__(self, treasure_type: TreasureType = TreasureType.NONE):
         self.items = {}
         self.magic_items = []
-        self._generate_treasure(treasure_type)
+        self._valuables_gp_value = 0
         self.treasure_type = treasure_type
+        self._generate_treasure(treasure_type)
 
     def __str__(self) -> str:
         """Returns a string representation of the treasure in a multi-line format, showing each type of treasure with its quantity on separate lines, followed by the total value in gold pieces (GP) on a separate line.
@@ -243,40 +247,71 @@ class Treasure:
         Args:
             treasure_type (TreasureType): The type of treasure for which to calculate its contents.
         """
-        treasure_details = self._treasure_types[treasure_type]
+        self._apply_treasure_details(self._treasure_types[treasure_type])
+
+    def _apply_treasure_details(self, treasure_details: Dict[Union[CoinType, ItemType], TreasureDetail]) -> None:
+        """Apply the generation rules in a treasure details map to this treasure instance."""
         for item_type, details in treasure_details.items():
             chance_roll = roll_dice("1d100").total
             if chance_roll <= details.chance:
-                amount_roll = roll_dice(details.amount)
-                if isinstance(item_type, CoinType):
-                    self.items[item_type] = amount_roll.total_with_modifier
-                elif item_type == ItemType.ARMOR or item_type == ItemType.WEAPON:
-                    magic_item = get_random_item(item_type, magical=True)
-                    self.magic_items.append(magic_item)
-                    logger.debug(f"Added {magic_item} to {treasure_type}")
+                amount = roll_dice(details.amount).total_with_modifier
+                self._add_treasure_entry(item_type, amount)
+
+    def _add_treasure_entry(self, item_type: Union[CoinType, ItemType], amount: int) -> None:
+        if amount <= 0:
+            return
+
+        if isinstance(item_type, CoinType):
+            self.items[item_type] = self.items.get(item_type, 0) + amount
+            return
+
+        if item_type == ItemType.GEMS_JEWELRY:
+            self.items[item_type] = self.items.get(item_type, 0) + amount
+            self._valuables_gp_value += sum(
+                random.choice(self._valuables_value_table) for _ in range(amount)
+            )
+            return
+
+        if item_type in self._magic_item_generators:
+            for _ in range(amount):
+                magic_item = self._magic_item_generators[item_type]()
+                self.magic_items.append(magic_item)
+                logger.debug(f"Added {magic_item} to {self.treasure_type}")
+            return
+
+        if item_type == ItemType.MAGIC_ITEM:
+            for _ in range(amount):
+                magic_category = random.choice(list(self._magic_item_generators.keys()))
+                magic_item = self._magic_item_generators[magic_category]()
+                self.magic_items.append(magic_item)
+                logger.debug(f"Added {magic_item} to {self.treasure_type}")
+            return
+
+        # Fallback for unhandled item types in custom treasure maps.
+        self.items[item_type] = self.items.get(item_type, 0) + amount
+
+    @property
+    def xp_gp_value(self) -> int:
+        """Gets the treasure GP value that should grant XP on acquisition."""
+        coin_amounts = {
+            item_type: amount
+            for item_type, amount in self.items.items()
+            if isinstance(item_type, CoinType)
+        }
+        coin_gp_value = CoinType.value_in_gold(coin_amounts) if coin_amounts else 0
+        return coin_gp_value + self._valuables_gp_value
 
     @property
     def total_gp_value(self) -> int:
         """Gets the total value in gold pieces (gp) of the treasure.
 
-        Use this value when calculating the amount of experience points (XP) to award a party who obtains the treasure.
-        For example, at the end of an encounter, quest, or any other event in which the party receives it.
+        This is the market/economy value: XP-awarded treasure value (`xp_gp_value`) plus generated magic item values.
+        For XP awards on treasure acquisition, use `xp_gp_value`.
 
         Returns:
             int: The total value in gold pieces (gp) of the coins, gems, jewelry, and items in the treasure.
         """
-        total_gp_value = 0
-        # Calculate the value of coins
-        for item_type, amount in self.items.items():
-            if isinstance(item_type, CoinType):
-                total_gp_value += CoinType.value_in_gold({item_type: amount})
-
-        # TODO: Calculate the value of the other items in the treasure
-        # for item_type, amount in self.items.items():
-        #     if isinstance(item_type, ItemType):
-        #         total_gp_value += item_type.value * amount
-
-        return total_gp_value
+        return self.xp_gp_value + sum(item.gp_value for item in self.magic_items)
 
     @classmethod
     def from_treasure_type(cls, treasure_type: TreasureType) -> "Treasure":
@@ -319,9 +354,5 @@ class Treasure:
         ```
         """
         treasure = cls()
-        for item_type, details in custom_type.items():
-            chance_roll = roll_dice("1d100").total
-            if chance_roll <= details.chance:
-                amount_roll = roll_dice(details.amount)
-                treasure.items[item_type] = amount_roll.total
+        treasure._apply_treasure_details(custom_type)
         return treasure

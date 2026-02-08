@@ -252,8 +252,7 @@ class Monster:
             base_xp = monster_xp["Under 1"]["base"]
             bonus = monster_xp["Under 1"]["bonus"]
             total_xp = base_xp + bonus * num_special_abilities
-            logger.debug(f"{self.name} XP: {total_xp} base + {self.treasure.total_gp_value} treasure")
-            total_xp += self.treasure.total_gp_value
+            logger.debug(f"{self.name} base XP: {total_xp}")
             return total_xp
 
         # Handle monsters with 1 hit die and up
@@ -283,11 +282,7 @@ class Monster:
         # Get the total XP value for the monster itself
         total_xp = base_xp + bonus * num_special_abilities
 
-        logger.debug(f"{self.name} XP: {total_xp} base + {self.treasure.total_gp_value} treasure")
-
-        # Add 1 XP per 1 GP of treasure
-        total_xp += self.treasure.total_gp_value
-
+        logger.debug(f"{self.name} base XP: {total_xp}")
         return total_xp
 
     @property
@@ -415,12 +410,14 @@ class MonsterParty:
 
         The total XP is the sum of:
 
-        - Experience points for all monsters in the party, including the GP value of treasure owned by **individuals**.
-        - GP value of the `treasure` owned or guarded by the party as a **group**.
+        - Base XP for all monsters in the party.
+        - XP-granting GP value of treasure owned by **individual monsters**.
+        - XP-granting GP value of the `treasure` owned or guarded by the party as a **group**.
         """
         total_xp_value = 0
         total_xp_value += sum(monster.xp_value for monster in self.members)
-        total_xp_value += self.treasure.total_gp_value
+        total_xp_value += sum(monster.treasure.xp_gp_value for monster in self.members)
+        total_xp_value += self.treasure.xp_gp_value
         return total_xp_value
 
     def get_surprise_roll(self) -> int:

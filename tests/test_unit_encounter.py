@@ -28,9 +28,10 @@ def test_encounter_initialization(random_monster_party):
 
     assert min_appearing <= len(encounter.monster_party.members) <= (min_appearing * max_appearing)
 
-    # Ensure the XP calc is working - should be each monsters' XP + the group XP value (if any)
+    # Ensure the XP calc is working - should be each monsters' base XP + treasure XP values.
     expected_xp = sum(member.xp_value for member in encounter.monster_party.members)
-    expected_xp += encounter.monster_party.treasure.total_gp_value
+    expected_xp += sum(member.treasure.xp_gp_value for member in encounter.monster_party.members)
+    expected_xp += encounter.monster_party.treasure.xp_gp_value
     assert encounter.monster_party.xp_value == expected_xp
 
 def test_encounter_to_dict(random_monster_party):
@@ -57,3 +58,38 @@ def test_encounter_from_dict(random_monster_party):
     assert rehydrated_encounter.monster_party.monster_stats_block.name == random_monster_party.monster_stats_block.name
 
     # Additional checks can be added to verify the integrity of the rehydrated monster party
+
+
+class _FakeParty:
+    def __init__(self, name: str):
+        self.name = name
+        self.is_alive = True
+        self.awarded_xp = 0
+
+    def grant_xp(self, amount: int):
+        self.awarded_xp += amount
+
+
+class _FakeMonsterParty:
+    def __init__(self, xp_value: int):
+        self.xp_value = xp_value
+        self.is_alive = False
+
+
+class _FakeTreasure:
+    def __init__(self, xp_gp_value: int):
+        self.xp_gp_value = xp_gp_value
+
+
+def test_end_encounter_awards_monster_and_encounter_treasure_xp():
+    encounter = Encounter(
+        "XP Test",
+        "Victory should include encounter treasure XP.",
+        monster_party=_FakeMonsterParty(xp_value=100),
+    )
+    encounter.pc_party = _FakeParty(name="Heroes")
+    encounter.treasure = _FakeTreasure(xp_gp_value=25)
+
+    encounter.end_encounter()
+
+    assert encounter.pc_party.awarded_xp == 125

@@ -45,3 +45,19 @@ def test_from_dict_method(random_monster_stats_block):
     assert len(new_party.members) > 0  # Ensure that members were created
 
 # Additional tests can be added to cover edge cases, error handling, etc.
+
+
+class _FakeTreasure:
+    def __init__(self, xp_gp_value: int):
+        self.xp_gp_value = xp_gp_value
+
+
+def test_xp_value_uses_base_xp_plus_treasure_xp():
+    party = MonsterParty(random.choice(monster_stats_blocks))
+    party.members = party.members[:1]
+
+    party.members[0].xp_value = 12
+    party.members[0].treasure = _FakeTreasure(xp_gp_value=30)
+    party.treasure = _FakeTreasure(xp_gp_value=40)
+
+    assert party.xp_value == 82
