@@ -69,8 +69,11 @@ class Treasure:
     print(f"Treasure haul 1: {treasure_haul_01}")
     print(f"Treasure haul 2: {treasure_haul_02}")
 
-    xp_from_treasure = treasure_haul_01.total_gp_value + treasure_haul_02.total_gp_value
+    xp_from_treasure = treasure_haul_01.xp_gp_value + treasure_haul_02.xp_gp_value
     print(f"Total XP from treasure: {xp_from_treasure}")
+
+    market_value = treasure_haul_01.total_gp_value + treasure_haul_02.total_gp_value
+    print(f"Total market value: {market_value} gp")
     ```
     """
     items: Dict[Union[CoinType, ItemType], int]
