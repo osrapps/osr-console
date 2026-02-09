@@ -1,30 +1,26 @@
 [project]
 name = "osrcli"
 version = "0.1.0"
-description = "Add your description here"
+description = "CLI interface for OSR Console."
 authors = [
-    { name = "Marsh Macy", email = "mmacy@users.noreply.github.com" }
-]
-dependencies = [
-    "questionary>=2.0.1",
-    "osrlib @ file:///Users/mmacy/repos/osr-console/osrcli/../osrlib",
+    { name = "Marsh Macy", email = "mmacy@users.noreply.github.com" },
 ]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">=3.11"
+dependencies = [
+    "questionary>=2.0.1",
+    "osrlib",
+]
 
 [project.scripts]
-"osrcli" = "osrcli:main"
+osrcli = "osrcli:main"
+
+[tool.uv.sources]
+osrlib = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.rye]
-managed = true
-dev-dependencies = []
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/osrcli"]
