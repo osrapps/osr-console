@@ -1201,7 +1201,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "osrlib", editable = "osrlib" },
-    { name = "textual", specifier = ">=0.40.0" },
+    { name = "textual", specifier = ">=7.0.0" },
 ]
 
 [package.metadata.requires-dev]

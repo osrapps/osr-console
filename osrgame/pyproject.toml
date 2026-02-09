@@ -9,7 +9,7 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "textual>=0.40.0",
+    "textual>=7.0.0",
     "osrlib",
 ]
 

@@ -7,17 +7,54 @@ OSR Console is an SDK for a turn-based dungeon crawler RPG in the Old-School Ren
 ## Prerequisites
 
 - [Python](https://www.python.org/) 3.11+
-- [Poetry](https://python-poetry.org/) 1.6+
-- [OpenAI API](https://platform.openai.com/docs/) key (if you enable AI-generated dungeon location and encounter descriptions)
+- [uv](https://docs.astral.sh/uv/) package manager
+- [OpenAI API](https://platform.openai.com/docs/) key (optional, for AI-generated dungeon descriptions)
 
 ## Installation
 
-This monorepo houses three projects: the game's library, `osrlib`, that library's `tests`, and an example user interface, `osrgame`.
+Clone the repo and install all workspace dependencies:
 
-For more information about each, see their respective `README.md` files:
+```bash
+git clone https://github.com/mmacy/osr-console.git
+cd osr-console
+uv sync --all-packages
+```
 
-- [osrlib](osrlib/README.md) - Python library for OSR-style turn-based RPGs
+## Quickstart
+
+### Run the TUI (osrgame)
+
+The `osrgame` package is a [Textual](https://textual.textualize.io/) terminal UI that demonstrates `osrlib`. Launch it with:
+
+```bash
+uv run python -m osrgame
+```
+
+Use the on-screen buttons to start a random adventure, load a saved adventure, or quit.
+
+### Run the CLI (osrcli)
+
+The `osrcli` package is an interactive command-line interface built with [questionary](https://github.com/tmbo/questionary). Launch it with:
+
+```bash
+uv run osrcli
+```
+
+Follow the prompts to create a party, explore dungeons, and manage encounters.
+
+### Run the tests
+
+```bash
+uv run pytest tests/
+```
+
+## Project structure
+
+This monorepo uses a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with these packages:
+
+- [osrlib](osrlib/README.md) - Core Python library for OSR-style turn-based RPGs
 - [osrgame](osrgame/README.md) - Textual TUI demonstrating use of `osrlib`
+- [osrcli](osrcli/) - Interactive CLI demonstrating use of `osrlib`
 - [tests](tests/README.md) - pytest-based unit and integration tests for `osrlib`
 
 ## Usage of AI
@@ -34,13 +71,9 @@ This screenshot shows an example of LLM-generated content in the (very much *for
 
 ![Screenshot of the OSR Console TUI's exploration test screen](images/exploration-screen-01.png)
 
-## Usage
-
-:pencil: TODO :pencil:
-
 ## Contribute
 
-:pencil: TODO :pencil:
+Contributions are welcome! See the open issues or submit a pull request.
 
 ## License
 

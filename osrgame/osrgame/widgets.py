@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Iterable
+from collections.abc import Iterable
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -166,11 +166,11 @@ class ItemTable(Container):
         )
         self.update_table(self.items)
 
-    def watch_items(self, items: List[Item]) -> None:
+    def watch_items(self, items: list[Item]) -> None:
         """Update the item table when the PC's list changes."""
         self.update_table(items)
 
-    def update_table(self, items: List[Item]) -> None:
+    def update_table(self, items: list[Item]) -> None:
         table = self.query_one(DataTable)
         table.clear()
         if not items:

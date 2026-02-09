@@ -11,7 +11,7 @@ from textual.widgets import Footer, Header, Static
 from osrlib.adventure import Adventure
 from osrlib.utils import get_data_dir_path
 
-from widgets import JsonFilteredDirectoryTree
+from .widgets import JsonFilteredDirectoryTree
 
 class AdventureBrowserScreen(Screen):
     """File browser for selecting an adventure to load."""
