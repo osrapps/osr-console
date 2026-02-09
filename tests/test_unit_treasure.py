@@ -1,100 +1,85 @@
-import pytest
+from types import SimpleNamespace
+
 from osrlib.enums import CoinType, ItemType
+from osrlib.item import Item
 from osrlib.treasure import Treasure, TreasureDetail, TreasureType
-from osrlib.utils import logger
+
+
+def _roll_result(total: int) -> SimpleNamespace:
+    return SimpleNamespace(total=total, total_with_modifier=total)
+
 
 def test_treasure_create_all_types():
-    # Loop through the TreasureType enum and create Treasure instances for every type
-    for t in TreasureType:
-        treasure = Treasure(t)
+    # Loop through the TreasureType enum and create Treasure instances for every type.
+    for treasure_type in TreasureType:
+        treasure = Treasure(treasure_type)
+        assert isinstance(treasure, Treasure)
+        assert treasure.treasure_type == treasure_type
 
-        assert isinstance(treasure, Treasure), "Failed to create instance of type 'Treasure'"
-        assert treasure.treasure_type == t, "Treasure type does not match the expected enum value."
 
-        logger.debug(treasure)
-
-def test_treasure_total_gold_piece_value():
+def test_xp_gp_value_uses_combined_coin_conversion(monkeypatch):
     custom_type = {
-        CoinType.GOLD: TreasureDetail(
-            # Always 10 GP
-            chance=100, amount="10", magical=False
-        ),
-        CoinType.SILVER: TreasureDetail(
-            # Always 100 SP
-            chance=100, amount="100", magical=False
-        ),
+        CoinType.COPPER: TreasureDetail(chance=100, amount="1"),
+        CoinType.SILVER: TreasureDetail(chance=100, amount="1"),
     }
+
+    rolls = iter([1, 1, 1, 1])  # chance/amount for CP, then chance/amount for SP
+    monkeypatch.setattr("osrlib.treasure.roll_dice", lambda _: _roll_result(next(rolls)))
+
     treasure = Treasure.from_custom_type(custom_type)
-    expected_total_gp = 20  # 10 GP + 100 SP (10 SP = 1 GP)
-    assert treasure.total_gp_value == expected_total_gp
+    assert treasure.xp_gp_value == 1
+    assert treasure.total_gp_value == 1
 
-@pytest.mark.flaky(reruns=5) # Flaky because we can't guarantee an average of exactly 50% of getting a magic item.
-def test_treasure_from_custom_type():
-    # Define a custom treasure type with specific items
-    custom_treasure_type = {
-        CoinType.GOLD: TreasureDetail(
-            # Always 5 GP
-            chance=100, amount="5", magical=False
-        ),
-        ItemType.WEAPON: TreasureDetail(
-            # 50% chance of 1 magic weapon
-            chance=50, amount="1", magical=True
-        ),
+
+def test_gems_jewelry_and_magic_items_have_expected_xp_and_gp_values(monkeypatch):
+    custom_type = {
+        CoinType.SILVER: TreasureDetail(chance=100, amount="100"),  # 10 GP
+        ItemType.GEMS_JEWELRY: TreasureDetail(chance=100, amount="1"),  # 50 GP (patched)
+        ItemType.WEAPON: TreasureDetail(chance=100, amount="2", magical=True),  # 2 * 300 GP
     }
 
-    # Create a Treasure instance using the custom treasure type
-    custom_treasure = Treasure.from_custom_type(custom_treasure_type)
-
-    # Check if the treasure contains the expected items
-    assert CoinType.GOLD in custom_treasure.items
-    assert custom_treasure.items[CoinType.GOLD] == 5  # Should always have 5 gold coins
-
-    # Since magic item appearance is probabilistic, we test it statistically
-    magic_item_appearances = [
-        Treasure.from_custom_type(custom_treasure_type).items.get(ItemType.WEAPON, 0) > 0
-        for _ in range(100)
-    ]
-    approx_magic_item_appearance_rate = sum(magic_item_appearances) / len(
-        magic_item_appearances
+    rolls = iter([1, 100, 1, 1, 1, 2])  # chance/amount per entry
+    monkeypatch.setattr("osrlib.treasure.roll_dice", lambda _: _roll_result(next(rolls)))
+    monkeypatch.setattr("osrlib.treasure.random.choice", lambda _: 50)
+    monkeypatch.setattr(
+        "osrlib.treasure.get_random_item",
+        lambda item_type, magical=False: Item("Magic Weapon", ItemType.WEAPON, gp_value=300),
     )
 
-    # Check if the appearance rate of the magic item is close to the expected 50%
-    assert 0.4 <= approx_magic_item_appearance_rate <= 0.6
+    treasure = Treasure.from_custom_type(custom_type)
 
-@pytest.mark.flaky(reruns=5) # Flaky because we can't guarantee exact average percentages of rolled treasure types.
-def test_treasure_predefined_treasure_type_statistics():
-    iterations = 1000  # Number of iterations to average out randomness
-    type_a_probabilities = {
-        CoinType.GOLD: 35,  # Probability in percent for CoinType.GOLD in TreasureType.A
-        ItemType.MAGIC_ITEM: 30,  # Probability in percent for ItemType.MAGIC_ITEM in TreasureType.A
-        # TODO: add other item types and their probabilities for TreasureType.A
-    }
-    type_d_probabilities = {
-        CoinType.SILVER: 15,  # Probability in percent for CoinType.SILVER in TreasureType.D
-        ItemType.GEMS_JEWELRY: 30,  # Probability in percent for ItemType.GEMS_JEWELRY in TreasureType.D
-        # TODO: add other item types and their probabilities for TreasureType.D
+    assert treasure.items[CoinType.SILVER] == 100
+    assert treasure.items[ItemType.GEMS_JEWELRY] == 1
+    assert len(treasure.magic_items) == 2
+    assert treasure.xp_gp_value == 60
+    assert treasure.total_gp_value == 660
+
+
+def test_magic_item_entry_generates_multiple_items(monkeypatch):
+    custom_type = {
+        ItemType.MAGIC_ITEM: TreasureDetail(chance=100, amount="3", magical=True),
     }
 
-    type_a_results = {item_type: 0 for item_type in type_a_probabilities}
-    type_d_results = {item_type: 0 for item_type in type_d_probabilities}
+    rolls = iter([1, 3])  # chance/amount for MAGIC_ITEM
+    monkeypatch.setattr("osrlib.treasure.roll_dice", lambda _: _roll_result(next(rolls)))
 
-    # Generate treasures and record occurrences of each item type
-    for _ in range(iterations):
-        treasure_a = Treasure(TreasureType.A)
-        for item_type in type_a_probabilities:
-            if item_type in treasure_a.items:
-                type_a_results[item_type] += 1
+    generated_categories = iter([ItemType.ARMOR, ItemType.WEAPON, ItemType.ARMOR])
+    monkeypatch.setattr("osrlib.treasure.random.choice", lambda _: next(generated_categories))
+    monkeypatch.setattr(
+        Treasure,
+        "_magic_item_generators",
+        {
+            ItemType.ARMOR: lambda: Item("Armor Relic", ItemType.ARMOR, gp_value=100),
+            ItemType.WEAPON: lambda: Item("Weapon Relic", ItemType.WEAPON, gp_value=200),
+        },
+    )
 
-        treasure_d = Treasure(TreasureType.D)
-        for item_type in type_d_probabilities:
-            if item_type in treasure_d.items:
-                type_d_results[item_type] += 1
-
-    # Check if the occurrence rates are within an acceptable range of their probabilities
-    for item_type, probability in type_a_probabilities.items():
-        occurrence_rate = (type_a_results[item_type] / iterations) * 100
-        assert probability - 5 <= occurrence_rate <= probability + 5
-
-    for item_type, probability in type_d_probabilities.items():
-        occurrence_rate = (type_d_results[item_type] / iterations) * 100
-        assert probability - 5 <= occurrence_rate <= probability + 5
+    treasure = Treasure.from_custom_type(custom_type)
+    assert len(treasure.magic_items) == 3
+    assert [item.item_type for item in treasure.magic_items] == [
+        ItemType.ARMOR,
+        ItemType.WEAPON,
+        ItemType.ARMOR,
+    ]
+    assert treasure.xp_gp_value == 0
+    assert treasure.total_gp_value == 400

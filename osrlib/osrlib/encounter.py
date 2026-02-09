@@ -265,11 +265,12 @@ class Encounter:
         if self.pc_party and self.monster_party:
             self.log_mesg(pylog.last_message)
             if self.pc_party.is_alive and not self.monster_party.is_alive:
+                awarded_xp = self.monster_party.xp_value + self.treasure.xp_gp_value
                 logger.debug(
-                    f"{self.pc_party.name} won the battle! Awarding {self.monster_party.xp_value} experience points to the party..."
+                    f"{self.pc_party.name} won the battle! Awarding {awarded_xp} experience points to the party..."
                 )
                 self.log_mesg(pylog.last_message)
-                self.pc_party.grant_xp(self.monster_party.xp_value)
+                self.pc_party.grant_xp(awarded_xp)
             elif not self.pc_party.is_alive and self.monster_party.is_alive:
                 logger.debug(f"{self.pc_party.name} lost the battle.")
                 self.log_mesg(pylog.last_message)
