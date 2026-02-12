@@ -1,11 +1,9 @@
-from typing import Any, Coroutine
-from textual import events, on
+from textual import on
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Log
-from textual.events import Event
 
-from widgets import (
+from .widgets import (
     CharacterStatsBox,
     AbilityTable,
     ItemTable,
@@ -111,12 +109,9 @@ class CharacterScreen(Screen):
             f"Character {character_to_remove.name} removed from party."
         )
 
-    def on_event(self, event: Event) -> Coroutine[Any, Any, None]:
-        """Handle events."""
-        # HACK: This is a hack to get the screen to update when the user switches to it.
-        if isinstance(event, events.ScreenResume):
-            self.on_mount()
-        return super().on_event(event)
+    def on_screen_resume(self) -> None:
+        """Update the screen when the user switches back to it."""
+        self.on_mount()
 
     def reroll(self):
         """Rolls the ability scores of the active character."""

@@ -1,0 +1,20 @@
+[project]
+name = "osr-console"
+version = "0.1.0"
+description = "OSR Console - a turn-based dungeon-crawler RPG in the old-school renaissance style."
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["osrlib", "osrgame", "osrcli", "tests", "utils"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.2",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-rerunfailures>=12.0",
+    "python-dotenv>=1.0.0",
+    "ruff>=0.4.0",
+    "mkdocs-material>=9.4.6",
+    "mkdocstrings[python]>=0.24.0",
+]

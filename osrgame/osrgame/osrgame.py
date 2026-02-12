@@ -1,10 +1,12 @@
 import random
-from textual.app import App, ComposeResult
-from screen_character import CharacterScreen
-from screen_welcome import WelcomeScreen
-from screen_explore import ExploreScreen
-from screen_modal_new_char import NewCharacterModalScreen
-from screen_adventure_browser import AdventureBrowserScreen
+
+from textual.app import App
+
+from .screen_character import CharacterScreen
+from .screen_welcome import WelcomeScreen
+from .screen_explore import ExploreScreen
+from .screen_modal_new_char import NewCharacterModalScreen
+from .screen_adventure_browser import AdventureBrowserScreen
 
 from osrlib.adventure import Adventure
 from osrlib.constants import ADVENTURE_NAMES, DUNGEON_NAMES
@@ -33,19 +35,17 @@ class OSRConsole(App):
     ]
 
     SCREENS = {
-        "screen_adventure_browser": AdventureBrowserScreen(),
-        "screen_character": CharacterScreen(),
-        "screen_explore": ExploreScreen(),
-        "screen_welcome": WelcomeScreen(),
-        "screen_modal_new_char": NewCharacterModalScreen(),
+        "screen_adventure_browser": AdventureBrowserScreen,
+        "screen_character": CharacterScreen,
+        "screen_explore": ExploreScreen,
+        "screen_welcome": WelcomeScreen,
+        "screen_modal_new_char": NewCharacterModalScreen,
     }
-
-    def compose(self) -> ComposeResult:
-        yield WelcomeScreen()
 
     def on_mount(self) -> None:
         self.title = "OSR Console"
         self.sub_title = f"Adventures in turn-based text (model: {self.openai_model.value})"
+        self.push_screen("screen_welcome")
 
     ### Actions ###
 
@@ -106,6 +106,7 @@ class OSRConsole(App):
 
         return dm_start_session_response + "\n" + dm_first_party_move_response
 
-app = OSRConsole()
+
 if __name__ == "__main__":
+    app = OSRConsole()
     app.run()

@@ -5,7 +5,7 @@ from textual.widgets import Header, Footer, Log
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
 
-from widgets import PartyRosterTable
+from .widgets import PartyRosterTable
 
 
 class ExploreScreen(Screen):

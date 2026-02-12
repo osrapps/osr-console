@@ -1,15 +1,15 @@
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Grid, Horizontal
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, RadioSet, Static, Placeholder
+from textual.widgets import Button, Input, RadioSet, Static
 from textual import on
-from widgets import CharacterClassRadioButtons
+
+from .widgets import CharacterClassRadioButtons
 from osrlib.enums import CharacterClassType
+
 
 class NewCharacterModalScreen(ModalScreen):
     """A modal screen for creating a new character."""
-
-    CSS_PATH = "screen.tcss"
 
     def compose(self) -> ComposeResult:
         yield Grid(

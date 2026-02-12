@@ -2,7 +2,7 @@ from textual import on
 from textual.screen import Screen
 from textual.app import ComposeResult
 from textual.widgets import Header, Footer, Button
-from widgets import WelcomeScreenButtons
+from .widgets import WelcomeScreenButtons
 
 
 class WelcomeScreen(Screen):
