@@ -536,3 +536,40 @@ def test_event_serializer():
     assert d["kind"] == "AttackRolled"
     assert d["hit"] is True
     assert d["attacker_id"] == "pc:Foo"
+
+
+# ---------------------------------------------------------------------------
+# 17. step() after ENDED is a safe no-op
+# ---------------------------------------------------------------------------
+
+
+def test_step_after_ended_preserves_outcome(default_party, weak_goblin_party):
+    """Calling step() on an already-ENDED engine must not corrupt the outcome."""
+    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+    _collect_events(engine)
+
+    assert engine.state == EncounterState.ENDED
+    original_outcome = engine.outcome
+
+    # Extra step() calls should be no-ops
+    for _ in range(3):
+        result = engine.step()
+        assert result.state == EncounterState.ENDED
+        assert result.events == ()
+        assert engine.outcome == original_outcome
+
+
+# ---------------------------------------------------------------------------
+# 18. step_until_decision faults engine before raising EncounterLoopError
+# ---------------------------------------------------------------------------
+
+
+def test_step_until_decision_faults_engine(default_party, goblin_party):
+    """After EncounterLoopError, engine must be in ENDED with FAULTED outcome."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    with pytest.raises(EncounterLoopError):
+        engine.step_until_decision(max_steps=2)
+
+    assert engine.state == EncounterState.ENDED
+    assert engine.outcome == EncounterOutcome.FAULTED

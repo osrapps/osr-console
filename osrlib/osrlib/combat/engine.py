@@ -76,7 +76,19 @@ class CombatEngine:
         return self._outcome
 
     def step(self, intent: ActionIntent | None = None) -> StepResult:
-        """Execute a single state transition and return the result."""
+        """Execute a single state transition and return the result.
+
+        Calling ``step()`` after the engine has reached ``ENDED`` is a safe
+        no-op: the original outcome is preserved and no events are emitted.
+        """
+        if self._state == EncounterState.ENDED:
+            return StepResult(
+                state=EncounterState.ENDED,
+                needs_intent=False,
+                pending_combatant_id=None,
+                events=(),
+            )
+
         if intent is not None:
             self._pending_intent = intent
 
@@ -120,6 +132,9 @@ class CombatEngine:
             results.append(result)
             if result.needs_intent or self._state == EncounterState.ENDED:
                 return tuple(results)
+        # Fault the engine into a safe terminal state before raising.
+        self._outcome = EncounterOutcome.FAULTED
+        self._state = EncounterState.ENDED
         raise EncounterLoopError(
             f"Combat engine did not reach a decision point within {max_steps} steps"
         )

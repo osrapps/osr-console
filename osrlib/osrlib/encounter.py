@@ -107,11 +107,18 @@ class Encounter:
         self.engine = CombatEngine(pc_party=party, monster_party=self.monster_party)
         formatter = EventFormatter()
 
-        # Phase 1: all intents auto-submitted, run to completion
-        while self.engine.state != EncounterState.ENDED:
+        # Phase 1: all intents auto-submitted, run to completion.
+        # Safety bound prevents infinite loop if engine reaches AWAIT_INTENT.
+        max_steps = 10_000
+        for _ in range(max_steps):
             result = self.engine.step()
             for event in result.events:
                 self.log_mesg(formatter.format(event))
+            if self.engine.state == EncounterState.ENDED:
+                break
+            if result.needs_intent:
+                logger.warning("Combat engine unexpectedly awaiting intent in synchronous mode")
+                break
 
         self.end_encounter()
 
