@@ -16,6 +16,7 @@ from osrlib.combat.effects import (
 from osrlib.combat.actions import ActionResult, CombatAction, MeleeAttackAction
 from osrlib.combat.engine import CombatEngine, StepResult
 from osrlib.combat.events import (
+    ActionChoice,
     ActionRejected,
     AttackRolled,
     ConditionApplied,
@@ -27,6 +28,7 @@ from osrlib.combat.events import (
     InitiativeRolled,
     NeedAction,
     RoundStarted,
+    Rejection,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -41,6 +43,7 @@ from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterS
 
 __all__ = [
     "ActionIntent",
+    "ActionChoice",
     "ActionResult",
     "ActionRejected",
     "ApplyConditionEffect",
@@ -71,6 +74,7 @@ __all__ = [
     "MeleeAttackIntent",
     "NeedAction",
     "RoundStarted",
+    "Rejection",
     "SpellSlotConsumed",
     "StepResult",
     "SurpriseRolled",

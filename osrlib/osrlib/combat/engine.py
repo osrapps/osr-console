@@ -17,6 +17,7 @@ from osrlib.combat.effects import (
     Effect,
 )
 from osrlib.combat.events import (
+    ActionChoice,
     ActionRejected,
     ConditionApplied,
     DamageApplied,
@@ -25,7 +26,9 @@ from osrlib.combat.events import (
     EncounterStarted,
     EntityDied,
     InitiativeRolled,
+    NeedAction,
     RoundStarted,
+    Rejection,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -54,8 +57,10 @@ class CombatEngine:
     ``step_until_decision()`` to run until the engine needs an external intent
     (or combat ends).
 
-    The current implementation auto-submits intents for all combatants, so
-    calling ``step()`` in a loop until ``state == ENDED`` runs a full encounter.
+    By default, the engine auto-submits intents for all combatants, so calling
+    ``step()`` in a loop until ``state == ENDED`` runs a full encounter.
+    Pass ``auto_resolve_intents=False`` to pause at ``AWAIT_INTENT`` and
+    require external intent submission.
     """
 
     def __init__(
@@ -63,9 +68,11 @@ class CombatEngine:
         pc_party: Party,
         monster_party: MonsterParty,
         dice: DiceService | None = None,
+        auto_resolve_intents: bool = True,
     ) -> None:
         self._ctx = CombatContext.build(pc_party, monster_party)
         self._dice: DiceService = dice or BXDiceService()
+        self._auto_resolve_intents = auto_resolve_intents
         self._state = EncounterState.INIT
         self._encounter_id = uuid.uuid4().hex[:12]
         self._pending_intent: ActionIntent | None = None
@@ -219,6 +226,18 @@ class CombatEngine:
             self._state = EncounterState.CHECK_VICTORY
             return
 
+        if not self._auto_resolve_intents:
+            available_choices = tuple(
+                ActionChoice(
+                    label=f"Melee attack {target.id}",
+                    intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
+                )
+                for target in living_targets
+            )
+            events.append(NeedAction(combatant_id=cid, available=available_choices))
+            self._state = EncounterState.AWAIT_INTENT
+            return
+
         target = self._dice.choice(living_targets)
         self._pending_intent = MeleeAttackIntent(actor_id=cid, target_id=target.id)
         self._state = EncounterState.VALIDATE_INTENT
@@ -236,7 +255,7 @@ class CombatEngine:
             events.append(
                 ActionRejected(
                     combatant_id=self._ctx.current_combatant_id or "",
-                    reason="no intent",
+                    reasons=(Rejection(code="NO_INTENT", message="no intent"),),
                 )
             )
             self._state = EncounterState.AWAIT_INTENT
@@ -245,14 +264,22 @@ class CombatEngine:
         action = self._action_for_intent(intent)
         if action is None:
             events.append(
-                ActionRejected(combatant_id=intent.actor_id, reason="unsupported intent")
+                ActionRejected(
+                    combatant_id=intent.actor_id,
+                    reasons=(
+                        Rejection(
+                            code="UNSUPPORTED_INTENT",
+                            message="unsupported intent",
+                        ),
+                    ),
+                )
             )
             self._state = EncounterState.AWAIT_INTENT
             return
 
         reasons = action.validate(self._ctx)
         if reasons:
-            events.append(ActionRejected(combatant_id=intent.actor_id, reason="; ".join(reasons)))
+            events.append(ActionRejected(combatant_id=intent.actor_id, reasons=reasons))
             self._state = EncounterState.AWAIT_INTENT
             return
 
@@ -267,7 +294,12 @@ class CombatEngine:
             events.append(
                 ActionRejected(
                     combatant_id=self._ctx.current_combatant_id or "",
-                    reason="no validated action",
+                    reasons=(
+                        Rejection(
+                            code="NO_VALIDATED_ACTION",
+                            message="no validated action",
+                        ),
+                    ),
                 )
             )
             self._state = EncounterState.AWAIT_INTENT
@@ -284,7 +316,9 @@ class CombatEngine:
 
         for effect in effects:
             match effect:
-                case DamageEffect(source_id=source_id, target_id=target_id, amount=amount):
+                case DamageEffect(
+                    source_id=source_id, target_id=target_id, amount=amount
+                ):
                     target_ref = self._ctx.combatants[target_id]
                     target_ref.entity.apply_damage(amount)
                     events.append(
@@ -305,7 +339,12 @@ class CombatEngine:
                         )
                     except ValueError as exc:
                         events.append(
-                            ActionRejected(combatant_id=caster_id, reason=str(exc))
+                            ActionRejected(
+                                combatant_id=caster_id,
+                                reasons=(
+                                    Rejection(code="NO_SPELL_SLOT", message=str(exc)),
+                                ),
+                            )
                         )
                         continue
                     events.append(
@@ -333,7 +372,12 @@ class CombatEngine:
                     events.append(
                         ActionRejected(
                             combatant_id=self._ctx.current_combatant_id or "",
-                            reason=f"unknown effect type: {type(effect).__name__}",
+                            reasons=(
+                                Rejection(
+                                    code="UNKNOWN_EFFECT_TYPE",
+                                    message=f"unknown effect type: {type(effect).__name__}",
+                                ),
+                            ),
                         )
                     )
 
@@ -375,7 +419,9 @@ class CombatEngine:
 
     def _action_for_intent(self, intent: ActionIntent) -> CombatAction | None:
         if isinstance(intent, MeleeAttackIntent):
-            return MeleeAttackAction(actor_id=intent.actor_id, target_id=intent.target_id)
+            return MeleeAttackAction(
+                actor_id=intent.actor_id, target_id=intent.target_id
+            )
         return None
 
     def _handle_check_deaths(self, events: list[EncounterEvent]) -> None:

@@ -62,8 +62,9 @@ class EventFormatter:
             case TurnSkipped(combatant_id=cid, reason=reason):
                 return f"{cid}'s turn skipped ({reason})."
 
-            case NeedAction(combatant_id=cid, available_intents=intents):
-                return f"Awaiting action for {cid}: {', '.join(intents)}"
+            case NeedAction(combatant_id=cid, available=choices):
+                labels = [choice.label for choice in choices]
+                return f"Awaiting action for {cid}: {', '.join(labels)}"
 
             case AttackRolled(
                 attacker_id=aid, defender_id=did, total=tot, needed=n, hit=h, critical=c
@@ -98,8 +99,9 @@ class EventFormatter:
                     return "The party has been defeated."
                 return "Encounter ended in a fault."
 
-            case ActionRejected(combatant_id=cid, reason=reason):
-                return f"Action rejected for {cid}: {reason}"
+            case ActionRejected(combatant_id=cid, reasons=reasons):
+                reason_text = "; ".join(rejection.message for rejection in reasons)
+                return f"Action rejected for {cid}: {reason_text}"
 
             case EncounterFaulted(state=st, error_type=et, message=msg):
                 return f"FAULT in {st.name}: [{et}] {msg}"

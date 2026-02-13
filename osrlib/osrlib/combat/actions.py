@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from osrlib.combat.context import CombatContext, CombatSide
 from osrlib.combat.effects import DamageEffect, Effect
-from osrlib.combat.events import AttackRolled, EncounterEvent
+from osrlib.combat.events import AttackRolled, EncounterEvent, Rejection
 from osrlib.monster import Monster
 from osrlib.player_character import PlayerCharacter
 
@@ -23,7 +23,7 @@ class CombatAction(ABC):
     """Interface implemented by each concrete combat action."""
 
     @abstractmethod
-    def validate(self, ctx: CombatContext) -> tuple[str, ...]:
+    def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
         """Return rejection reasons if the action is illegal."""
 
     @abstractmethod
@@ -38,20 +38,31 @@ class MeleeAttackAction(CombatAction):
     actor_id: str
     target_id: str
 
-    def validate(self, ctx: CombatContext) -> tuple[str, ...]:
+    def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
         actor_ref = ctx.combatants.get(self.actor_id)
         if actor_ref is None:
-            return ("actor is invalid",)
+            return (Rejection(code="INVALID_ACTOR", message="actor is invalid"),)
         if self.actor_id != ctx.current_combatant_id:
-            return (f"not current combatant (expected {ctx.current_combatant_id})",)
+            return (
+                Rejection(
+                    code="NOT_CURRENT_COMBATANT",
+                    message=f"not current combatant (expected {ctx.current_combatant_id})",
+                ),
+            )
         if not actor_ref.is_alive:
-            return ("actor is dead",)
+            return (Rejection(code="ACTOR_DEAD", message="actor is dead"),)
 
         target_ref = ctx.combatants.get(self.target_id)
         if target_ref is None or not target_ref.is_alive:
-            return ("target is dead or invalid",)
+            return (
+                Rejection(code="INVALID_TARGET", message="target is dead or invalid"),
+            )
         if target_ref.side == actor_ref.side:
-            return ("target must be an opponent",)
+            return (
+                Rejection(
+                    code="TARGET_NOT_OPPONENT", message="target must be an opponent"
+                ),
+            )
 
         return ()
 
@@ -109,7 +120,9 @@ class MeleeAttackAction(CombatAction):
             multiplier = 1.5 if is_critical else 1
             amount = math.ceil(damage_roll.total_with_modifier * multiplier)
             effects.append(
-                DamageEffect(source_id=attacker_id, target_id=defender_id, amount=amount)
+                DamageEffect(
+                    source_id=attacker_id, target_id=defender_id, amount=amount
+                )
             )
 
         return ActionResult(events=tuple(events), effects=tuple(effects))

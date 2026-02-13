@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome, EncounterState
 
 
@@ -64,11 +65,32 @@ class TurnSkipped(EncounterEvent):
 
 
 @dataclass(frozen=True)
+class Rejection:
+    """Structured reason for an action validation or execution rejection."""
+
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ActionChoice:
+    """A UI-facing actionable choice for the active combatant."""
+
+    label: str
+    intent: ActionIntent
+
+
+@dataclass(frozen=True)
 class NeedAction(EncounterEvent):
     """Emitted when the engine pauses for an external intent."""
 
     combatant_id: str
-    available_intents: tuple[str, ...]
+    available: tuple[ActionChoice, ...] = ()
+
+    @property
+    def available_intents(self) -> tuple[str, ...]:
+        """Backward-compatible intent names used by older formatter/tests."""
+        return tuple(type(choice.intent).__name__ for choice in self.available)
 
 
 @dataclass(frozen=True)
@@ -132,7 +154,12 @@ class ActionRejected(EncounterEvent):
     """Emitted when a submitted intent fails validation."""
 
     combatant_id: str
-    reason: str
+    reasons: tuple[Rejection, ...]
+
+    @property
+    def reason(self) -> str:
+        """Backward-compatible plain-text view used by older callers."""
+        return "; ".join(rejection.message for rejection in self.reasons)
 
 
 @dataclass(frozen=True)
