@@ -1,0 +1,125 @@
+"""Typed event dataclasses emitted by the combat engine."""
+
+from dataclasses import dataclass
+
+from osrlib.combat.state import EncounterOutcome, EncounterState
+
+
+@dataclass(frozen=True)
+class EncounterEvent:
+    """Base class for all combat events."""
+
+
+@dataclass(frozen=True)
+class EncounterStarted(EncounterEvent):
+    """Emitted once when the engine enters INIT."""
+
+    encounter_id: str
+
+
+@dataclass(frozen=True)
+class SurpriseRolled(EncounterEvent):
+    """Emitted during INIT with surprise roll results."""
+
+    pc_roll: int
+    monster_roll: int
+    pc_surprised: bool
+    monster_surprised: bool
+
+
+@dataclass(frozen=True)
+class RoundStarted(EncounterEvent):
+    """Emitted at the start of each combat round."""
+
+    round_number: int
+
+
+@dataclass(frozen=True)
+class InitiativeRolled(EncounterEvent):
+    """Emitted after initiative is rolled for all combatants."""
+
+    order: tuple[tuple[str, int], ...]
+
+
+@dataclass(frozen=True)
+class TurnQueueBuilt(EncounterEvent):
+    """Emitted after the turn queue is assembled from initiative order."""
+
+    queue: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TurnStarted(EncounterEvent):
+    """Emitted when a living combatant's turn begins."""
+
+    combatant_id: str
+
+
+@dataclass(frozen=True)
+class TurnSkipped(EncounterEvent):
+    """Emitted when a dead combatant's turn is skipped."""
+
+    combatant_id: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class NeedAction(EncounterEvent):
+    """Emitted when the engine pauses for an external intent."""
+
+    combatant_id: str
+    available_intents: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AttackRolled(EncounterEvent):
+    """Emitted for each attack roll (PC or monster)."""
+
+    attacker_id: str
+    defender_id: str
+    roll: int
+    total: int
+    needed: int
+    hit: bool
+    critical: bool
+
+
+@dataclass(frozen=True)
+class DamageApplied(EncounterEvent):
+    """Emitted when damage is dealt to a combatant."""
+
+    source_id: str
+    target_id: str
+    amount: int
+    target_hp_after: int
+
+
+@dataclass(frozen=True)
+class EntityDied(EncounterEvent):
+    """Emitted when a combatant's HP drops to zero."""
+
+    entity_id: str
+
+
+@dataclass(frozen=True)
+class VictoryDetermined(EncounterEvent):
+    """Emitted when one side has been defeated."""
+
+    outcome: EncounterOutcome
+
+
+@dataclass(frozen=True)
+class ActionRejected(EncounterEvent):
+    """Emitted when a submitted intent fails validation."""
+
+    combatant_id: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class EncounterFaulted(EncounterEvent):
+    """Emitted when the engine hits an unrecoverable error."""
+
+    state: EncounterState
+    error_type: str
+    message: str

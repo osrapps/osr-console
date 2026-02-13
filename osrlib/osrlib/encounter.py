@@ -1,6 +1,5 @@
 from collections import deque
 from typing import Optional
-import math
 import random
 from osrlib.party import Party
 from osrlib.monster import MonsterParty
@@ -8,6 +7,7 @@ from osrlib.monster_manual import monster_stats_blocks
 from osrlib.utils import logger, last_message_handler as pylog
 from osrlib.dice_roller import roll_dice
 from osrlib.treasure import Treasure, TreasureType
+from osrlib.combat import CombatEngine, EncounterState, EventFormatter
 
 
 class Encounter:
@@ -56,6 +56,7 @@ class Encounter:
         self.is_started: bool = False
         self.is_ended: bool = False
         self.log: list = []
+        self.engine: CombatEngine | None = None
 
     def __str__(self):
         """Return a string representation of the encounter."""
@@ -82,23 +83,12 @@ class Encounter:
     def start_encounter(self, party: Party):
         """Start the encounter with the given party.
 
-        This method initiates the encounter and sets up conditions like determining surprise and starting combat if the
-        encounter contains a hostile [MonsterParty][osrlib.monster.MonsterParty]. If so, it compares the surprise rolls
-        of the player's party and the monster party to decide which party is surprised, then proceeds to start combat
-        with its `_start_combat` private method if combat is necessary. If there are no monsters, the encounter proceeds
+        This method initiates the encounter and runs combat to completion using the
+        state-machine ``CombatEngine``. If there are no monsters, the encounter proceeds
         as a non-combat scenario.
 
         Args:
             party (Party): The player's party involved in the encounter.
-
-        Example:
-        ```python
-        # Assuming 'encounter' is an instance of Encounter and 'player_party' is an instance of Party
-        encounter.start_encounter(player_party)
-
-        # This initiates the encounter, determining surprise, starting combat if applicable,
-        # and logging the start of the encounter.
-        ```
         """
         self.is_started = True
         logger.debug(f"Starting encounter '{self.name}'...")
@@ -106,137 +96,31 @@ class Encounter:
 
         self.pc_party = party
 
-        if self.monster_party is None:
+        if self.monster_party is None or len(self.monster_party.members) == 0:
             logger.debug(
                 f"Encounter {self.name} has no monsters - continuing as non-combat encounter."
             )
             self.log_mesg(pylog.last_message)
+            self.end_encounter()
             return
 
-        pc_party_surprise_roll = self.pc_party.get_surprise_roll()
-        monster_party_surprise_roll = self.monster_party.get_surprise_roll()
+        self.engine = CombatEngine(pc_party=party, monster_party=self.monster_party)
+        formatter = EventFormatter()
 
-        if (
-            pc_party_surprise_roll > monster_party_surprise_roll
-            or pc_party_surprise_roll == monster_party_surprise_roll
-        ):
-            logger.debug(f"Monsters are surprised!")
-            self.log_mesg(pylog.last_message)
-            # TODO: Get player input to determine if PCs want to attack or run away, but for now, just start combat.
-            self._start_combat()
-        elif monster_party_surprise_roll > pc_party_surprise_roll:
-            logger.debug(f"PCs are surprised!")
-            self.log_mesg(pylog.last_message)
-            self._start_combat()
+        # Phase 1: all intents auto-submitted, run to completion.
+        # Safety bound prevents infinite loop if engine reaches AWAIT_INTENT.
+        max_steps = 10_000
+        for _ in range(max_steps):
+            result = self.engine.step()
+            for event in result.events:
+                self.log_mesg(formatter.format(event))
+            if self.engine.state == EncounterState.ENDED:
+                break
+            if result.needs_intent:
+                logger.warning("Combat engine unexpectedly awaiting intent in synchronous mode")
+                break
 
-    def _start_combat(self):
-        logger.debug(f"Starting combat in encounter '{self.name}'...")
-        self.log_mesg(pylog.last_message)
-
-        # Get initiative rolls for both parties
-        party_initiative = [
-            (pc, pc.get_initiative_roll()) for pc in self.pc_party.members
-        ]
-        monster_initiative = [
-            (monster, monster.get_initiative_roll())
-            for monster in self.monster_party.members
-        ]
-
-        # Combine and sort the combatants by initiative roll
-        combatants_sorted_by_initiative = sorted(
-            party_initiative + monster_initiative, key=lambda x: x[1], reverse=True
-        )
-
-        # Populate the combat queue with only the combatant objects
-        self.combat_queue.extend(
-            [combatant[0] for combatant in combatants_sorted_by_initiative]
-        )
-
-        # Start combat
-        round_num = 0  # Track rounds for spell and other time-based effects
-        while (
-            self.pc_party.is_alive and self.monster_party.is_alive and round_num < 1000
-        ):
-            round_num += 1
-            self.execute_combat_round(round_num)
-
-        # All members of one party killed - end the encounter
         self.end_encounter()
-
-    def execute_combat_round(self, round_num: int):
-        logger.debug(f"Starting combat round {round_num}...")
-        self.log_mesg(pylog.last_message)
-
-        # Deque first combatant to act
-        attacker = self.combat_queue.popleft()
-
-        # If combatant is PC, player chooses a monster to attack
-        if attacker in self.pc_party.members:
-            # TODO: Get player input for next action, but for now, just attack a random monster
-            defender = random.choice(
-                [monster for monster in self.monster_party.members if monster.is_alive]
-            )
-            needed_to_hit = attacker.character_class.current_level.get_to_hit_target_ac(
-                defender.armor_class
-            )
-            attack_roll = (
-                attacker.get_attack_roll()
-            )
-            # TODO: Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_attack_roll()
-            # TODO: attack_item = attacker.inventory.get_equipped_item_by_type(attack_roll.attack_type)
-            weapon = attacker.inventory.get_equipped_weapon().name.lower()
-
-            # Natural 20 always hits and a 1 always misses
-            if attack_roll.total == 20 or (
-                attack_roll.total > 1
-                and attack_roll.total_with_modifier >= needed_to_hit
-            ):
-                damage_roll = (
-                    attacker.get_damage_roll()
-                )  # Pass attack type (e.g., MELEE, RANGED, SPELL, etc.) to get_damage_roll()
-                damage_multiplier = 1.5 if attack_roll.total == 20 else 1
-                damage_mesg_suffix = " CRITICAL HIT!" if attack_roll.total == 20 else ""
-                damage_amount = math.ceil(
-                    damage_roll.total_with_modifier * damage_multiplier
-                )
-                defender.apply_damage(damage_amount)
-
-                attack_mesg_suffix = f" for {damage_amount} damage.{damage_mesg_suffix}"
-            else:
-                attack_mesg_suffix = f" and missed."
-            logger.debug(
-                f"{attacker.name} ({attacker.character_class}) attacked {defender.name} with their {weapon} ({attack_roll.total_with_modifier} on {attack_roll}){attack_mesg_suffix}"
-            )
-            self.log_mesg(pylog.last_message)
-        elif attacker in self.monster_party.members:
-            defender = random.choice(
-                [pc for pc in self.pc_party.members if pc.is_alive]
-            )
-            needed_to_hit = attacker.get_to_hit_target_ac(defender.armor_class)
-            for attack_roll in attacker.get_attack_rolls():
-                if (
-                    defender.is_alive
-                    and attack_roll.total_with_modifier >= needed_to_hit
-                ):
-                    damage_roll = attacker.get_damage_roll()
-                    defender.apply_damage(damage_roll.total_with_modifier)
-                    logger.debug(
-                        f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} for {damage_roll.total_with_modifier} damage."
-                    )
-                    self.log_mesg(pylog.last_message)
-                else:
-                    logger.debug(
-                        f"{attacker.name} attacked {defender.name} and rolled {attack_roll.total_with_modifier} on {attack_roll} and missed."
-                    )
-                    self.log_mesg(pylog.last_message)
-
-        if not defender.is_alive:
-            logger.debug(f"{defender.name} was killed!")
-            self.log_mesg(pylog.last_message)
-            self.combat_queue.remove(defender)
-
-        # Add the attacker back into the combat queue
-        self.combat_queue.append(attacker)
 
     def end_encounter(self):
         """Ends an encounter that was previously started with `start_encounter()`.
