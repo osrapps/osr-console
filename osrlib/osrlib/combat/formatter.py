@@ -7,6 +7,7 @@ so that ``DungeonAssistant.summarize_battle()`` receives similar input.
 from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
+    ConditionApplied,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
@@ -15,6 +16,7 @@ from osrlib.combat.events import (
     InitiativeRolled,
     NeedAction,
     RoundStarted,
+    SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
     TurnSkipped,
@@ -60,8 +62,9 @@ class EventFormatter:
             case TurnSkipped(combatant_id=cid, reason=reason):
                 return f"{cid}'s turn skipped ({reason})."
 
-            case NeedAction(combatant_id=cid, available_intents=intents):
-                return f"Awaiting action for {cid}: {', '.join(intents)}"
+            case NeedAction(combatant_id=cid, available=choices):
+                labels = [choice.label for choice in choices]
+                return f"Awaiting action for {cid}: {', '.join(labels)}"
 
             case AttackRolled(
                 attacker_id=aid, defender_id=did, total=tot, needed=n, hit=h, critical=c
@@ -77,6 +80,15 @@ class EventFormatter:
             ):
                 return f"{sid} dealt {amt} damage to {tid} (HP: {hp})."
 
+            case SpellSlotConsumed(caster_id=cid, level=level, remaining=rem):
+                return f"{cid} used a level {level} spell slot ({rem} remaining)."
+
+            case ConditionApplied(
+                source_id=sid, target_id=tid, condition_id=cond, duration=dur
+            ):
+                duration_text = "permanent" if dur is None else f"{dur} rounds"
+                return f"{sid} applied {cond} to {tid} ({duration_text})."
+
             case EntityDied(entity_id=eid):
                 return f"{eid} was killed!"
 
@@ -87,8 +99,9 @@ class EventFormatter:
                     return "The party has been defeated."
                 return "Encounter ended in a fault."
 
-            case ActionRejected(combatant_id=cid, reason=reason):
-                return f"Action rejected for {cid}: {reason}"
+            case ActionRejected(combatant_id=cid, reasons=reasons):
+                reason_text = "; ".join(rejection.message for rejection in reasons)
+                return f"Action rejected for {cid}: {reason_text}"
 
             case EncounterFaulted(state=st, error_type=et, message=msg):
                 return f"FAULT in {st.name}: [{et}] {msg}"

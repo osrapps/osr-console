@@ -1,26 +1,35 @@
 """State-machine combat engine for B/X-style tactical encounters."""
 
-import math
 import uuid
 from collections import deque
 from dataclasses import dataclass
 
-from osrlib.monster import Monster, MonsterParty
+from osrlib.monster import MonsterParty
 from osrlib.party import Party
-from osrlib.player_character import PlayerCharacter
 
-from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
+from osrlib.combat.actions import CombatAction, MeleeAttackAction
+from osrlib.combat.context import CombatContext, CombatSide
 from osrlib.combat.dice_service import BXDiceService, DiceService
+from osrlib.combat.effects import (
+    ApplyConditionEffect,
+    ConsumeSlotEffect,
+    DamageEffect,
+    Effect,
+)
 from osrlib.combat.events import (
+    ActionChoice,
     ActionRejected,
-    AttackRolled,
+    ConditionApplied,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
     InitiativeRolled,
+    NeedAction,
     RoundStarted,
+    Rejection,
+    SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
     TurnSkipped,
@@ -48,8 +57,10 @@ class CombatEngine:
     ``step_until_decision()`` to run until the engine needs an external intent
     (or combat ends).
 
-    In Phase 1 the engine auto-submits intents for all combatants, so calling
+    By default, the engine auto-submits intents for all combatants, so calling
     ``step()`` in a loop until ``state == ENDED`` runs a full encounter.
+    Pass ``auto_resolve_intents=False`` to pause at ``AWAIT_INTENT`` and
+    require external intent submission.
     """
 
     def __init__(
@@ -57,12 +68,17 @@ class CombatEngine:
         pc_party: Party,
         monster_party: MonsterParty,
         dice: DiceService | None = None,
+        auto_resolve_intents: bool = True,
     ) -> None:
         self._ctx = CombatContext.build(pc_party, monster_party)
         self._dice: DiceService = dice or BXDiceService()
+        self._auto_resolve_intents = auto_resolve_intents
         self._state = EncounterState.INIT
         self._encounter_id = uuid.uuid4().hex[:12]
         self._pending_intent: ActionIntent | None = None
+        self._validated_action: CombatAction | None = None
+        self._pending_effects: tuple[Effect, ...] = ()
+        self._spell_slots_remaining_by_caster: dict[str, dict[int, int]] = {}
         self._outcome: EncounterOutcome | None = None
 
     # -- Public API ----------------------------------------------------------
@@ -199,15 +215,27 @@ class CombatEngine:
 
         events.append(TurnStarted(combatant_id=cid))
 
-        # Phase 1 auto-provider: auto-submit a MeleeAttackIntent
+        # Auto-provider: submit a MeleeAttackIntent against a random living opponent.
         opposite_side = (
             CombatSide.MONSTER if ref.side == CombatSide.PC else CombatSide.PC
         )
         living_targets = self._ctx.living(opposite_side)
 
         if not living_targets:
-            # No targets remain — go straight to victory check
+            # No targets remain, go straight to victory check.
             self._state = EncounterState.CHECK_VICTORY
+            return
+
+        if not self._auto_resolve_intents:
+            available_choices = tuple(
+                ActionChoice(
+                    label=f"Melee attack {target.id}",
+                    intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
+                )
+                for target in living_targets
+            )
+            events.append(NeedAction(combatant_id=cid, available=available_choices))
+            self._state = EncounterState.AWAIT_INTENT
             return
 
         target = self._dice.choice(living_targets)
@@ -227,137 +255,174 @@ class CombatEngine:
             events.append(
                 ActionRejected(
                     combatant_id=self._ctx.current_combatant_id or "",
-                    reason="no intent",
+                    reasons=(Rejection(code="NO_INTENT", message="no intent"),),
                 )
             )
             self._state = EncounterState.AWAIT_INTENT
             return
 
-        # Validate actor matches current combatant
-        if intent.actor_id != self._ctx.current_combatant_id:
+        action = self._action_for_intent(intent)
+        if action is None:
             events.append(
                 ActionRejected(
                     combatant_id=intent.actor_id,
-                    reason=f"not current combatant (expected {self._ctx.current_combatant_id})",
+                    reasons=(
+                        Rejection(
+                            code="UNSUPPORTED_INTENT",
+                            message="unsupported intent",
+                        ),
+                    ),
                 )
             )
             self._state = EncounterState.AWAIT_INTENT
             return
 
-        # Validate target is alive
-        target_ref = self._ctx.combatants.get(intent.target_id)
-        if target_ref is None or not target_ref.is_alive:
-            events.append(
-                ActionRejected(
-                    combatant_id=intent.actor_id, reason="target is dead or invalid"
-                )
-            )
+        reasons = action.validate(self._ctx)
+        if reasons:
+            events.append(ActionRejected(combatant_id=intent.actor_id, reasons=reasons))
             self._state = EncounterState.AWAIT_INTENT
             return
 
-        # Intent is valid — stash for execution
-        self._validated_intent = intent
+        self._validated_action = action
         self._state = EncounterState.EXECUTE_ACTION
 
     def _handle_execute_action(self, events: list[EncounterEvent]) -> None:
-        intent: MeleeAttackIntent = self._validated_intent
-        self._validated_intent = None
+        action = self._validated_action
+        self._validated_action = None
 
-        attacker_ref = self._ctx.combatants[intent.actor_id]
-        defender_ref = self._ctx.combatants[intent.target_id]
+        if action is None:
+            events.append(
+                ActionRejected(
+                    combatant_id=self._ctx.current_combatant_id or "",
+                    reasons=(
+                        Rejection(
+                            code="NO_VALIDATED_ACTION",
+                            message="no validated action",
+                        ),
+                    ),
+                )
+            )
+            self._state = EncounterState.AWAIT_INTENT
+            return
 
-        if attacker_ref.side == CombatSide.PC:
-            self._execute_pc_attack(attacker_ref, defender_ref, events)
-        else:
-            self._execute_monster_attack(attacker_ref, defender_ref, events)
+        result = action.execute(self._ctx)
+        events.extend(result.events)
+        self._pending_effects = result.effects
+        self._state = EncounterState.APPLY_EFFECTS
+
+    def _handle_apply_effects(self, events: list[EncounterEvent]) -> None:
+        effects = self._pending_effects
+        self._pending_effects = ()
+
+        for effect in effects:
+            match effect:
+                case DamageEffect(
+                    source_id=source_id, target_id=target_id, amount=amount
+                ):
+                    target_ref = self._ctx.combatants[target_id]
+                    target_ref.entity.apply_damage(amount)
+                    events.append(
+                        DamageApplied(
+                            source_id=source_id,
+                            target_id=target_id,
+                            amount=amount,
+                            target_hp_after=target_ref.entity.hit_points,
+                        )
+                    )
+                case ConsumeSlotEffect(caster_id=caster_id, level=level):
+                    caster_ref = self._ctx.combatants[caster_id]
+                    try:
+                        remaining = self._consume_spell_slot(
+                            caster_id=caster_id,
+                            caster_entity=caster_ref.entity,
+                            level=level,
+                        )
+                    except ValueError as exc:
+                        events.append(
+                            ActionRejected(
+                                combatant_id=caster_id,
+                                reasons=(
+                                    Rejection(code="NO_SPELL_SLOT", message=str(exc)),
+                                ),
+                            )
+                        )
+                        continue
+                    events.append(
+                        SpellSlotConsumed(
+                            caster_id=caster_id,
+                            level=level,
+                            remaining=remaining,
+                        )
+                    )
+                case ApplyConditionEffect(
+                    source_id=source_id,
+                    target_id=target_id,
+                    condition_id=condition_id,
+                    duration=duration,
+                ):
+                    events.append(
+                        ConditionApplied(
+                            source_id=source_id,
+                            target_id=target_id,
+                            condition_id=condition_id,
+                            duration=duration,
+                        )
+                    )
+                case _:
+                    events.append(
+                        ActionRejected(
+                            combatant_id=self._ctx.current_combatant_id or "",
+                            reasons=(
+                                Rejection(
+                                    code="UNKNOWN_EFFECT_TYPE",
+                                    message=f"unknown effect type: {type(effect).__name__}",
+                                ),
+                            ),
+                        )
+                    )
 
         self._state = EncounterState.CHECK_DEATHS
 
-    def _execute_pc_attack(
-        self,
-        attacker_ref: CombatantRef,
-        defender_ref: CombatantRef,
-        events: list[EncounterEvent],
-    ) -> None:
-        pc: PlayerCharacter = attacker_ref.entity
-        defender: Monster = defender_ref.entity
+    def _consume_spell_slot(
+        self, caster_id: str, caster_entity: object, level: int
+    ) -> int:
+        """Consume one spell slot and return remaining slots at that level."""
+        use_spell_slot = getattr(caster_entity, "use_spell_slot", None)
+        if callable(use_spell_slot):
+            return int(use_spell_slot(level))
 
-        needed = pc.character_class.current_level.get_to_hit_target_ac(
-            defender.armor_class
-        )
-        attack_roll = pc.get_attack_roll()
-        raw = attack_roll.total
-        total = attack_roll.total_with_modifier
-
-        is_critical = raw == 20
-        is_hit = is_critical or (raw > 1 and total >= needed)
-
-        events.append(
-            AttackRolled(
-                attacker_id=attacker_ref.id,
-                defender_id=defender_ref.id,
-                roll=raw,
-                total=total,
-                needed=needed,
-                hit=is_hit,
-                critical=is_critical,
-            )
-        )
-
-        if is_hit:
-            damage_roll = pc.get_damage_roll()
-            multiplier = 1.5 if is_critical else 1
-            amount = math.ceil(damage_roll.total_with_modifier * multiplier)
-            defender.apply_damage(amount)
-            events.append(
-                DamageApplied(
-                    source_id=attacker_ref.id,
-                    target_id=defender_ref.id,
-                    amount=amount,
-                    target_hp_after=defender.hit_points,
-                )
+        if caster_id not in self._spell_slots_remaining_by_caster:
+            self._spell_slots_remaining_by_caster[caster_id] = (
+                self._get_spell_slots_for_caster(caster_entity)
             )
 
-    def _execute_monster_attack(
-        self,
-        attacker_ref: CombatantRef,
-        defender_ref: CombatantRef,
-        events: list[EncounterEvent],
-    ) -> None:
-        monster: Monster = attacker_ref.entity
-        defender: PlayerCharacter = defender_ref.entity
+        slots = self._spell_slots_remaining_by_caster[caster_id]
+        if slots.get(level, 0) <= 0:
+            raise ValueError(f"no level {level} spell slots remaining")
 
-        needed = monster.get_to_hit_target_ac(defender.armor_class)
+        slots[level] -= 1
+        return slots[level]
 
-        for attack_roll in monster.get_attack_rolls():
-            raw = attack_roll.total
-            total = attack_roll.total_with_modifier
-            is_hit = defender.is_alive and total >= needed
+    @staticmethod
+    def _get_spell_slots_for_caster(caster_entity: object) -> dict[int, int]:
+        """Extract spell-slot counts from the caster's current class level."""
+        character_class = getattr(caster_entity, "character_class", None)
+        if character_class is None:
+            return {}
 
-            events.append(
-                AttackRolled(
-                    attacker_id=attacker_ref.id,
-                    defender_id=defender_ref.id,
-                    roll=raw,
-                    total=total,
-                    needed=needed,
-                    hit=is_hit,
-                    critical=False,
-                )
+        current_level = getattr(character_class, "current_level", None)
+        spell_slots = getattr(current_level, "spell_slots", None)
+        if not spell_slots:
+            return {}
+
+        return {int(slot_level): int(count) for slot_level, count in spell_slots}
+
+    def _action_for_intent(self, intent: ActionIntent) -> CombatAction | None:
+        if isinstance(intent, MeleeAttackIntent):
+            return MeleeAttackAction(
+                actor_id=intent.actor_id, target_id=intent.target_id
             )
-
-            if is_hit:
-                damage_roll = monster.get_damage_roll()
-                amount = damage_roll.total_with_modifier
-                defender.apply_damage(amount)
-                events.append(
-                    DamageApplied(
-                        source_id=attacker_ref.id,
-                        target_id=defender_ref.id,
-                        amount=amount,
-                        target_hp_after=defender.hit_points,
-                    )
-                )
+        return None
 
     def _handle_check_deaths(self, events: list[EncounterEvent]) -> None:
         for cid, ref in self._ctx.combatants.items():
@@ -367,7 +432,7 @@ class CombatEngine:
         self._state = EncounterState.CHECK_MORALE
 
     def _handle_check_morale(self, events: list[EncounterEvent]) -> None:
-        # Phase 1: pass-through, no morale checks
+        # Phase 2: pass-through, no morale checks yet.
         self._state = EncounterState.CHECK_VICTORY
 
     def _handle_check_victory(self, events: list[EncounterEvent]) -> None:
@@ -394,6 +459,7 @@ class CombatEngine:
         EncounterState.AWAIT_INTENT: _handle_await_intent,
         EncounterState.VALIDATE_INTENT: _handle_validate_intent,
         EncounterState.EXECUTE_ACTION: _handle_execute_action,
+        EncounterState.APPLY_EFFECTS: _handle_apply_effects,
         EncounterState.CHECK_DEATHS: _handle_check_deaths,
         EncounterState.CHECK_MORALE: _handle_check_morale,
         EncounterState.CHECK_VICTORY: _handle_check_victory,

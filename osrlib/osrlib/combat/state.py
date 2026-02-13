@@ -12,6 +12,7 @@ class EncounterState(Enum):
     AWAIT_INTENT = auto()
     VALIDATE_INTENT = auto()
     EXECUTE_ACTION = auto()
+    APPLY_EFFECTS = auto()
     CHECK_DEATHS = auto()
     CHECK_MORALE = auto()
     CHECK_VICTORY = auto()

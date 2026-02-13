@@ -1,10 +1,17 @@
-"""Tests for the Phase 1 state-driven combat engine."""
+"""Tests for the state-driven combat engine."""
 
 import pytest
 from osrlib.combat import (
+    ActionChoice,
+    ApplyConditionEffect,
     ActionRejected,
     AttackRolled,
+    CombatSide,
     CombatEngine,
+    ConditionApplied,
+    ConsumeSlotEffect,
+    DamageApplied,
+    DamageEffect,
     EncounterLoopError,
     EncounterOutcome,
     EncounterStarted,
@@ -14,14 +21,18 @@ from osrlib.combat import (
     EventSerializer,
     FixedDiceService,
     InitiativeRolled,
+    MeleeAttackAction,
     MeleeAttackIntent,
+    NeedAction,
     RoundStarted,
+    SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
     TurnSkipped,
     TurnStarted,
     VictoryDetermined,
 )
+from osrlib.dice_roller import DiceRoll
 from osrlib.monster import MonsterParty, MonsterStatsBlock
 from osrlib.party import Party
 from osrlib.player_character import Alignment
@@ -176,6 +187,18 @@ def test_state_transitions(default_party, goblin_party):
     result = engine.step()
     assert result.state == EncounterState.VALIDATE_INTENT
     assert any(isinstance(e, TurnStarted) for e in result.events)
+
+    # VALIDATE_INTENT -> EXECUTE_ACTION
+    result = engine.step()
+    assert result.state == EncounterState.EXECUTE_ACTION
+
+    # EXECUTE_ACTION -> APPLY_EFFECTS
+    result = engine.step()
+    assert result.state == EncounterState.APPLY_EFFECTS
+
+    # APPLY_EFFECTS -> CHECK_DEATHS
+    result = engine.step()
+    assert result.state == EncounterState.CHECK_DEATHS
 
 
 # ---------------------------------------------------------------------------
@@ -348,11 +371,88 @@ def test_monster_victory():
     monster_party = MonsterParty(strong_stats)
 
     engine = CombatEngine(pc_party=party, monster_party=monster_party)
+
+    # Make this test deterministic: PCs always miss, monster always hits.
+    for pc in party.members:
+        pc.get_attack_roll = lambda: DiceRoll(1, 20, 1, 0, 1, [1])
+
+    monster_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
+    monster = engine._ctx.combatants[monster_id].entity
+    monster.get_to_hit_target_ac = lambda _: 1
+    monster.get_attack_rolls = lambda: [
+        DiceRoll(1, 20, 20, 0, 20, [20]),
+        DiceRoll(1, 20, 20, 0, 20, [20]),
+        DiceRoll(1, 20, 20, 0, 20, [20]),
+    ]
+    monster.get_damage_roll = lambda: DiceRoll(1, 6, 6, 0, 6, [6])
+
     events = _collect_events(engine)
 
     victory_events = _find_events(events, VictoryDetermined)
     assert len(victory_events) == 1
     assert victory_events[0].outcome == EncounterOutcome.OPPOSITION_VICTORY
+
+
+# ---------------------------------------------------------------------------
+# 11b. Manual mode pauses at AWAIT_INTENT and emits NeedAction
+# ---------------------------------------------------------------------------
+
+
+def test_manual_mode_pauses_and_emits_need_action(default_party, goblin_party):
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    engine.step()  # INIT -> ROUND_START
+    engine.step()  # ROUND_START -> TURN_START
+    result = engine.step()  # TURN_START -> AWAIT_INTENT
+
+    assert result.state == EncounterState.AWAIT_INTENT
+    assert result.needs_intent is True
+    assert result.pending_combatant_id is not None
+    need_action_events = [e for e in result.events if isinstance(e, NeedAction)]
+    assert len(need_action_events) == 1
+    assert need_action_events[0].combatant_id == result.pending_combatant_id
+    assert len(need_action_events[0].available) > 0
+    assert all(
+        isinstance(choice, ActionChoice) for choice in need_action_events[0].available
+    )
+    assert "MeleeAttackIntent" in need_action_events[0].available_intents
+
+
+# ---------------------------------------------------------------------------
+# 11c. Manual mode accepts submitted intent and advances through execution
+# ---------------------------------------------------------------------------
+
+
+def test_manual_mode_submitted_intent_executes(default_party, goblin_party):
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+    results = engine.step_until_decision(max_steps=8)
+    decision = results[-1]
+    assert decision.state == EncounterState.AWAIT_INTENT
+    assert decision.pending_combatant_id is not None
+
+    actor_id = decision.pending_combatant_id
+    actor_side = engine._ctx.combatants[actor_id].side
+    target_side = CombatSide.MONSTER if actor_side == CombatSide.PC else CombatSide.PC
+    target_id = engine._ctx.living(target_side)[0].id
+
+    results = engine.step_until_decision(
+        intent=MeleeAttackIntent(actor_id=actor_id, target_id=target_id),
+        max_steps=8,
+    )
+    assert results[0].state == EncounterState.VALIDATE_INTENT
+    assert any(
+        isinstance(event, AttackRolled) for result in results for event in result.events
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -455,6 +555,7 @@ def test_action_rejected_dead_target(default_party, goblin_party):
             result = engine.step()  # VALIDATE_INTENT
             rejected = [e for e in result.events if isinstance(e, ActionRejected)]
             assert len(rejected) == 1
+            assert rejected[0].reasons[0].code == "INVALID_TARGET"
             assert "dead" in rejected[0].reason
 
 
@@ -573,3 +674,274 @@ def test_step_until_decision_faults_engine(default_party, goblin_party):
 
     assert engine.state == EncounterState.ENDED
     assert engine.outcome == EncounterOutcome.FAULTED
+
+
+# ---------------------------------------------------------------------------
+# 19. EXECUTE_ACTION emits resolution only; APPLY_EFFECTS emits mutation only
+# ---------------------------------------------------------------------------
+
+
+def test_resolution_and_mutation_emitted_in_separate_states(
+    default_party, weak_goblin_party
+):
+    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+
+    # Drive to EXECUTE_ACTION
+    engine.step()  # INIT -> ROUND_START
+    engine.step()  # ROUND_START -> TURN_START
+    engine.step()  # TURN_START -> VALIDATE_INTENT
+    engine.step()  # VALIDATE_INTENT -> EXECUTE_ACTION
+    assert engine.state == EncounterState.EXECUTE_ACTION
+
+    action = engine._validated_action
+    assert action is not None
+
+    attacker_ref = engine._ctx.combatants[action.actor_id]
+    if attacker_ref.side.name == "PC":
+        attacker_ref.entity.get_attack_roll = lambda: DiceRoll(1, 20, 20, 0, 20, [20])
+        attacker_ref.entity.get_damage_roll = lambda: DiceRoll(1, 6, 4, 0, 4, [4])
+    else:
+        attacker_ref.entity.get_to_hit_target_ac = lambda _: 2
+        attacker_ref.entity.get_attack_rolls = lambda: [
+            DiceRoll(1, 20, 15, 0, 15, [15])
+        ]
+        attacker_ref.entity.get_damage_roll = lambda: DiceRoll(1, 6, 4, 0, 4, [4])
+
+    result = engine.step()  # EXECUTE_ACTION -> APPLY_EFFECTS
+    assert result.state == EncounterState.APPLY_EFFECTS
+    assert any(isinstance(e, AttackRolled) for e in result.events)
+    assert not any(isinstance(e, DamageApplied) for e in result.events)
+
+    result = engine.step()  # APPLY_EFFECTS -> CHECK_DEATHS
+    assert result.state == EncounterState.CHECK_DEATHS
+    assert any(isinstance(e, DamageApplied) for e in result.events)
+
+
+# ---------------------------------------------------------------------------
+# 20. APPLY_EFFECTS preserves effect ordering
+# ---------------------------------------------------------------------------
+
+
+def test_apply_effects_ordering(default_party, goblin_party):
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+    source_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
+
+    target = engine._ctx.combatants[target_id].entity
+    target.hit_points = 20
+
+    engine._pending_effects = (
+        DamageEffect(source_id=source_id, target_id=target_id, amount=3),
+        DamageEffect(source_id=source_id, target_id=target_id, amount=4),
+    )
+
+    events = []
+    engine._handle_apply_effects(events)
+
+    damage_events = [e for e in events if isinstance(e, DamageApplied)]
+    assert [e.amount for e in damage_events] == [3, 4]
+    assert target.hit_points == 13
+    assert engine.state == EncounterState.CHECK_DEATHS
+
+
+# ---------------------------------------------------------------------------
+# 21. MeleeAttackAction parity: PC critical and damage multiplier
+# ---------------------------------------------------------------------------
+
+
+def test_melee_attack_action_pc_parity(default_party, weak_goblin_party):
+    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+    actor_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
+    engine._ctx.current_combatant_id = actor_id
+
+    pc = engine._ctx.combatants[actor_id].entity
+    pc.get_attack_roll = lambda: DiceRoll(1, 20, 20, 0, 20, [20])
+    pc.get_damage_roll = lambda: DiceRoll(1, 8, 5, 0, 5, [5])
+
+    action = MeleeAttackAction(actor_id=actor_id, target_id=target_id)
+    assert action.validate(engine._ctx) == ()
+
+    result = action.execute(engine._ctx)
+    assert len(result.events) == 1
+    assert isinstance(result.events[0], AttackRolled)
+    assert result.events[0].critical is True
+    assert result.events[0].hit is True
+
+    assert len(result.effects) == 1
+    effect = result.effects[0]
+    assert isinstance(effect, DamageEffect)
+    assert effect.amount == 8  # ceil(5 * 1.5)
+
+
+# ---------------------------------------------------------------------------
+# 22. MeleeAttackAction parity: monster multi-attack stops on lethal damage
+# ---------------------------------------------------------------------------
+
+
+def test_melee_attack_action_monster_multi_attack_parity(
+    default_party, multi_attack_party
+):
+    engine = CombatEngine(pc_party=default_party, monster_party=multi_attack_party)
+    actor_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    engine._ctx.current_combatant_id = actor_id
+
+    monster = engine._ctx.combatants[actor_id].entity
+    target = engine._ctx.combatants[target_id].entity
+    target.character_class.hp = 10
+
+    monster.get_to_hit_target_ac = lambda _: 10
+    monster.get_attack_rolls = lambda: [
+        DiceRoll(1, 20, 15, 0, 15, [15]),
+        DiceRoll(1, 20, 15, 0, 15, [15]),
+        DiceRoll(1, 20, 15, 0, 15, [15]),
+    ]
+
+    damage_values = iter([6, 6, 6])
+
+    def _damage_roll():
+        value = next(damage_values)
+        return DiceRoll(1, 6, value, 0, value, [value])
+
+    monster.get_damage_roll = _damage_roll
+
+    action = MeleeAttackAction(actor_id=actor_id, target_id=target_id)
+    assert action.validate(engine._ctx) == ()
+
+    result = action.execute(engine._ctx)
+
+    attack_events = [e for e in result.events if isinstance(e, AttackRolled)]
+    assert len(attack_events) == 3
+    assert [e.hit for e in attack_events] == [True, True, False]
+    assert [e.amount for e in result.effects if isinstance(e, DamageEffect)] == [6, 6]
+
+
+# ---------------------------------------------------------------------------
+# 23. ConsumeSlotEffect applies via class-level slots when caster API is absent
+# ---------------------------------------------------------------------------
+
+
+def test_consume_slot_effect_uses_class_level_slots(default_party, goblin_party):
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    caster_id = None
+    slot_level = None
+    slot_count = None
+    for cid, ref in engine._ctx.combatants.items():
+        if not cid.startswith("pc:"):
+            continue
+        slots = getattr(ref.entity.character_class.current_level, "spell_slots", None)
+        if slots:
+            caster_id = cid
+            slot_level, slot_count = slots[0]
+            break
+
+    assert caster_id is not None, "fixture party must include at least one spellcaster"
+    assert slot_level is not None
+    assert slot_count is not None
+
+    engine._pending_effects = (
+        ConsumeSlotEffect(caster_id=caster_id, level=slot_level),
+    )
+    events = []
+    engine._handle_apply_effects(events)
+
+    consumed = [e for e in events if isinstance(e, SpellSlotConsumed)]
+    assert len(consumed) == 1
+    assert consumed[0].caster_id == caster_id
+    assert consumed[0].level == slot_level
+    assert consumed[0].remaining == slot_count - 1
+    assert engine.state == EncounterState.CHECK_DEATHS
+
+
+# ---------------------------------------------------------------------------
+# 24. ConsumeSlotEffect rejects when no slot is available
+# ---------------------------------------------------------------------------
+
+
+def test_consume_slot_effect_rejected_without_available_slot(
+    default_party, goblin_party
+):
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    caster_id = None
+    for cid, ref in engine._ctx.combatants.items():
+        if not cid.startswith("pc:"):
+            continue
+        slots = getattr(ref.entity.character_class.current_level, "spell_slots", None)
+        if not slots:
+            caster_id = cid
+            break
+
+    assert caster_id is not None, (
+        "fixture party must include at least one non-spellcaster"
+    )
+
+    engine._pending_effects = (ConsumeSlotEffect(caster_id=caster_id, level=1),)
+    events = []
+    engine._handle_apply_effects(events)
+
+    rejected = [e for e in events if isinstance(e, ActionRejected)]
+    assert len(rejected) == 1
+    assert rejected[0].reasons[0].code == "NO_SPELL_SLOT"
+    assert rejected[0].combatant_id == caster_id
+    assert "no level 1 spell slots remaining" in rejected[0].reason
+    assert engine.state == EncounterState.CHECK_DEATHS
+
+
+# ---------------------------------------------------------------------------
+# 25. ApplyConditionEffect emits ConditionApplied
+# ---------------------------------------------------------------------------
+
+
+def test_apply_condition_effect_emits_event(default_party, goblin_party):
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+    source_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
+
+    engine._pending_effects = (
+        ApplyConditionEffect(
+            source_id=source_id,
+            target_id=target_id,
+            condition_id="stunned",
+            duration=2,
+        ),
+    )
+    events = []
+    engine._handle_apply_effects(events)
+
+    applied = [e for e in events if isinstance(e, ConditionApplied)]
+    assert len(applied) == 1
+    assert applied[0].source_id == source_id
+    assert applied[0].target_id == target_id
+    assert applied[0].condition_id == "stunned"
+    assert applied[0].duration == 2
+    assert engine.state == EncounterState.CHECK_DEATHS
+
+
+# ---------------------------------------------------------------------------
+# 26. Unknown effect types are rejected (not silently dropped)
+# ---------------------------------------------------------------------------
+
+
+def test_unknown_effect_type_is_rejected(default_party, goblin_party):
+    class UnknownEffect:
+        pass
+
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+    engine._pending_effects = (UnknownEffect(),)
+    events = []
+    engine._handle_apply_effects(events)
+
+    rejected = [e for e in events if isinstance(e, ActionRejected)]
+    assert len(rejected) == 1
+    assert rejected[0].reasons[0].code == "UNKNOWN_EFFECT_TYPE"
+    assert "unknown effect type: UnknownEffect" in rejected[0].reason
+    assert engine.state == EncounterState.CHECK_DEATHS

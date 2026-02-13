@@ -7,10 +7,19 @@ Import public types from here::
 
 from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
 from osrlib.combat.dice_service import BXDiceService, DiceService, FixedDiceService
+from osrlib.combat.effects import (
+    ApplyConditionEffect,
+    ConsumeSlotEffect,
+    DamageEffect,
+    Effect,
+)
+from osrlib.combat.actions import ActionResult, CombatAction, MeleeAttackAction
 from osrlib.combat.engine import CombatEngine, StepResult
 from osrlib.combat.events import (
+    ActionChoice,
     ActionRejected,
     AttackRolled,
+    ConditionApplied,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
@@ -19,6 +28,8 @@ from osrlib.combat.events import (
     InitiativeRolled,
     NeedAction,
     RoundStarted,
+    Rejection,
+    SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
     TurnSkipped,
@@ -32,15 +43,23 @@ from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterS
 
 __all__ = [
     "ActionIntent",
+    "ActionChoice",
+    "ActionResult",
     "ActionRejected",
+    "ApplyConditionEffect",
     "AttackRolled",
     "BXDiceService",
+    "CombatAction",
     "CombatContext",
     "CombatEngine",
     "CombatSide",
     "CombatantRef",
+    "ConditionApplied",
+    "ConsumeSlotEffect",
+    "DamageEffect",
     "DamageApplied",
     "DiceService",
+    "Effect",
     "EncounterEvent",
     "EncounterFaulted",
     "EncounterLoopError",
@@ -55,8 +74,11 @@ __all__ = [
     "MeleeAttackIntent",
     "NeedAction",
     "RoundStarted",
+    "Rejection",
+    "SpellSlotConsumed",
     "StepResult",
     "SurpriseRolled",
+    "MeleeAttackAction",
     "TurnQueueBuilt",
     "TurnSkipped",
     "TurnStarted",
