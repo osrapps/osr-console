@@ -95,6 +95,25 @@ class DamageApplied(EncounterEvent):
 
 
 @dataclass(frozen=True)
+class SpellSlotConsumed(EncounterEvent):
+    """Emitted when a spell slot is consumed."""
+
+    caster_id: str
+    level: int
+    remaining: int
+
+
+@dataclass(frozen=True)
+class ConditionApplied(EncounterEvent):
+    """Emitted when a named condition is applied."""
+
+    source_id: str
+    target_id: str
+    condition_id: str
+    duration: int | None
+
+
+@dataclass(frozen=True)
 class EntityDied(EncounterEvent):
     """Emitted when a combatant's HP drops to zero."""
 

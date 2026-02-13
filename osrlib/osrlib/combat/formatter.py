@@ -7,6 +7,7 @@ so that ``DungeonAssistant.summarize_battle()`` receives similar input.
 from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
+    ConditionApplied,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
@@ -15,6 +16,7 @@ from osrlib.combat.events import (
     InitiativeRolled,
     NeedAction,
     RoundStarted,
+    SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
     TurnSkipped,
@@ -76,6 +78,15 @@ class EventFormatter:
                 source_id=sid, target_id=tid, amount=amt, target_hp_after=hp
             ):
                 return f"{sid} dealt {amt} damage to {tid} (HP: {hp})."
+
+            case SpellSlotConsumed(caster_id=cid, level=level, remaining=rem):
+                return f"{cid} used a level {level} spell slot ({rem} remaining)."
+
+            case ConditionApplied(
+                source_id=sid, target_id=tid, condition_id=cond, duration=dur
+            ):
+                duration_text = "permanent" if dur is None else f"{dur} rounds"
+                return f"{sid} applied {cond} to {tid} ({duration_text})."
 
             case EntityDied(entity_id=eid):
                 return f"{eid} was killed!"
