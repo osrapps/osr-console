@@ -229,7 +229,7 @@ class CombatEngine:
         if not self._auto_resolve_intents:
             available_choices = tuple(
                 ActionChoice(
-                    label=f"Melee attack {target.id}",
+                    label=f"Attack {self._display_target_name(target.id)}",
                     intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
                 )
                 for target in living_targets
@@ -241,6 +241,23 @@ class CombatEngine:
         target = self._dice.choice(living_targets)
         self._pending_intent = MeleeAttackIntent(actor_id=cid, target_id=target.id)
         self._state = EncounterState.VALIDATE_INTENT
+
+    @staticmethod
+    def _display_target_name(combatant_id: str) -> str:
+        """Convert canonical IDs into concise target labels for UI choices."""
+        if combatant_id.startswith("pc:"):
+            _, name = combatant_id.split(":", 1)
+            return name
+
+        if combatant_id.startswith("monster:"):
+            parts = combatant_id.split(":")
+            if len(parts) == 3:
+                _, name, idx = parts
+                if idx.isdigit():
+                    return f"{name} #{int(idx) + 1}"
+                return name
+
+        return combatant_id
 
     def _handle_await_intent(self, events: list[EncounterEvent]) -> None:
         if self._pending_intent is not None:
