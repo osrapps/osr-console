@@ -112,15 +112,73 @@ Phase 2 deliverables now implemented in this branch:
 - `combat/state.py` — `APPLY_EFFECTS` state
 - `combat/events.py` — `SpellSlotConsumed`, `ConditionApplied`
 
-## Phase 3: Textual integration (STARTED, PARTIAL)
+## Phase 3: Textual integration (COMPLETE)
 
-- Added manual mode in `CombatEngine`:
-  `CombatEngine(..., auto_resolve_intents=False)` now emits `NeedAction` at `TURN_START` and pauses in `AWAIT_INTENT`.
-- Added tests validating manual pause behavior and submission of external `MeleeAttackIntent`.
-- Not yet done:
-  - TUI wiring in explore screen
-  - menu rendering from available choices
-  - frozen `PartiesView` / `ConditionsView` snapshots
+### What was built
+
+Bard's Tale-style interactive `CombatScreen` that replaces the synchronous
+auto-resolve combat flow with a manual-mode engine driven by the TUI.
+
+| File | Change |
+|---|---|
+| `osrgame/osrgame/screen_combat.py` | **New.** `CombatScreen(Screen)` — grid layout with party roster, monster roster, target `OptionList`, and scrolling combat log. Creates `CombatEngine(auto_resolve_intents=False)`, advances via `step_until_decision()`, auto-resolves monster turns (random PC target), shows target menu for PC turns. Uses `set_timer()` between steps to keep UI responsive. Dismisses with outcome data to explore screen callback. |
+| `osrgame/osrgame/widgets.py` | **Modified.** Added `MonsterRosterTable(Container)` — `DataTable` showing monster name, HP, and alive/dead status. `update_table(combatants, announced_deaths)` refreshes from engine context. |
+| `osrgame/osrgame/screen_explore.py` | **Modified.** `check_for_encounter()` now pushes `CombatScreen` instead of calling `encounter.start_encounter()` synchronously. Added `_on_combat_ended(result)` callback that calls `encounter.end_encounter()` for XP/treasure awards and `dungeon_assistant.summarize_battle()` for the adventure log. |
+| `osrgame/osrgame/screen.tcss` | **Modified.** Added CSS grid rules for `CombatScreen` (40/60 column split, 3-row left column, right column row-span 3). |
+| `tests/test_unit_combat_screen.py` | **New.** 8 tests covering the manual-mode combat controller logic. |
+
+### Combat screen layout
+
+```
+┌──────────────────────────────────────────────────┐
+│ Header                                           │
+├─────────────────┬────────────────────────────────┤
+│ Party roster    │ Combat log (scrolling)         │
+│ Name  HP  AC    │                                │
+├─────────────────┤ Round 1                        │
+│ Monsters        │ Sckricko attacks Goblin #1...  │
+│ Goblin #1  3 HP│ Hit! 4 damage.                  │
+├─────────────────┤                                │
+│ > Sckricko's    │                                │
+│   turn:         │                                │
+│ 1. Goblin #1   │                                │
+│ 2. Goblin #2   │                                │
+└─────────────────┴────────────────────────────────┘
+│ Footer: keybindings                              │
+└──────────────────────────────────────────────────┘
+```
+
+### Combat loop (TUI controller)
+
+1. `ExploreScreen.check_for_encounter()` pushes `CombatScreen` with encounter and party.
+2. `on_mount`: creates `CombatEngine(auto_resolve_intents=False)`, kicks off `_advance_combat()`.
+3. `_advance_combat()` calls `step_until_decision()`, formats events to log.
+4. If `ENDED`: show outcome message, enable Escape to dismiss.
+5. If `AWAIT_INTENT` + monster side: auto-pick random living PC target, re-call `_advance_combat(intent=...)` via `set_timer`.
+6. If `AWAIT_INTENT` + PC side: populate `OptionList` with `NeedAction.available` choices.
+7. On player selection: call `_advance_combat(intent=selected.intent)`.
+8. On dismiss: callback calls `encounter.end_encounter()` for XP/treasure, then `summarize_battle()`.
+
+### Tests
+
+`tests/test_unit_combat_screen.py` — 8 test cases:
+
+1. Engine pauses at `AWAIT_INTENT` in manual mode
+2. `NeedAction` has available `ActionChoice` targets with `MeleeAttackIntent`
+3. Monster auto-resolve (TUI picks random target, submits intent)
+4. PC turn choices target monsters (`target_id` starts with `"monster:"`)
+5. Full encounter completes via manual-mode loop
+6. Full encounter with weak monsters (1 HP goblins) → party victory
+7. `Encounter.end_encounter()` works correctly after manual-mode combat
+8. Encounter log populated with formatted events during manual combat
+
+### Design decisions
+
+1. **Monster auto-resolve in TUI layer.** The engine stays in pure manual mode for all combatants. The TUI detects monster turns via `CombatSide` and auto-submits a random target intent. This keeps the engine simple and the auto-resolve policy in the controller.
+
+2. **No frozen `PartiesView` / `ConditionsView` snapshots.** The TUI accesses `engine._ctx` directly for roster updates. This is pragmatic for now — the context is only read between `step_until_decision()` calls when the engine is paused. Frozen snapshots remain a future improvement for Phase 4+.
+
+3. **`set_timer()` for UI responsiveness.** Monster turns and combat advancement use `set_timer(0.05, ...)` to yield control to Textual's event loop between steps, preventing the screen from appearing frozen during multi-step monster turns.
 
 ## Phase 4: Ranged + spells + slots (NOT STARTED)
 
@@ -128,5 +186,6 @@ Phase 2 deliverables now implemented in this branch:
 
 ## Current test count
 
-`tests/test_unit_combat_engine.py` now contains 28 tests (up from 16 in Phase 1),
-including Phase 2 coverage and manual `NeedAction` path coverage.
+- `tests/test_unit_combat_engine.py`: 28 tests (Phases 1-2 + manual mode)
+- `tests/test_unit_combat_screen.py`: 8 tests (Phase 3 combat controller logic)
+- Total suite: 303 passed, 3 skipped

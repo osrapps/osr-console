@@ -4,7 +4,15 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
-from textual.widgets import Button, DataTable, Log, Static, DirectoryTree, RadioSet, RadioButton
+from textual.widgets import (
+    Button,
+    DataTable,
+    Log,
+    Static,
+    DirectoryTree,
+    RadioSet,
+    RadioButton,
+)
 
 from osrlib.enums import CharacterClassType
 from osrlib.item import Item
@@ -14,8 +22,8 @@ from osrlib.utils import format_modifiers
 class CharacterClassRadioButtons(Container):
     def compose(self) -> ComposeResult:
         with RadioSet(id="character_class") as radio_set:
-                for character_class in CharacterClassType:
-                    yield RadioButton(character_class.value, name=character_class.name)
+            for character_class in CharacterClassType:
+                yield RadioButton(character_class.value, name=character_class.name)
 
 
 class WelcomeScreenButtons(Container):
@@ -25,6 +33,7 @@ class WelcomeScreenButtons(Container):
         yield Button("Create adventure", id="btn-adventure-create", classes="button")
         yield Button("Quit", id="btn-quit", classes="button")
 
+
 class CharacterScreenButtons(Container):
     def compose(self) -> ComposeResult:
         yield Button("New character", id="btn_new_character", classes="button")
@@ -32,6 +41,7 @@ class CharacterScreenButtons(Container):
         yield Button("Roll HP", id="btn_roll_hp", classes="button")
         yield Button("Save character", id="btn_save_character", classes="button")
         yield Button("Delete character", id="btn_delete_character", classes="button")
+
 
 class CharacterStatsBox(Container):
     """A container for the character stats like name, class, level, HP, and AC."""
@@ -113,9 +123,17 @@ class PartyRosterTable(Container):
                 pc.name,
                 pc.character_class.class_type.value,
                 Text(str(pc.level), justify="center"),
-                Text("DEAD" if pc.hit_points <= 0 else f"{pc.hit_points}/{pc.max_hit_points}", justify="center"),
+                Text(
+                    "DEAD"
+                    if pc.hit_points <= 0
+                    else f"{pc.hit_points}/{pc.max_hit_points}",
+                    justify="center",
+                ),
                 Text(str(pc.armor_class), justify="center"),
-                Text(str(pc.xp) + "/" + str(pc.xp_needed_for_next_level), justify="center"),
+                Text(
+                    str(pc.xp) + "/" + str(pc.xp_needed_for_next_level),
+                    justify="center",
+                ),
             ]
             table.add_row(*row_data, key=pc.name)
 
@@ -124,7 +142,8 @@ class PartyRosterTable(Container):
         event.stop()
         party = self.app.adventure.active_party
         party.set_active_character(party.members[event.cursor_row])
-        #self.update_table()
+        # self.update_table()
+
 
 class SavingThrowTable(Container):
     def compose(self) -> ComposeResult:
@@ -197,7 +216,41 @@ class ExploreLogs(Container):
         self.query_one("#dm_log", Log).border_title = "DM LOG"
         self.query_one("#player_log", Log).border_subtitle = "PLAYER LOG"
 
+
+class MonsterRosterTable(Container):
+    """A table showing monsters in the current encounter with name, HP, and status."""
+
+    def compose(self) -> ComposeResult:
+        yield DataTable(id="tbl_monster_roster", cursor_type=None, classes="table")
+
+    def on_mount(self) -> None:
+        table = self.query_one(DataTable)
+        table.add_columns("Monster", "HP", "Status")
+
+    def update_table(self, combatants: dict, announced_deaths: set) -> None:
+        """Refresh the monster table from engine combat context.
+
+        Args:
+            combatants: The ``CombatContext.combatants`` dict.
+            announced_deaths: The ``CombatContext.announced_deaths`` set.
+        """
+        table = self.query_one(DataTable)
+        table.clear()
+        for cid, ref in combatants.items():
+            if not cid.startswith("monster:"):
+                continue
+            hp_text = str(ref.entity.hit_points) if ref.is_alive else "0"
+            status = "Dead" if cid in announced_deaths or not ref.is_alive else "Alive"
+            table.add_row(
+                ref.name,
+                Text(hp_text, justify="center"),
+                Text(status, justify="center"),
+                key=cid,
+            )
+
+
 class JsonFilteredDirectoryTree(DirectoryTree):
     """A directory tree that shows only JSON files."""
+
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
         return [path for path in paths if path.name.endswith(".json")]

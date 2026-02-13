@@ -4,6 +4,8 @@ Output style is designed to match the existing log messages from ``encounter.py`
 so that ``DungeonAssistant.summarize_battle()`` receives similar input.
 """
 
+import re
+
 from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
@@ -29,11 +31,33 @@ from osrlib.combat.state import EncounterOutcome
 class EventFormatter:
     """Formats combat events into human-readable log lines."""
 
+    @staticmethod
+    def _display_combatant(combatant_id: str) -> str:
+        """Convert canonical combatant IDs into player-facing names."""
+        if combatant_id.startswith("pc:"):
+            _, name = combatant_id.split(":", 1)
+            return name
+
+        if combatant_id.startswith("monster:"):
+            parts = combatant_id.split(":")
+            if len(parts) == 3:
+                _, name, idx = parts
+                if idx.isdigit():
+                    return f"{name} #{int(idx) + 1}"
+                return name
+
+        return combatant_id
+
+    def _display_choice_label(self, label: str) -> str:
+        """Replace canonical IDs embedded in action labels."""
+        pattern = r"(pc:[^\s,]+|monster:[^\s,]+:[0-9]+)"
+        return re.sub(pattern, lambda m: self._display_combatant(m.group(0)), label)
+
     def format(self, event: EncounterEvent) -> str:
         """Return a single-line string for *event*."""
         match event:
             case EncounterStarted(encounter_id=eid):
-                return f"Encounter {eid} started."
+                return f"Encounter {eid} begins."
 
             case SurpriseRolled(
                 pc_roll=pr, monster_roll=mr, pc_surprised=pcs, monster_surprised=ms
@@ -47,50 +71,66 @@ class EventFormatter:
                 return f"No surprise. (PC roll: {pr}, Monster roll: {mr})"
 
             case RoundStarted(round_number=rn):
-                return f"Starting combat round {rn}..."
+                return f"Round {rn} begins."
 
             case InitiativeRolled(order=order):
-                parts = [f"{name}={roll}" for name, roll in order]
+                parts = [
+                    f"{self._display_combatant(combatant_id)} ({roll})"
+                    for combatant_id, roll in order
+                ]
                 return f"Initiative: {', '.join(parts)}"
 
             case TurnQueueBuilt(queue=q):
-                return f"Turn order: {', '.join(q)}"
+                turn_order = [self._display_combatant(combatant_id) for combatant_id in q]
+                return f"Turn order: {', '.join(turn_order)}"
 
             case TurnStarted(combatant_id=cid):
-                return f"{cid}'s turn."
+                return f"{self._display_combatant(cid)}'s turn."
 
             case TurnSkipped(combatant_id=cid, reason=reason):
-                return f"{cid}'s turn skipped ({reason})."
+                return f"{self._display_combatant(cid)}'s turn is skipped ({reason})."
 
             case NeedAction(combatant_id=cid, available=choices):
-                labels = [choice.label for choice in choices]
-                return f"Awaiting action for {cid}: {', '.join(labels)}"
+                labels = [self._display_choice_label(choice.label) for choice in choices]
+                return f"Choose action for {self._display_combatant(cid)}: {', '.join(labels)}"
 
             case AttackRolled(
                 attacker_id=aid, defender_id=did, total=tot, needed=n, hit=h, critical=c
             ):
+                attacker = self._display_combatant(aid)
+                defender = self._display_combatant(did)
+                if c:
+                    return (
+                        f"{attacker} attacks {defender}: HIT (rolled {tot} vs {n}) "
+                        "CRITICAL HIT!"
+                    )
                 result = "HIT" if h else "MISS"
-                crit = " CRITICAL HIT!" if c else ""
-                return (
-                    f"{aid} attacked {did} (rolled {tot}, needed {n}): {result}{crit}"
-                )
+                return f"{attacker} attacks {defender}: {result} (rolled {tot} vs {n})."
 
             case DamageApplied(
                 source_id=sid, target_id=tid, amount=amt, target_hp_after=hp
             ):
-                return f"{sid} dealt {amt} damage to {tid} (HP: {hp})."
+                source = self._display_combatant(sid)
+                target = self._display_combatant(tid)
+                return (
+                    f"{source} deals {amt} damage to {target}. "
+                    f"{target} has {max(hp, 0)} HP remaining."
+                )
 
             case SpellSlotConsumed(caster_id=cid, level=level, remaining=rem):
-                return f"{cid} used a level {level} spell slot ({rem} remaining)."
+                caster = self._display_combatant(cid)
+                return f"{caster} uses a level {level} spell slot ({rem} remaining)."
 
             case ConditionApplied(
                 source_id=sid, target_id=tid, condition_id=cond, duration=dur
             ):
                 duration_text = "permanent" if dur is None else f"{dur} rounds"
-                return f"{sid} applied {cond} to {tid} ({duration_text})."
+                source = self._display_combatant(sid)
+                target = self._display_combatant(tid)
+                return f"{source} applies {cond} to {target} ({duration_text})."
 
             case EntityDied(entity_id=eid):
-                return f"{eid} was killed!"
+                return f"{self._display_combatant(eid)} falls!"
 
             case VictoryDetermined(outcome=outcome):
                 if outcome == EncounterOutcome.PARTY_VICTORY:
@@ -101,7 +141,7 @@ class EventFormatter:
 
             case ActionRejected(combatant_id=cid, reasons=reasons):
                 reason_text = "; ".join(rejection.message for rejection in reasons)
-                return f"Action rejected for {cid}: {reason_text}"
+                return f"Action rejected for {self._display_combatant(cid)}: {reason_text}"
 
             case EncounterFaulted(state=st, error_type=et, message=msg):
                 return f"FAULT in {st.name}: [{et}] {msg}"

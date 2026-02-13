@@ -587,7 +587,8 @@ def test_event_formatter():
     )
     text = formatter.format(attack_hit)
     assert "HIT" in text
-    assert "pc:Sckricko" in text
+    assert "Sckricko" in text
+    assert "Goblin #1" in text
 
     attack_crit = AttackRolled(
         attacker_id="pc:Sckricko",
@@ -602,7 +603,7 @@ def test_event_formatter():
     assert "CRITICAL HIT" in text
 
     death = EntityDied(entity_id="monster:Goblin:0")
-    assert "killed" in formatter.format(death)
+    assert "falls" in formatter.format(death)
 
     victory = VictoryDetermined(outcome=EncounterOutcome.PARTY_VICTORY)
     assert "victorious" in formatter.format(victory)
