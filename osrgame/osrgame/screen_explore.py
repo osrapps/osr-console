@@ -5,6 +5,7 @@ from textual.widgets import Header, Footer, Log
 from osrlib.dungeon import Direction
 from osrlib.utils import wrap_text
 
+from .screen_combat import CombatScreen
 from .widgets import PartyRosterTable
 
 
@@ -45,33 +46,59 @@ class ExploreScreen(Screen):
         dm_response = self.dungeon_assistant.move_party(direction)
 
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
+            ""  # "> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
 
         self.check_for_encounter()
 
     def check_for_encounter(self) -> None:
-        """Check for an encounter and execute battle if there are monsters in the encounter."""
+        """Check for an encounter and push the combat screen if there are monsters."""
+        location = (
+            self.dungeon_assistant.adventure.active_dungeon.current_party_location
+        )
+        if not location.encounter or location.encounter.is_ended:
+            self.query_one("#pc_party_table").update_table()
+            self.query_one("#dm_log").write_line("---")
+            return
+
+        encounter = location.encounter
+        active_party = self.dungeon_assistant.adventure.active_party
+
         if (
-            self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter
-            and not self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter.is_ended
+            encounter.monster_party is not None
+            and len(encounter.monster_party.members) > 0
         ):
-            encounter = (
-                self.dungeon_assistant.adventure.active_dungeon.current_party_location.encounter
+            self.query_one("#dm_log").write_line("> Encounter:")
+            self.query_one("#dm_log").write_line(
+                f"  {encounter.monster_party}".replace("\n", "\n  ")
             )
+            self.query_one("#player_log").write_line("> Fight!")
 
-            if (
-                encounter.monster_party is not None
-                and len(encounter.monster_party.members) > 0
-            ):
-                self.query_one("#dm_log").write_line("> Encounter:")
-                self.query_one("#dm_log").write_line(f"  {encounter.monster_party}".replace("\n", "\n  "))
+            # Push the interactive combat screen
+            self.app.push_screen(
+                CombatScreen(encounter=encounter, party=active_party),
+                callback=self._on_combat_ended,
+            )
+        else:
+            # Non-combat encounter
+            encounter.start_encounter(active_party)
+            self.query_one("#pc_party_table").update_table()
+            self.query_one("#dm_log").write_line("---")
 
-                # TODO: Check whether monsters were surprised, and if so, give the player a chance to flee.
-                self.query_one("#player_log").write_line("> Fight!")
+    def _on_combat_ended(self, result: dict | None) -> None:
+        """Callback invoked when CombatScreen is dismissed."""
+        if result is None:
+            self.query_one("#pc_party_table").update_table()
+            self.query_one("#dm_log").write_line("---")
+            return
 
-            encounter.start_encounter(self.dungeon_assistant.adventure.active_party)
+        encounter = result.get("encounter")
+        if encounter is not None:
+            # Let encounter handle XP/treasure awards
+            encounter.end_encounter()
+
+            # Summarize the battle via the dungeon assistant
             encounter_log = encounter.get_encounter_log()
             dm_response = self.dungeon_assistant.summarize_battle(encounter_log)
             self.query_one("#dm_log").write_line(wrap_text(dm_response))
@@ -116,12 +143,14 @@ class ExploreScreen(Screen):
         """An action to summarize the session."""
         self.query_one("#player_log").write_line("> Describe location")
         formatted_message = self.dungeon_assistant.format_user_message(
-            "Please describe this location again, including specifying the exit that we entered from and which exit or exits, if any, we haven't yet explored: " \
-            + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
+            "Please describe this location again, including specifying the exit that we entered from and which exit or exits, if any, we haven't yet explored: "
+            + str(
+                self.dungeon_assistant.adventure.active_dungeon.current_party_location
+            )
         )
         dm_response = self.dungeon_assistant.send_player_message(formatted_message)
         self.query_one("#dm_log").write_line(
-            ""#"> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
+            ""  # "> " + str(self.dungeon_assistant.adventure.active_dungeon.current_party_location)
         )
         self.query_one("#dm_log").write_line(wrap_text(dm_response))
         self.query_one("#dm_log").write_line("---")
