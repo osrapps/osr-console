@@ -3,12 +3,13 @@
 import uuid
 from collections import deque
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from osrlib.monster import MonsterParty
 from osrlib.party import Party
 
 from osrlib.combat.actions import CombatAction, MeleeAttackAction
-from osrlib.combat.context import CombatContext, CombatSide
+from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
 from osrlib.combat.dice_service import BXDiceService, DiceService
 from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
 from osrlib.combat.views import CombatView, CombatantView
@@ -88,6 +89,8 @@ class CombatEngine:
         self._validated_action: CombatAction | None = None
         self._pending_effects: tuple[Effect, ...] = ()
         self._spell_slots_remaining_by_caster: dict[str, dict[int, int]] = {}
+        self._forced_intent_active: bool = False
+        self._deferred_events: list[EncounterEvent] = []
         self._outcome: EncounterOutcome | None = None
 
     # -- Public API ----------------------------------------------------------
@@ -126,6 +129,9 @@ class CombatEngine:
     ) -> ForcedIntentQueued:
         """Queue a forced intent that bypasses ``AWAIT_INTENT`` on the combatant's next turn.
 
+        The returned ``ForcedIntentQueued`` event is also stored internally and
+        will be emitted in the next ``step()`` call's event batch.
+
         Args:
             combatant_id: The canonical combatant ID.
             intent: The intent to force.
@@ -135,9 +141,11 @@ class CombatEngine:
             The ``ForcedIntentQueued`` event that was produced.
         """
         self._ctx.forced_intents[combatant_id] = intent
-        return ForcedIntentQueued(
+        event = ForcedIntentQueued(
             combatant_id=combatant_id, intent=intent, reason=reason
         )
+        self._deferred_events.append(event)
+        return event
 
     def step(self, intent: ActionIntent | None = None) -> StepResult:
         """Execute a single state transition and return the result.
@@ -157,6 +165,9 @@ class CombatEngine:
             self._pending_intent = intent
 
         events: list[EncounterEvent] = []
+        if self._deferred_events:
+            events.extend(self._deferred_events)
+            self._deferred_events.clear()
         try:
             handler = self._handlers[self._state]
             handler(self, events)
@@ -267,47 +278,46 @@ class CombatEngine:
         forced = self._ctx.forced_intents.pop(cid, None)
         if forced is not None:
             self._pending_intent = forced
+            self._forced_intent_active = True
             events.append(ForcedIntentApplied(combatant_id=cid, intent=forced))
             self._state = EncounterState.VALIDATE_INTENT
             return
 
+        self._build_choices_or_await(cid, ref, events)
+
+    def _build_choices_or_await(
+        self, cid: str, ref: CombatantRef, events: list[EncounterEvent]
+    ) -> None:
+        """Build action choices and either auto-resolve or pause for external input."""
         opposite_side = (
             CombatSide.MONSTER if ref.side == CombatSide.PC else CombatSide.PC
         )
         living_targets = self._ctx.living(opposite_side)
 
         if not living_targets:
-            # No targets remain, go straight to victory check.
             self._state = EncounterState.CHECK_VICTORY
             return
 
         available_choices = tuple(
             ActionChoice(
                 ui_key="attack_target",
-                ui_args={
-                    "target_id": target.id,
-                    "target_name": self._display_target_name(target.id),
-                },
+                ui_args=MappingProxyType(
+                    {
+                        "target_id": target.id,
+                        "target_name": self._display_target_name(target.id),
+                    }
+                ),
                 intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
             )
             for target in living_targets
         )
 
-        # Decide whether to auto-resolve or pause for external input.
-        if self._auto_resolve_intents:
-            # Full auto-resolve: use tactical provider for all combatants.
-            self._pending_intent = self._tactical_provider.choose_intent(
-                cid, available_choices, self._ctx
-            )
-            self._state = EncounterState.VALIDATE_INTENT
-        elif ref.side == CombatSide.MONSTER:
-            # Manual mode, but monsters are engine-controlled via provider.
+        if self._auto_resolve_intents or ref.side == CombatSide.MONSTER:
             self._pending_intent = self._tactical_provider.choose_intent(
                 cid, available_choices, self._ctx
             )
             self._state = EncounterState.VALIDATE_INTENT
         else:
-            # Manual mode, PC turn: emit NeedAction for external input.
             events.append(NeedAction(combatant_id=cid, available=available_choices))
             self._state = EncounterState.AWAIT_INTENT
 
@@ -336,6 +346,8 @@ class CombatEngine:
     def _handle_validate_intent(self, events: list[EncounterEvent]) -> None:
         intent = self._pending_intent
         self._pending_intent = None
+        was_forced = self._forced_intent_active
+        self._forced_intent_active = False
 
         if intent is None:
             events.append(
@@ -362,17 +374,35 @@ class CombatEngine:
                     ),
                 )
             )
-            self._state = EncounterState.AWAIT_INTENT
+            if was_forced:
+                self._fallback_after_forced_rejection(events)
+            else:
+                self._state = EncounterState.AWAIT_INTENT
             return
 
         reasons = action.validate(self._ctx)
         if reasons:
             events.append(ActionRejected(combatant_id=intent.actor_id, reasons=reasons))
-            self._state = EncounterState.AWAIT_INTENT
+            if was_forced:
+                self._fallback_after_forced_rejection(events)
+            else:
+                self._state = EncounterState.AWAIT_INTENT
             return
 
         self._validated_action = action
         self._state = EncounterState.EXECUTE_ACTION
+
+    def _fallback_after_forced_rejection(self, events: list[EncounterEvent]) -> None:
+        """Re-enter normal choice generation after a forced intent is rejected."""
+        cid = self._ctx.current_combatant_id
+        if cid is None:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+        ref = self._ctx.combatants.get(cid)
+        if ref is None or not ref.is_alive:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+        self._build_choices_or_await(cid, ref, events)
 
     def _handle_execute_action(self, events: list[EncounterEvent]) -> None:
         action = self._validated_action

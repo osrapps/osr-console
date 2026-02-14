@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, auto
+from types import MappingProxyType
 
 from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome, EncounterState
@@ -93,7 +94,7 @@ class ActionChoice:
     """A UI-facing actionable choice for the active combatant."""
 
     ui_key: str
-    ui_args: dict[str, str]
+    ui_args: MappingProxyType
     intent: ActionIntent
 
     @property
@@ -102,7 +103,7 @@ class ActionChoice:
         return _render_choice_label(self.ui_key, self.ui_args)
 
 
-def _render_choice_label(ui_key: str, ui_args: dict[str, str]) -> str:
+def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
     """Render a human-readable label from structured action-choice data."""
     if ui_key == "attack_target":
         return f"Attack {ui_args.get('target_name', ui_args.get('target_id', '???'))}"
