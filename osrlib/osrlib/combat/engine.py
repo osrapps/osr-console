@@ -3,13 +3,16 @@
 import uuid
 from collections import deque
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from osrlib.monster import MonsterParty
 from osrlib.party import Party
 
 from osrlib.combat.actions import CombatAction, MeleeAttackAction
-from osrlib.combat.context import CombatContext, CombatSide
+from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
 from osrlib.combat.dice_service import BXDiceService, DiceService
+from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
+from osrlib.combat.views import CombatView, CombatantView
 from osrlib.combat.effects import (
     ApplyConditionEffect,
     ConsumeSlotEffect,
@@ -25,10 +28,13 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    ForcedIntentApplied,
+    ForcedIntentQueued,
     InitiativeRolled,
     NeedAction,
     RoundStarted,
     Rejection,
+    RejectionCode,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -69,16 +75,22 @@ class CombatEngine:
         monster_party: MonsterParty,
         dice: DiceService | None = None,
         auto_resolve_intents: bool = True,
+        tactical_provider: TacticalProvider | None = None,
     ) -> None:
         self._ctx = CombatContext.build(pc_party, monster_party)
         self._dice: DiceService = dice or BXDiceService()
         self._auto_resolve_intents = auto_resolve_intents
+        self._tactical_provider: TacticalProvider = (
+            tactical_provider or RandomMonsterProvider(self._dice)
+        )
         self._state = EncounterState.INIT
         self._encounter_id = uuid.uuid4().hex[:12]
         self._pending_intent: ActionIntent | None = None
         self._validated_action: CombatAction | None = None
         self._pending_effects: tuple[Effect, ...] = ()
         self._spell_slots_remaining_by_caster: dict[str, dict[int, int]] = {}
+        self._forced_intent_active: bool = False
+        self._deferred_events: list[EncounterEvent] = []
         self._outcome: EncounterOutcome | None = None
 
     # -- Public API ----------------------------------------------------------
@@ -90,6 +102,53 @@ class CombatEngine:
     @property
     def outcome(self) -> EncounterOutcome | None:
         return self._outcome
+
+    def get_view(self) -> CombatView:
+        """Return a frozen snapshot of the current combat state for UI consumption."""
+        combatant_views = tuple(
+            CombatantView(
+                id=ref.id,
+                name=ref.name,
+                side=ref.side,
+                hp=ref.entity.hit_points,
+                max_hp=ref.entity.max_hit_points,
+                armor_class=ref.armor_class,
+                is_alive=ref.is_alive,
+            )
+            for ref in self._ctx.combatants.values()
+        )
+        return CombatView(
+            round_number=self._ctx.round_number,
+            current_combatant_id=self._ctx.current_combatant_id,
+            combatants=combatant_views,
+            announced_deaths=frozenset(self._ctx.announced_deaths),
+        )
+
+    def queue_forced_intent(
+        self, combatant_id: str, intent: ActionIntent, reason: str
+    ) -> ForcedIntentQueued:
+        """Queue a forced intent that bypasses ``AWAIT_INTENT`` on the combatant's next turn.
+
+        The returned ``ForcedIntentQueued`` event is also stored internally and
+        will be emitted in the next ``step()`` call's event batch.
+
+        Args:
+            combatant_id: The canonical combatant ID.
+            intent: The intent to force.
+            reason: Human-readable reason (e.g. ``"morale failure"``).
+
+        Returns:
+            The ``ForcedIntentQueued`` event that was produced.
+        """
+        if self._state == EncounterState.ENDED:
+            raise RuntimeError("cannot queue forced intent after encounter ended")
+
+        self._ctx.forced_intents[combatant_id] = intent
+        event = ForcedIntentQueued(
+            combatant_id=combatant_id, intent=intent, reason=reason
+        )
+        self._deferred_events.append(event)
+        return event
 
     def step(self, intent: ActionIntent | None = None) -> StepResult:
         """Execute a single state transition and return the result.
@@ -109,6 +168,9 @@ class CombatEngine:
             self._pending_intent = intent
 
         events: list[EncounterEvent] = []
+        if self._deferred_events:
+            events.extend(self._deferred_events)
+            self._deferred_events.clear()
         try:
             handler = self._handlers[self._state]
             handler(self, events)
@@ -215,32 +277,52 @@ class CombatEngine:
 
         events.append(TurnStarted(combatant_id=cid))
 
-        # Auto-provider: submit a MeleeAttackIntent against a random living opponent.
+        # Check for forced intents (morale/flee) before normal decision flow.
+        forced = self._ctx.forced_intents.pop(cid, None)
+        if forced is not None:
+            self._pending_intent = forced
+            self._forced_intent_active = True
+            events.append(ForcedIntentApplied(combatant_id=cid, intent=forced))
+            self._state = EncounterState.VALIDATE_INTENT
+            return
+
+        self._build_choices_or_await(cid, ref, events)
+
+    def _build_choices_or_await(
+        self, cid: str, ref: CombatantRef, events: list[EncounterEvent]
+    ) -> None:
+        """Build action choices and either auto-resolve or pause for external input."""
         opposite_side = (
             CombatSide.MONSTER if ref.side == CombatSide.PC else CombatSide.PC
         )
         living_targets = self._ctx.living(opposite_side)
 
         if not living_targets:
-            # No targets remain, go straight to victory check.
             self._state = EncounterState.CHECK_VICTORY
             return
 
-        if not self._auto_resolve_intents:
-            available_choices = tuple(
-                ActionChoice(
-                    label=f"Attack {self._display_target_name(target.id)}",
-                    intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
-                )
-                for target in living_targets
+        available_choices = tuple(
+            ActionChoice(
+                ui_key="attack_target",
+                ui_args=MappingProxyType(
+                    {
+                        "target_id": target.id,
+                        "target_name": self._display_target_name(target.id),
+                    }
+                ),
+                intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
             )
+            for target in living_targets
+        )
+
+        if self._auto_resolve_intents or ref.side == CombatSide.MONSTER:
+            self._pending_intent = self._tactical_provider.choose_intent(
+                cid, available_choices, self._ctx
+            )
+            self._state = EncounterState.VALIDATE_INTENT
+        else:
             events.append(NeedAction(combatant_id=cid, available=available_choices))
             self._state = EncounterState.AWAIT_INTENT
-            return
-
-        target = self._dice.choice(living_targets)
-        self._pending_intent = MeleeAttackIntent(actor_id=cid, target_id=target.id)
-        self._state = EncounterState.VALIDATE_INTENT
 
     @staticmethod
     def _display_target_name(combatant_id: str) -> str:
@@ -267,12 +349,16 @@ class CombatEngine:
     def _handle_validate_intent(self, events: list[EncounterEvent]) -> None:
         intent = self._pending_intent
         self._pending_intent = None
+        was_forced = self._forced_intent_active
+        self._forced_intent_active = False
 
         if intent is None:
             events.append(
                 ActionRejected(
                     combatant_id=self._ctx.current_combatant_id or "",
-                    reasons=(Rejection(code="NO_INTENT", message="no intent"),),
+                    reasons=(
+                        Rejection(code=RejectionCode.NO_INTENT, message="no intent"),
+                    ),
                 )
             )
             self._state = EncounterState.AWAIT_INTENT
@@ -285,23 +371,41 @@ class CombatEngine:
                     combatant_id=intent.actor_id,
                     reasons=(
                         Rejection(
-                            code="UNSUPPORTED_INTENT",
+                            code=RejectionCode.UNSUPPORTED_INTENT,
                             message="unsupported intent",
                         ),
                     ),
                 )
             )
-            self._state = EncounterState.AWAIT_INTENT
+            if was_forced:
+                self._fallback_after_forced_rejection(events)
+            else:
+                self._state = EncounterState.AWAIT_INTENT
             return
 
         reasons = action.validate(self._ctx)
         if reasons:
             events.append(ActionRejected(combatant_id=intent.actor_id, reasons=reasons))
-            self._state = EncounterState.AWAIT_INTENT
+            if was_forced:
+                self._fallback_after_forced_rejection(events)
+            else:
+                self._state = EncounterState.AWAIT_INTENT
             return
 
         self._validated_action = action
         self._state = EncounterState.EXECUTE_ACTION
+
+    def _fallback_after_forced_rejection(self, events: list[EncounterEvent]) -> None:
+        """Re-enter normal choice generation after a forced intent is rejected."""
+        cid = self._ctx.current_combatant_id
+        if cid is None:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+        ref = self._ctx.combatants.get(cid)
+        if ref is None or not ref.is_alive:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+        self._build_choices_or_await(cid, ref, events)
 
     def _handle_execute_action(self, events: list[EncounterEvent]) -> None:
         action = self._validated_action
@@ -313,7 +417,7 @@ class CombatEngine:
                     combatant_id=self._ctx.current_combatant_id or "",
                     reasons=(
                         Rejection(
-                            code="NO_VALIDATED_ACTION",
+                            code=RejectionCode.NO_VALIDATED_ACTION,
                             message="no validated action",
                         ),
                     ),
@@ -359,7 +463,10 @@ class CombatEngine:
                             ActionRejected(
                                 combatant_id=caster_id,
                                 reasons=(
-                                    Rejection(code="NO_SPELL_SLOT", message=str(exc)),
+                                    Rejection(
+                                        code=RejectionCode.NO_SPELL_SLOT,
+                                        message=str(exc),
+                                    ),
                                 ),
                             )
                         )
@@ -391,7 +498,7 @@ class CombatEngine:
                             combatant_id=self._ctx.current_combatant_id or "",
                             reasons=(
                                 Rejection(
-                                    code="UNKNOWN_EFFECT_TYPE",
+                                    code=RejectionCode.UNKNOWN_EFFECT_TYPE,
                                     message=f"unknown effect type: {type(effect).__name__}",
                                 ),
                             ),

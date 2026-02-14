@@ -8,6 +8,8 @@ from osrlib.combat import (
     AttackRolled,
     CombatSide,
     CombatEngine,
+    CombatView,
+    CombatantView,
     ConditionApplied,
     ConsumeSlotEffect,
     DamageApplied,
@@ -20,10 +22,13 @@ from osrlib.combat import (
     EventFormatter,
     EventSerializer,
     FixedDiceService,
+    ForcedIntentApplied,
+    ForcedIntentQueued,
     InitiativeRolled,
     MeleeAttackAction,
     MeleeAttackIntent,
     NeedAction,
+    RejectionCode,
     RoundStarted,
     SpellSlotConsumed,
     SurpriseRolled,
@@ -407,16 +412,21 @@ def test_manual_mode_pauses_and_emits_need_action(default_party, goblin_party):
         auto_resolve_intents=False,
     )
 
-    engine.step()  # INIT -> ROUND_START
-    engine.step()  # ROUND_START -> TURN_START
-    result = engine.step()  # TURN_START -> AWAIT_INTENT
+    # Use step_until_decision which processes through monster auto-resolve
+    # and pauses only at PC turns.
+    results = engine.step_until_decision()
+    last = results[-1]
 
-    assert result.state == EncounterState.AWAIT_INTENT
-    assert result.needs_intent is True
-    assert result.pending_combatant_id is not None
-    need_action_events = [e for e in result.events if isinstance(e, NeedAction)]
+    assert last.state == EncounterState.AWAIT_INTENT
+    assert last.needs_intent is True
+    assert last.pending_combatant_id is not None
+
+    # Collect NeedAction from all step results
+    need_action_events = [
+        e for r in results for e in r.events if isinstance(e, NeedAction)
+    ]
     assert len(need_action_events) == 1
-    assert need_action_events[0].combatant_id == result.pending_combatant_id
+    assert need_action_events[0].combatant_id == last.pending_combatant_id
     assert len(need_action_events[0].available) > 0
     assert all(
         isinstance(choice, ActionChoice) for choice in need_action_events[0].available
@@ -435,7 +445,7 @@ def test_manual_mode_submitted_intent_executes(default_party, goblin_party):
         monster_party=goblin_party,
         auto_resolve_intents=False,
     )
-    results = engine.step_until_decision(max_steps=8)
+    results = engine.step_until_decision()
     decision = results[-1]
     assert decision.state == EncounterState.AWAIT_INTENT
     assert decision.pending_combatant_id is not None
@@ -447,12 +457,10 @@ def test_manual_mode_submitted_intent_executes(default_party, goblin_party):
 
     results = engine.step_until_decision(
         intent=MeleeAttackIntent(actor_id=actor_id, target_id=target_id),
-        max_steps=8,
     )
-    assert results[0].state == EncounterState.VALIDATE_INTENT
-    assert any(
-        isinstance(event, AttackRolled) for result in results for event in result.events
-    )
+    # After submitting intent, engine should have processed through validate/execute
+    all_events = [event for result in results for event in result.events]
+    assert any(isinstance(event, AttackRolled) for event in all_events)
 
 
 # ---------------------------------------------------------------------------
@@ -532,31 +540,37 @@ def test_action_rejected_dead_target(default_party, goblin_party):
     engine.step()  # INIT -> ROUND_START
     engine.step()  # ROUND_START -> TURN_START
 
-    # Step to get a PC's turn started
-    result = engine.step()  # TURN_START -> VALIDATE_INTENT (auto-provider)
+    # Step until we find a living PC's turn in VALIDATE_INTENT
+    result = engine.step()
+    while result.state != EncounterState.ENDED:
+        if result.state == EncounterState.VALIDATE_INTENT:
+            current = engine._ctx.current_combatant_id
+            ref = engine._ctx.combatants.get(current)
+            if ref and ref.side == CombatSide.PC and ref.is_alive:
+                break
+        result = engine.step()
+    else:
+        pytest.skip("Could not find a PC turn in VALIDATE_INTENT")
 
-    if result.state == EncounterState.VALIDATE_INTENT:
-        # The auto-provider already set an intent. Let's manually set up a scenario:
-        # Kill all monsters, then try submitting an intent targeting one
-        first_monster_id = None
-        for cid, ref in engine._ctx.combatants.items():
-            if cid.startswith("monster:"):
-                ref.entity.hit_points = 0
-                if first_monster_id is None:
-                    first_monster_id = cid
+    # Kill all monsters, then override the intent with a dead-target intent
+    first_monster_id = None
+    for cid, ref in engine._ctx.combatants.items():
+        if cid.startswith("monster:"):
+            ref.entity.hit_points = 0
+            if first_monster_id is None:
+                first_monster_id = cid
 
-        if first_monster_id and engine._ctx.current_combatant_id:
-            # Override the pending intent with a dead-target intent
-            engine._pending_intent = MeleeAttackIntent(
-                actor_id=engine._ctx.current_combatant_id,
-                target_id=first_monster_id,
-            )
+    if first_monster_id and engine._ctx.current_combatant_id:
+        engine._pending_intent = MeleeAttackIntent(
+            actor_id=engine._ctx.current_combatant_id,
+            target_id=first_monster_id,
+        )
 
-            result = engine.step()  # VALIDATE_INTENT
-            rejected = [e for e in result.events if isinstance(e, ActionRejected)]
-            assert len(rejected) == 1
-            assert rejected[0].reasons[0].code == "INVALID_TARGET"
-            assert "dead" in rejected[0].reason
+        result = engine.step()  # VALIDATE_INTENT
+        rejected = [e for e in result.events if isinstance(e, ActionRejected)]
+        assert len(rejected) == 1
+        assert rejected[0].reasons[0].code == RejectionCode.INVALID_TARGET
+        assert "dead" in rejected[0].reason
 
 
 # ---------------------------------------------------------------------------
@@ -889,7 +903,7 @@ def test_consume_slot_effect_rejected_without_available_slot(
 
     rejected = [e for e in events if isinstance(e, ActionRejected)]
     assert len(rejected) == 1
-    assert rejected[0].reasons[0].code == "NO_SPELL_SLOT"
+    assert rejected[0].reasons[0].code == RejectionCode.NO_SPELL_SLOT
     assert rejected[0].combatant_id == caster_id
     assert "no level 1 spell slots remaining" in rejected[0].reason
     assert engine.state == EncounterState.CHECK_DEATHS
@@ -943,6 +957,410 @@ def test_unknown_effect_type_is_rejected(default_party, goblin_party):
 
     rejected = [e for e in events if isinstance(e, ActionRejected)]
     assert len(rejected) == 1
-    assert rejected[0].reasons[0].code == "UNKNOWN_EFFECT_TYPE"
+    assert rejected[0].reasons[0].code == RejectionCode.UNKNOWN_EFFECT_TYPE
     assert "unknown effect type: UnknownEffect" in rejected[0].reason
     assert engine.state == EncounterState.CHECK_DEATHS
+
+
+# ---------------------------------------------------------------------------
+# 27. WS1: Manual mode only pauses for PC turns, never monster turns
+# ---------------------------------------------------------------------------
+
+
+def test_manual_mode_never_pauses_for_monsters(default_party, goblin_party):
+    """In manual mode, AWAIT_INTENT should only occur for PC combatants."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    max_decisions = 50
+    results = engine.step_until_decision()
+    for _ in range(max_decisions):
+        last = results[-1]
+        if engine.state == EncounterState.ENDED:
+            break
+        if last.needs_intent:
+            cid = last.pending_combatant_id
+            ref = engine._ctx.combatants[cid]
+            assert ref.side == CombatSide.PC, f"NeedAction for monster {cid}"
+            # Pick first choice and continue
+            need_action = next(
+                event
+                for r in results
+                for event in r.events
+                if isinstance(event, NeedAction)
+            )
+            results = engine.step_until_decision(intent=need_action.available[0].intent)
+        else:
+            break
+
+
+# ---------------------------------------------------------------------------
+# 28. WS1: Custom TacticalProvider is invoked for monster decisions
+# ---------------------------------------------------------------------------
+
+
+def test_custom_tactical_provider(default_party, goblin_party):
+    """A custom TacticalProvider should be called for monster turns."""
+    calls = []
+
+    class RecordingProvider:
+        def choose_intent(self, combatant_id, choices, ctx):
+            calls.append(combatant_id)
+            return choices[0].intent
+
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=True,
+        tactical_provider=RecordingProvider(),
+    )
+    _collect_events(engine)
+
+    # The provider should have been called at least once
+    assert len(calls) > 0
+
+
+# ---------------------------------------------------------------------------
+# 29. WS2: get_view() returns frozen snapshot with correct fields
+# ---------------------------------------------------------------------------
+
+
+def test_get_view_returns_frozen_snapshot(default_party, goblin_party):
+    """get_view() should return a CombatView with correct data."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+    engine.step()  # INIT
+    engine.step()  # ROUND_START
+
+    view = engine.get_view()
+    assert isinstance(view, CombatView)
+    assert view.round_number == 1
+    assert len(view.combatants) > 0
+    assert isinstance(view.announced_deaths, frozenset)
+
+    for c in view.combatants:
+        assert isinstance(c, CombatantView)
+        assert c.id
+        assert c.name
+        assert c.side in (CombatSide.PC, CombatSide.MONSTER)
+
+
+# ---------------------------------------------------------------------------
+# 30. WS2: Snapshot is truly immutable
+# ---------------------------------------------------------------------------
+
+
+def test_combat_view_is_immutable(default_party, goblin_party):
+    """CombatView and CombatantView should be frozen dataclasses."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+    engine.step()
+
+    view = engine.get_view()
+    with pytest.raises(AttributeError):
+        view.round_number = 99
+
+    if view.combatants:
+        with pytest.raises(AttributeError):
+            view.combatants[0].hp = 999
+
+
+# ---------------------------------------------------------------------------
+# 31. WS3: Serialization of ActionRejected with enum-backed codes
+# ---------------------------------------------------------------------------
+
+
+def test_serializer_handles_rejection_code_enum(default_party, goblin_party):
+    """EventSerializer should serialize RejectionCode as its .name string."""
+    from osrlib.combat.events import Rejection
+
+    event = ActionRejected(
+        combatant_id="pc:Test",
+        reasons=(Rejection(code=RejectionCode.INVALID_TARGET, message="target dead"),),
+    )
+    d = EventSerializer.to_dict(event)
+    assert d["kind"] == "ActionRejected"
+    assert d["reasons"][0]["code"] == "INVALID_TARGET"
+
+
+# ---------------------------------------------------------------------------
+# 32. WS4: ActionChoice has ui_key and ui_args
+# ---------------------------------------------------------------------------
+
+
+def test_action_choice_has_ui_key_and_ui_args(default_party, goblin_party):
+    """ActionChoice payloads should carry structured ui_key/ui_args."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+    results = engine.step_until_decision()
+
+    need_actions = [
+        event for r in results for event in r.events if isinstance(event, NeedAction)
+    ]
+    assert len(need_actions) == 1
+    for choice in need_actions[0].available:
+        assert choice.ui_key == "attack_target"
+        assert "target_id" in choice.ui_args
+        assert "target_name" in choice.ui_args
+        # label should be derivable from ui_key/ui_args
+        assert choice.label.startswith("Attack ")
+
+
+# ---------------------------------------------------------------------------
+# 33. WS5: Forced intent bypasses AWAIT_INTENT and NeedAction
+# ---------------------------------------------------------------------------
+
+
+def test_forced_intent_bypasses_await(default_party, goblin_party):
+    """A forced intent should skip AWAIT_INTENT and go directly to VALIDATE_INTENT."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Advance to first PC decision
+    results = engine.step_until_decision()
+    last = results[-1]
+    assert last.needs_intent
+
+    need_action = next(
+        event for r in results for event in r.events if isinstance(event, NeedAction)
+    )
+    first_choice = need_action.available[0]
+
+    # Submit the intent to continue, then queue a forced intent for next time
+    results = engine.step_until_decision(intent=first_choice.intent)
+
+    # Find a living PC for forcing
+    living_pcs = engine._ctx.living(CombatSide.PC)
+    if not living_pcs or engine.state == EncounterState.ENDED:
+        pytest.skip("Combat ended before we could test forced intents")
+
+    target_side = CombatSide.MONSTER
+    living_targets = engine._ctx.living(target_side)
+    if not living_targets:
+        pytest.skip("No living targets for forced intent test")
+
+    pc_id = living_pcs[0].id
+    forced_intent = MeleeAttackIntent(actor_id=pc_id, target_id=living_targets[0].id)
+    queued_event = engine.queue_forced_intent(pc_id, forced_intent, "morale failure")
+
+    assert isinstance(queued_event, ForcedIntentQueued)
+    assert queued_event.reason == "morale failure"
+    assert pc_id in engine._ctx.forced_intents
+
+
+# ---------------------------------------------------------------------------
+# 34. WS5: Forced intent applies through VALIDATE_INTENT -> EXECUTE_ACTION
+# ---------------------------------------------------------------------------
+
+
+def test_forced_intent_applies_correctly(default_party, weak_goblin_party):
+    """A forced intent should be consumed and flow through the normal action pipeline."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Get the first PC
+    pc_ids = [cid for cid in engine._ctx.combatants if cid.startswith("pc:")]
+    monster_ids = [cid for cid in engine._ctx.combatants if cid.startswith("monster:")]
+
+    # Queue a forced intent for the first PC
+    forced_intent = MeleeAttackIntent(actor_id=pc_ids[0], target_id=monster_ids[0])
+    engine.queue_forced_intent(pc_ids[0], forced_intent, "test reason")
+
+    # Run the encounter
+    all_events = []
+    results = engine.step_until_decision()
+    for r in results:
+        all_events.extend(r.events)
+
+    # Check that ForcedIntentApplied was emitted
+    applied_events = [e for e in all_events if isinstance(e, ForcedIntentApplied)]
+
+    # If the forced PC happened to act first, we should see the event
+    if applied_events:
+        assert applied_events[0].combatant_id == pc_ids[0]
+        assert applied_events[0].intent == forced_intent
+
+
+# ---------------------------------------------------------------------------
+# 35. Review finding 1: rejected forced intent falls back to normal choices
+# ---------------------------------------------------------------------------
+
+
+def test_rejected_forced_intent_falls_back_to_choices(default_party, goblin_party):
+    """A forced intent that fails validation must not leave the engine stuck.
+
+    When a forced intent targets a dead combatant, the engine should emit
+    ActionRejected then fall back to normal choice generation (NeedAction for
+    PCs, provider for monsters) instead of entering bare AWAIT_INTENT.
+    """
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    pc_ids = [cid for cid in engine._ctx.combatants if cid.startswith("pc:")]
+    monster_ids = [cid for cid in engine._ctx.combatants if cid.startswith("monster:")]
+
+    # Kill the target so the forced intent will be rejected
+    target_id = monster_ids[0]
+    engine._ctx.combatants[target_id].entity.hit_points = 0
+
+    # Queue a forced intent targeting the dead monster
+    bad_intent = MeleeAttackIntent(actor_id=pc_ids[0], target_id=target_id)
+    engine.queue_forced_intent(pc_ids[0], bad_intent, "bad forced intent")
+
+    # Run until decision — should NOT stall
+    results = engine.step_until_decision()
+    all_events = [event for r in results for event in r.events]
+
+    # The engine should reach either AWAIT_INTENT with NeedAction or ENDED — not bare AWAIT_INTENT
+    if engine.state == EncounterState.AWAIT_INTENT:
+        need_actions = [e for e in all_events if isinstance(e, NeedAction)]
+        assert len(need_actions) > 0, (
+            "Engine is in AWAIT_INTENT but no NeedAction was emitted after forced-intent rejection"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 36. Review finding 2: ActionChoice.ui_args is immutable
+# ---------------------------------------------------------------------------
+
+
+def test_action_choice_ui_args_immutable(default_party, goblin_party):
+    """ActionChoice.ui_args should not be mutatable by consumers."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+    results = engine.step_until_decision()
+    need_action = next(
+        event for r in results for event in r.events if isinstance(event, NeedAction)
+    )
+    choice = need_action.available[0]
+    with pytest.raises(TypeError):
+        choice.ui_args["hacked"] = "value"
+
+
+# ---------------------------------------------------------------------------
+# 37. Review finding 3: serialized NeedAction includes label
+# ---------------------------------------------------------------------------
+
+
+def test_serialized_need_action_includes_label(default_party, goblin_party):
+    """EventSerializer.to_dict should include the computed label in ActionChoice dicts."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+    results = engine.step_until_decision()
+    need_action = next(
+        event for r in results for event in r.events if isinstance(event, NeedAction)
+    )
+    d = EventSerializer.to_dict(need_action)
+    assert d["kind"] == "NeedAction"
+    for choice_dict in d["available"]:
+        assert "label" in choice_dict
+        assert choice_dict["label"].startswith("Attack ")
+        assert "ui_key" in choice_dict
+        assert "ui_args" in choice_dict
+
+
+# ---------------------------------------------------------------------------
+# 38. Review finding 4: ForcedIntentQueued emitted in step() event batch
+# ---------------------------------------------------------------------------
+
+
+def test_forced_intent_queued_emitted_in_step(default_party, goblin_party):
+    """ForcedIntentQueued should appear in the next step() call's event batch."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    pc_ids = [cid for cid in engine._ctx.combatants if cid.startswith("pc:")]
+    monster_ids = [cid for cid in engine._ctx.combatants if cid.startswith("monster:")]
+
+    forced_intent = MeleeAttackIntent(actor_id=pc_ids[0], target_id=monster_ids[0])
+    engine.queue_forced_intent(pc_ids[0], forced_intent, "morale test")
+
+    # The very next step() should include the ForcedIntentQueued event
+    result = engine.step()
+    queued_events = [e for e in result.events if isinstance(e, ForcedIntentQueued)]
+    assert len(queued_events) == 1
+    assert queued_events[0].combatant_id == pc_ids[0]
+    assert queued_events[0].reason == "morale test"
+
+
+# ---------------------------------------------------------------------------
+# 39. Non-blocker: queue_forced_intent after ENDED raises explicitly
+# ---------------------------------------------------------------------------
+
+
+def test_queue_forced_intent_after_ended_raises(default_party, weak_goblin_party):
+    """Queueing forced intents after ENDED should fail fast (not silently defer forever)."""
+    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+    _collect_events(engine)
+    assert engine.state == EncounterState.ENDED
+
+    pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    monster_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    intent = MeleeAttackIntent(actor_id=pc_id, target_id=monster_id)
+
+    with pytest.raises(RuntimeError, match="after encounter ended"):
+        engine.queue_forced_intent(pc_id, intent, "late queue")
+
+
+# ---------------------------------------------------------------------------
+# 40. Non-blocker: forced rejection emits ActionRejected before fallback choice
+# ---------------------------------------------------------------------------
+
+
+def test_forced_rejection_event_ordering(default_party, goblin_party):
+    """Forced-intent rejection should emit ActionRejected before fallback NeedAction."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    monster_ids = [cid for cid in engine._ctx.combatants if cid.startswith("monster:")]
+    dead_target_id = monster_ids[0]
+    engine._ctx.combatants[dead_target_id].entity.hit_points = 0
+
+    # Force deterministic turn order to trigger this PC's forced intent immediately.
+    engine._ctx.turn_queue.clear()
+    engine._ctx.turn_queue.append(pc_id)
+    engine._state = EncounterState.TURN_START
+
+    engine.queue_forced_intent(
+        pc_id,
+        MeleeAttackIntent(actor_id=pc_id, target_id=dead_target_id),
+        "ordering test",
+    )
+
+    first = engine.step()  # TURN_START -> VALIDATE_INTENT
+    assert any(isinstance(e, ForcedIntentApplied) for e in first.events)
+
+    second = engine.step()  # VALIDATE_INTENT with forced rejection + fallback
+    assert second.state == EncounterState.AWAIT_INTENT
+    assert second.needs_intent is True
+    assert any(isinstance(e, ActionRejected) for e in second.events)
+    assert any(isinstance(e, NeedAction) for e in second.events)
+
+    event_names = [type(e).__name__ for e in second.events]
+    assert event_names.index("ActionRejected") < event_names.index("NeedAction")

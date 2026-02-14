@@ -4,8 +4,6 @@ Output style is designed to match the existing log messages from ``encounter.py`
 so that ``DungeonAssistant.summarize_battle()`` receives similar input.
 """
 
-import re
-
 from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
@@ -15,6 +13,8 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    ForcedIntentApplied,
+    ForcedIntentQueued,
     InitiativeRolled,
     NeedAction,
     RoundStarted,
@@ -48,11 +48,6 @@ class EventFormatter:
 
         return combatant_id
 
-    def _display_choice_label(self, label: str) -> str:
-        """Replace canonical IDs embedded in action labels."""
-        pattern = r"(pc:[^\s,]+|monster:[^\s,]+:[0-9]+)"
-        return re.sub(pattern, lambda m: self._display_combatant(m.group(0)), label)
-
     def format(self, event: EncounterEvent) -> str:
         """Return a single-line string for *event*."""
         match event:
@@ -81,7 +76,9 @@ class EventFormatter:
                 return f"Initiative: {', '.join(parts)}"
 
             case TurnQueueBuilt(queue=q):
-                turn_order = [self._display_combatant(combatant_id) for combatant_id in q]
+                turn_order = [
+                    self._display_combatant(combatant_id) for combatant_id in q
+                ]
                 return f"Turn order: {', '.join(turn_order)}"
 
             case TurnStarted(combatant_id=cid):
@@ -91,7 +88,7 @@ class EventFormatter:
                 return f"{self._display_combatant(cid)}'s turn is skipped ({reason})."
 
             case NeedAction(combatant_id=cid, available=choices):
-                labels = [self._display_choice_label(choice.label) for choice in choices]
+                labels = [choice.label for choice in choices]
                 return f"Choose action for {self._display_combatant(cid)}: {', '.join(labels)}"
 
             case AttackRolled(
@@ -129,6 +126,12 @@ class EventFormatter:
                 target = self._display_combatant(tid)
                 return f"{source} applies {cond} to {target} ({duration_text})."
 
+            case ForcedIntentQueued(combatant_id=cid, reason=reason):
+                return f"{self._display_combatant(cid)} is forced to act ({reason})."
+
+            case ForcedIntentApplied(combatant_id=cid):
+                return f"{self._display_combatant(cid)}'s forced action is applied."
+
             case EntityDied(entity_id=eid):
                 return f"{self._display_combatant(eid)} falls!"
 
@@ -141,7 +144,9 @@ class EventFormatter:
 
             case ActionRejected(combatant_id=cid, reasons=reasons):
                 reason_text = "; ".join(rejection.message for rejection in reasons)
-                return f"Action rejected for {self._display_combatant(cid)}: {reason_text}"
+                return (
+                    f"Action rejected for {self._display_combatant(cid)}: {reason_text}"
+                )
 
             case EncounterFaulted(state=st, error_type=et, message=msg):
                 return f"FAULT in {st.name}: [{et}] {msg}"

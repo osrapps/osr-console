@@ -25,10 +25,13 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    ForcedIntentApplied,
+    ForcedIntentQueued,
     InitiativeRolled,
     NeedAction,
     RoundStarted,
     Rejection,
+    RejectionCode,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -39,6 +42,8 @@ from osrlib.combat.events import (
 from osrlib.combat.formatter import EventFormatter
 from osrlib.combat.intents import ActionIntent, MeleeAttackIntent
 from osrlib.combat.serializer import EventSerializer
+from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
+from osrlib.combat.views import CombatView, CombatantView
 from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterState
 
 __all__ = [
@@ -53,7 +58,9 @@ __all__ = [
     "CombatContext",
     "CombatEngine",
     "CombatSide",
+    "CombatView",
     "CombatantRef",
+    "CombatantView",
     "ConditionApplied",
     "ConsumeSlotEffect",
     "DamageEffect",
@@ -67,6 +74,8 @@ __all__ = [
     "EncounterStarted",
     "EncounterState",
     "EntityDied",
+    "ForcedIntentApplied",
+    "ForcedIntentQueued",
     "EventFormatter",
     "EventSerializer",
     "FixedDiceService",
@@ -75,10 +84,13 @@ __all__ = [
     "NeedAction",
     "RoundStarted",
     "Rejection",
+    "RejectionCode",
     "SpellSlotConsumed",
     "StepResult",
     "SurpriseRolled",
     "MeleeAttackAction",
+    "RandomMonsterProvider",
+    "TacticalProvider",
     "TurnQueueBuilt",
     "TurnSkipped",
     "TurnStarted",

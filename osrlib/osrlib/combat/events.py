@@ -1,9 +1,26 @@
 """Typed event dataclasses emitted by the combat engine."""
 
 from dataclasses import dataclass
+from enum import Enum, auto
+from types import MappingProxyType
 
 from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome, EncounterState
+
+
+class RejectionCode(Enum):
+    """Enumerated rejection codes for combat action validation failures."""
+
+    NO_INTENT = auto()
+    UNSUPPORTED_INTENT = auto()
+    INVALID_ACTOR = auto()
+    NOT_CURRENT_COMBATANT = auto()
+    ACTOR_DEAD = auto()
+    INVALID_TARGET = auto()
+    TARGET_NOT_OPPONENT = auto()
+    NO_SPELL_SLOT = auto()
+    UNKNOWN_EFFECT_TYPE = auto()
+    NO_VALIDATED_ACTION = auto()
 
 
 @dataclass(frozen=True)
@@ -68,7 +85,7 @@ class TurnSkipped(EncounterEvent):
 class Rejection:
     """Structured reason for an action validation or execution rejection."""
 
-    code: str
+    code: RejectionCode
     message: str
 
 
@@ -76,8 +93,21 @@ class Rejection:
 class ActionChoice:
     """A UI-facing actionable choice for the active combatant."""
 
-    label: str
+    ui_key: str
+    ui_args: MappingProxyType
     intent: ActionIntent
+
+    @property
+    def label(self) -> str:
+        """Human-readable label derived from ``ui_key`` and ``ui_args``."""
+        return _render_choice_label(self.ui_key, self.ui_args)
+
+
+def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
+    """Render a human-readable label from structured action-choice data."""
+    if ui_key == "attack_target":
+        return f"Attack {ui_args.get('target_name', ui_args.get('target_id', '???'))}"
+    return ui_key
 
 
 @dataclass(frozen=True)
@@ -160,6 +190,23 @@ class ActionRejected(EncounterEvent):
     def reason(self) -> str:
         """Backward-compatible plain-text view used by older callers."""
         return "; ".join(rejection.message for rejection in self.reasons)
+
+
+@dataclass(frozen=True)
+class ForcedIntentQueued(EncounterEvent):
+    """Emitted when a forced intent is queued for a combatant (e.g. morale/flee)."""
+
+    combatant_id: str
+    intent: ActionIntent
+    reason: str
+
+
+@dataclass(frozen=True)
+class ForcedIntentApplied(EncounterEvent):
+    """Emitted when a forced intent is consumed and applied to a combatant's turn."""
+
+    combatant_id: str
+    intent: ActionIntent
 
 
 @dataclass(frozen=True)

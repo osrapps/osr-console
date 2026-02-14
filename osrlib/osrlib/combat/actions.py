@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from osrlib.combat.context import CombatContext, CombatSide
 from osrlib.combat.effects import DamageEffect, Effect
-from osrlib.combat.events import AttackRolled, EncounterEvent, Rejection
+from osrlib.combat.events import AttackRolled, EncounterEvent, Rejection, RejectionCode
 from osrlib.monster import Monster
 from osrlib.player_character import PlayerCharacter
 
@@ -41,26 +41,32 @@ class MeleeAttackAction(CombatAction):
     def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
         actor_ref = ctx.combatants.get(self.actor_id)
         if actor_ref is None:
-            return (Rejection(code="INVALID_ACTOR", message="actor is invalid"),)
+            return (
+                Rejection(code=RejectionCode.INVALID_ACTOR, message="actor is invalid"),
+            )
         if self.actor_id != ctx.current_combatant_id:
             return (
                 Rejection(
-                    code="NOT_CURRENT_COMBATANT",
+                    code=RejectionCode.NOT_CURRENT_COMBATANT,
                     message=f"not current combatant (expected {ctx.current_combatant_id})",
                 ),
             )
         if not actor_ref.is_alive:
-            return (Rejection(code="ACTOR_DEAD", message="actor is dead"),)
+            return (Rejection(code=RejectionCode.ACTOR_DEAD, message="actor is dead"),)
 
         target_ref = ctx.combatants.get(self.target_id)
         if target_ref is None or not target_ref.is_alive:
             return (
-                Rejection(code="INVALID_TARGET", message="target is dead or invalid"),
+                Rejection(
+                    code=RejectionCode.INVALID_TARGET,
+                    message="target is dead or invalid",
+                ),
             )
         if target_ref.side == actor_ref.side:
             return (
                 Rejection(
-                    code="TARGET_NOT_OPPONENT", message="target must be an opponent"
+                    code=RejectionCode.TARGET_NOT_OPPONENT,
+                    message="target must be an opponent",
                 ),
             )
 

@@ -1,7 +1,5 @@
 """Bard's Tale-style interactive combat screen."""
 
-import random
-
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
@@ -10,7 +8,6 @@ from textual.widgets.option_list import Option
 
 from osrlib.combat import (
     CombatEngine,
-    CombatSide,
     EncounterState,
     EventFormatter,
     NeedAction,
@@ -114,7 +111,8 @@ class CombatScreen(Screen):
             self._finish_combat(self._outcome or self.engine.outcome)
             return
 
-        # Engine is awaiting intent — figure out whose turn it is
+        # Engine is awaiting intent — in manual mode this is always a PC turn
+        # (monsters are auto-resolved by the engine's tactical provider).
         last_result = results[-1]
         if not last_result.needs_intent:
             return
@@ -133,22 +131,9 @@ class CombatScreen(Screen):
         if need_action is None:
             return
 
-        # Determine side
-        ref = self.engine._ctx.combatants.get(combatant_id)
-        if ref is None:
-            return
-
-        if ref.side == CombatSide.MONSTER:
-            # Auto-resolve monster turn: pick random living PC target
-            choices = need_action.available
-            if choices:
-                chosen = random.choice(choices)
-                # Use set_timer to let UI render between monster turns
-                self.set_timer(0.05, lambda: self._advance_combat(intent=chosen.intent))
-        else:
-            # PC turn: show target selection
-            self._pending_need_action = need_action
-            self._show_target_menu(combatant_id, need_action)
+        # PC turn: show target selection
+        self._pending_need_action = need_action
+        self._show_target_menu(combatant_id, need_action)
 
     def _show_target_menu(self, combatant_id: str, need_action: NeedAction) -> None:
         """Populate and display the target OptionList for a PC's turn."""
@@ -216,10 +201,8 @@ class CombatScreen(Screen):
     def _refresh_rosters(self) -> None:
         """Update party and monster roster tables from current engine state."""
         self.query_one("#combat_party_table", PartyRosterTable).update_table()
-        self.query_one("#monster_roster", MonsterRosterTable).update_table(
-            self.engine._ctx.combatants,
-            self.engine._ctx.announced_deaths,
-        )
+        view = self.engine.get_view()
+        self.query_one("#monster_roster", MonsterRosterTable).update_table(view)
 
     def action_dismiss_screen(self) -> None:
         """Dismiss the combat screen, returning outcome data."""
