@@ -227,25 +227,28 @@ class MonsterRosterTable(Container):
         table = self.query_one(DataTable)
         table.add_columns("Monster", "HP", "Status")
 
-    def update_table(self, combatants: dict, announced_deaths: set) -> None:
-        """Refresh the monster table from engine combat context.
+    def update_table(self, view) -> None:
+        """Refresh the monster table from a frozen combat view.
 
         Args:
-            combatants: The ``CombatContext.combatants`` dict.
-            announced_deaths: The ``CombatContext.announced_deaths`` set.
+            view: An immutable [`CombatView`][osrlib.combat.views.CombatView] snapshot.
         """
+        from osrlib.combat.context import CombatSide
+
         table = self.query_one(DataTable)
         table.clear()
-        for cid, ref in combatants.items():
-            if not cid.startswith("monster:"):
+        for c in view.combatants:
+            if c.side != CombatSide.MONSTER:
                 continue
-            hp_text = str(ref.entity.hit_points) if ref.is_alive else "0"
-            status = "Dead" if cid in announced_deaths or not ref.is_alive else "Alive"
+            hp_text = str(c.hp) if c.is_alive else "0"
+            status = (
+                "Dead" if c.id in view.announced_deaths or not c.is_alive else "Alive"
+            )
             table.add_row(
-                ref.name,
+                c.name,
                 Text(hp_text, justify="center"),
                 Text(status, justify="center"),
-                key=cid,
+                key=c.id,
             )
 
 

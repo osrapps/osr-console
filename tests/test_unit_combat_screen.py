@@ -1,10 +1,8 @@
 """Tests for the TUI combat screen controller logic.
 
 These tests exercise the manual-mode combat loop that the CombatScreen uses:
-monster turns auto-resolved by picking random targets, PC turns pausing for input.
+monster turns auto-resolved by the engine's tactical provider, PC turns pausing for input.
 """
-
-import random
 
 import pytest
 
@@ -106,7 +104,7 @@ def weak_goblin_gang(weak_goblin_gang_stats):
 
 
 def _simulate_combat_loop(engine: CombatEngine, max_iterations: int = 200) -> list:
-    """Simulate the TUI combat loop: auto-resolve all turns (monster and PC).
+    """Simulate the TUI combat loop: monsters auto-resolved by engine provider, PCs pick first choice.
 
     Returns all events collected during the encounter.
     """
@@ -125,7 +123,7 @@ def _simulate_combat_loop(engine: CombatEngine, max_iterations: int = 200) -> li
         if not last.needs_intent:
             break
 
-        # Find the NeedAction event
+        # Find the NeedAction event (only emitted for PC turns)
         need_action = None
         for r in results:
             for event in r.events:
@@ -135,12 +133,12 @@ def _simulate_combat_loop(engine: CombatEngine, max_iterations: int = 200) -> li
         if need_action is None:
             break
 
-        # Pick a random available choice (same logic as TUI)
         choices = need_action.available
         if not choices:
             break
 
-        chosen = random.choice(choices)
+        # Pick the first available choice (deterministic)
+        chosen = choices[0]
         results = engine.step_until_decision(intent=chosen.intent)
         for r in results:
             all_events.extend(r.events)
@@ -191,8 +189,11 @@ class TestManualModeCombatLoop:
             assert choice.label
             assert isinstance(choice.intent, MeleeAttackIntent)
 
-    def test_monster_turn_auto_resolve(self, default_party, goblin_party):
-        """Simulating the TUI auto-resolve for monster turns should work correctly."""
+    def test_monster_turns_auto_resolved_by_engine(self, default_party, goblin_party):
+        """In manual mode, monster turns are resolved by the engine's tactical provider.
+
+        NeedAction should only be emitted for PC combatants.
+        """
         engine = CombatEngine(
             pc_party=default_party,
             monster_party=goblin_party,
@@ -201,24 +202,12 @@ class TestManualModeCombatLoop:
         results = engine.step_until_decision()
         last = results[-1]
 
-        # Determine combatant side
-        cid = last.pending_combatant_id
-        ref = engine._ctx.combatants[cid]
-
-        if ref.side == CombatSide.MONSTER:
-            # Find NeedAction and auto-pick a target
-            need_action = next(
-                event
-                for r in results
-                for event in r.events
-                if isinstance(event, NeedAction)
-            )
-            chosen = random.choice(need_action.available)
-            results2 = engine.step_until_decision(intent=chosen.intent)
-
-            # Should advance past AWAIT_INTENT
-            assert (
-                engine.state != EncounterState.AWAIT_INTENT or results2[-1].needs_intent
+        # The engine should pause only for PC turns
+        if last.needs_intent:
+            cid = last.pending_combatant_id
+            ref = engine._ctx.combatants[cid]
+            assert ref.side == CombatSide.PC, (
+                "NeedAction should only be emitted for PCs"
             )
 
     def test_pc_turn_choices_are_monster_targets(self, default_party, goblin_party):
@@ -229,24 +218,11 @@ class TestManualModeCombatLoop:
             auto_resolve_intents=False,
         )
 
-        # Run until we find a PC turn
-        all_need_actions = []
+        # In manual mode, step_until_decision pauses only for PC turns
         results = engine.step_until_decision()
-        for r in results:
-            for event in r.events:
-                if isinstance(event, NeedAction):
-                    all_need_actions.append(event)
+        last = results[-1]
 
-        max_iter = 50
-        while max_iter > 0:
-            max_iter -= 1
-            last = results[-1]
-            if not last.needs_intent:
-                break
-
-            cid = last.pending_combatant_id
-            ref = engine._ctx.combatants[cid]
-
+        if last.needs_intent:
             need_action = next(
                 (
                     event
@@ -256,18 +232,10 @@ class TestManualModeCombatLoop:
                 ),
                 None,
             )
-            if need_action is None:
-                break
-
-            if ref.side == CombatSide.PC:
-                # Verify choices target monsters
-                for choice in need_action.available:
-                    assert choice.intent.target_id.startswith("monster:")
-                break
-
-            # Auto-resolve monster turn
-            chosen = random.choice(need_action.available)
-            results = engine.step_until_decision(intent=chosen.intent)
+            assert need_action is not None
+            # All choices should target monsters
+            for choice in need_action.available:
+                assert choice.intent.target_id.startswith("monster:")
 
     def test_full_encounter_completes(self, default_party, goblin_party):
         """A full encounter should run to completion via the manual mode loop."""
@@ -439,3 +407,18 @@ class TestManualModeCombatLoop:
         log = encounter.get_encounter_log()
         assert len(log) > 0
         assert "Encounter" in log or "round" in log.lower()
+
+    def test_no_need_action_emitted_for_monsters(self, default_party, goblin_party):
+        """NeedAction should never be emitted for monster combatants in manual mode."""
+        engine = CombatEngine(
+            pc_party=default_party,
+            monster_party=goblin_party,
+            auto_resolve_intents=False,
+        )
+        all_events = _simulate_combat_loop(engine)
+
+        need_actions = [e for e in all_events if isinstance(e, NeedAction)]
+        for na in need_actions:
+            assert na.combatant_id.startswith("pc:"), (
+                f"NeedAction emitted for non-PC: {na.combatant_id}"
+            )

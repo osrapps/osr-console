@@ -4,6 +4,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
+from osrlib.combat.intents import ActionIntent
 from osrlib.monster import Monster, MonsterParty
 from osrlib.party import Party
 from osrlib.player_character import PlayerCharacter
@@ -46,6 +47,7 @@ class CombatContext:
     current_combatant_id: str | None = None
     round_number: int = 0
     announced_deaths: set[str] = field(default_factory=set)
+    forced_intents: dict[str, ActionIntent] = field(default_factory=dict)
     pc_party: Party | None = None
     monster_party: MonsterParty | None = None
 

@@ -180,12 +180,71 @@ auto-resolve combat flow with a manual-mode engine driven by the TUI.
 
 3. **`set_timer()` for UI responsiveness.** Monster turns and combat advancement use `set_timer(0.05, ...)` to yield control to Textual's event loop between steps, preventing the screen from appearing frozen during multi-step monster turns.
 
+## Phase 3.5: Combat architecture stabilization (COMPLETE)
+
+Five workstreams to harden engine contracts and clean up layering issues before Phase 4.
+
+### WS3: Rejection model hardening
+
+- Added `RejectionCode` enum (10 members) to `events.py`
+- Changed `Rejection.code` type from `str` to `RejectionCode`
+- Updated all rejection constructors in `engine.py` and `actions.py`
+- Fixed `serializer.py` to recursively normalize nested enum values in `to_dict()`
+
+### WS4: Decouple action choice labels
+
+- Replaced `ActionChoice.label: str` field with `ui_key: str` + `ui_args: dict[str, str]`
+- Added computed `label` property via `_render_choice_label()` for backward compatibility
+- Engine builds choices with `ui_key="attack_target"` and structured target args
+- Removed regex-based label rewriting from `formatter.py`
+
+### WS1: Engine-owned tactical providers
+
+| File | Change |
+|---|---|
+| `combat/tactical_providers.py` | **New.** `TacticalProvider` protocol + `RandomMonsterProvider` default implementation |
+| `combat/engine.py` | Constructor accepts optional `tactical_provider` param. In manual mode, monsters are auto-resolved by the provider — `NeedAction` only emits for PCs. Auto-resolve mode also routes through provider for consistency. |
+| `screen_combat.py` | Removed `import random` and monster auto-resolve branch. `_advance_combat()` simplified: `needs_intent` always means PC turn. |
+
+### WS2: Frozen combat snapshots
+
+| File | Change |
+|---|---|
+| `combat/views.py` | **New.** `CombatantView` and `CombatView` frozen dataclasses |
+| `combat/engine.py` | Added `get_view() -> CombatView` public method |
+| `widgets.py` | `MonsterRosterTable.update_table()` accepts `CombatView` instead of raw context dicts |
+| `screen_combat.py` | `_refresh_rosters()` calls `engine.get_view()` — no more `engine._ctx` access |
+
+### WS5: Forced-intent contract
+
+- Added `ForcedIntentQueued` and `ForcedIntentApplied` event types to `events.py`
+- Added `forced_intents: dict[str, ActionIntent]` field to `CombatContext`
+- Added `engine.queue_forced_intent(combatant_id, intent, reason)` public method
+- Engine checks forced intents at `TURN_START` before normal decision flow — forced turns bypass `AWAIT_INTENT` and do not emit `NeedAction`
+- Added formatter support for new event types
+
+### Exit criteria met
+
+- No UI access to `engine._ctx` — screen uses `engine.get_view()` only
+- No AI/tactical logic in TUI — `random.choice` removed from screen; engine handles monsters via provider
+- No rejection-string parsing — all codes are `RejectionCode` enum values
+
+### Design decisions
+
+1. **Monster turns invisible to TUI in manual mode.** The engine now auto-resolves all monster turns via `TacticalProvider` before reaching `AWAIT_INTENT`. The TUI only ever sees `NeedAction` for PC combatants. This is a deliberate reversal of the Phase 3 design decision (#1) to keep monster auto-resolve in the controller layer.
+
+2. **`ActionChoice.label` preserved as computed property.** Rather than a breaking removal, `label` is derived from `ui_key`/`ui_args` at read time. Existing code referencing `choice.label` continues to work.
+
+3. **Minimal `CombatView` surface.** Only fields the TUI currently needs are exposed (`combatants`, `announced_deaths`, `round_number`, `current_combatant_id`). Future phases can extend without breaking existing consumers.
+
+4. **Forced-intent scaffolding only.** No morale rules or flee actions — just the queue/consume mechanism and event contract so Phase 5 can plug in without engine-level changes.
+
 ## Phase 4: Ranged + spells + slots (NOT STARTED)
 
 ## Phase 5: Morale + flee (NOT STARTED)
 
 ## Current test count
 
-- `tests/test_unit_combat_engine.py`: 28 tests (Phases 1-2 + manual mode)
-- `tests/test_unit_combat_screen.py`: 8 tests (Phase 3 combat controller logic)
-- Total suite: 303 passed, 3 skipped
+- `tests/test_unit_combat_engine.py`: 37 tests (Phases 1-3 + Phase 3.5 additions)
+- `tests/test_unit_combat_screen.py`: 10 tests (Phase 3 combat controller + Phase 3.5 monster auto-resolve)
+- Total suite: 314 passed, 3 skipped
