@@ -239,12 +239,31 @@ Five workstreams to harden engine contracts and clean up layering issues before 
 
 4. **Forced-intent scaffolding only.** No morale rules or flee actions — just the queue/consume mechanism and event contract so Phase 5 can plug in without engine-level changes.
 
+### Post-review hardening (COMPLETE)
+
+Follow-up fixes from code review are now implemented:
+
+- **Forced-intent rejection fallback:** Rejected forced intents no longer leave the engine in bare `AWAIT_INTENT`; the engine falls back to normal choice generation (`NeedAction` for PCs / tactical provider for monsters).
+- **ActionChoice immutability:** `ActionChoice.ui_args` now uses `MappingProxyType` and is immutable to consumers.
+- **Serializer compatibility:** `EventSerializer.to_dict()` now includes computed `ActionChoice.label` in serialized `NeedAction.available` entries and safely handles `MappingProxyType`.
+- **Forced-intent observability:** `ForcedIntentQueued` events are buffered and emitted in the next `step()` result.
+- **Ended-state safety:** `queue_forced_intent()` now raises a clear `RuntimeError` if called after the encounter has ended.
+
+Additional tests added:
+
+- `test_rejected_forced_intent_falls_back_to_choices`
+- `test_action_choice_ui_args_immutable`
+- `test_serialized_need_action_includes_label`
+- `test_forced_intent_queued_emitted_in_step`
+- `test_queue_forced_intent_after_ended_raises`
+- `test_forced_rejection_event_ordering`
+
 ## Phase 4: Ranged + spells + slots (NOT STARTED)
 
 ## Phase 5: Morale + flee (NOT STARTED)
 
 ## Current test count
 
-- `tests/test_unit_combat_engine.py`: 37 tests (Phases 1-3 + Phase 3.5 additions)
+- `tests/test_unit_combat_engine.py`: 43 tests (Phases 1-3 + Phase 3.5 additions + post-review hardening)
 - `tests/test_unit_combat_screen.py`: 10 tests (Phase 3 combat controller + Phase 3.5 monster auto-resolve)
-- Total suite: 314 passed, 3 skipped
+- Total suite: 320 passed, 3 skipped

@@ -140,6 +140,9 @@ class CombatEngine:
         Returns:
             The ``ForcedIntentQueued`` event that was produced.
         """
+        if self._state == EncounterState.ENDED:
+            raise RuntimeError("cannot queue forced intent after encounter ended")
+
         self._ctx.forced_intents[combatant_id] = intent
         event = ForcedIntentQueued(
             combatant_id=combatant_id, intent=intent, reason=reason

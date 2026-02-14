@@ -1303,3 +1303,64 @@ def test_forced_intent_queued_emitted_in_step(default_party, goblin_party):
     assert len(queued_events) == 1
     assert queued_events[0].combatant_id == pc_ids[0]
     assert queued_events[0].reason == "morale test"
+
+
+# ---------------------------------------------------------------------------
+# 39. Non-blocker: queue_forced_intent after ENDED raises explicitly
+# ---------------------------------------------------------------------------
+
+
+def test_queue_forced_intent_after_ended_raises(default_party, weak_goblin_party):
+    """Queueing forced intents after ENDED should fail fast (not silently defer forever)."""
+    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+    _collect_events(engine)
+    assert engine.state == EncounterState.ENDED
+
+    pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    monster_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    intent = MeleeAttackIntent(actor_id=pc_id, target_id=monster_id)
+
+    with pytest.raises(RuntimeError, match="after encounter ended"):
+        engine.queue_forced_intent(pc_id, intent, "late queue")
+
+
+# ---------------------------------------------------------------------------
+# 40. Non-blocker: forced rejection emits ActionRejected before fallback choice
+# ---------------------------------------------------------------------------
+
+
+def test_forced_rejection_event_ordering(default_party, goblin_party):
+    """Forced-intent rejection should emit ActionRejected before fallback NeedAction."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+    monster_ids = [cid for cid in engine._ctx.combatants if cid.startswith("monster:")]
+    dead_target_id = monster_ids[0]
+    engine._ctx.combatants[dead_target_id].entity.hit_points = 0
+
+    # Force deterministic turn order to trigger this PC's forced intent immediately.
+    engine._ctx.turn_queue.clear()
+    engine._ctx.turn_queue.append(pc_id)
+    engine._state = EncounterState.TURN_START
+
+    engine.queue_forced_intent(
+        pc_id,
+        MeleeAttackIntent(actor_id=pc_id, target_id=dead_target_id),
+        "ordering test",
+    )
+
+    first = engine.step()  # TURN_START -> VALIDATE_INTENT
+    assert any(isinstance(e, ForcedIntentApplied) for e in first.events)
+
+    second = engine.step()  # VALIDATE_INTENT with forced rejection + fallback
+    assert second.state == EncounterState.AWAIT_INTENT
+    assert second.needs_intent is True
+    assert any(isinstance(e, ActionRejected) for e in second.events)
+    assert any(isinstance(e, NeedAction) for e in second.events)
+
+    event_names = [type(e).__name__ for e in second.events]
+    assert event_names.index("ActionRejected") < event_names.index("NeedAction")
