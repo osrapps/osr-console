@@ -23,6 +23,9 @@ class RejectionCode(Enum):
     UNKNOWN_SPELL = auto()
     UNKNOWN_EFFECT_TYPE = auto()
     NO_VALIDATED_ACTION = auto()
+    INELIGIBLE_CASTER = auto()
+    SLOT_LEVEL_MISMATCH = auto()
+    MONSTER_ACTION_NOT_SUPPORTED = auto()
 
 
 @dataclass(frozen=True)

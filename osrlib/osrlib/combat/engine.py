@@ -350,10 +350,13 @@ class CombatEngine:
                         )
                     )
 
-            # Spell choices
+            # Spell choices — only show spells the PC actually knows
             slots = self._get_or_init_spell_slots(cid, pc)
-            if slots:
+            known_spell_names = {s.name for s in pc.inventory.spells}
+            if slots and known_spell_names:
                 for spell_def in SPELL_CATALOG.values():
+                    if spell_def.name not in known_spell_names:
+                        continue
                     if pc.character_class.class_type not in spell_def.usable_by:
                         continue
                     if slots.get(spell_def.spell_level, 0) <= 0:
@@ -563,7 +566,7 @@ class CombatEngine:
                                 ),
                             )
                         )
-                        continue
+                        break
                     events.append(
                         SpellSlotConsumed(
                             caster_id=caster_id,

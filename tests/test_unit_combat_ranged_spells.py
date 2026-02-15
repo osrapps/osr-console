@@ -649,3 +649,206 @@ def test_choice_labels_ranged_and_spells():
         MappingProxyType({"target_name": "Goblin #1"}),
     )
     assert label == "Attack Goblin #1"
+
+
+# ---------------------------------------------------------------------------
+# 15. Failed slot consumption blocks downstream effects (Fix 1)
+# ---------------------------------------------------------------------------
+
+
+def test_failed_slot_consumption_blocks_downstream_effects(
+    default_party, weak_goblin_party
+):
+    """When ConsumeSlotEffect fails, no DamageApplied/ConditionApplied events are emitted."""
+    from osrlib.combat.effects import (
+        ApplyConditionEffect,
+        ConsumeSlotEffect,
+        DamageEffect,
+    )
+    from osrlib.combat.events import ConditionApplied, DamageApplied
+
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Find a fighter (no spell slots)
+    fighter_cid, _ = _find_pc_with_class(engine, CharacterClassType.FIGHTER)
+    target_id = engine._ctx.living(CombatSide.MONSTER)[0].id
+
+    # Simulate the effect pipeline: ConsumeSlot first, then Damage and Condition
+    engine._pending_effects = (
+        ConsumeSlotEffect(caster_id=fighter_cid, level=1),
+        DamageEffect(source_id=fighter_cid, target_id=target_id, amount=5),
+        ApplyConditionEffect(
+            source_id=fighter_cid,
+            target_id=target_id,
+            condition_id="asleep",
+            duration=None,
+        ),
+    )
+    events: list = []
+    engine._handle_apply_effects(events)
+
+    # Should have ActionRejected for the slot failure
+    rejected = _find_events(events, ActionRejected)
+    assert len(rejected) == 1
+    assert rejected[0].reasons[0].code == RejectionCode.NO_SPELL_SLOT
+
+    # Should NOT have any damage or condition events
+    assert _find_events(events, DamageApplied) == []
+    assert _find_events(events, ConditionApplied) == []
+
+
+# ---------------------------------------------------------------------------
+# 16. Cast spell rejected for ineligible caster class (Fix 2a)
+# ---------------------------------------------------------------------------
+
+
+def test_cast_spell_rejected_ineligible_class(default_party, weak_goblin_party):
+    """A Fighter trying to cast Magic Missile gets INELIGIBLE_CASTER rejection."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    fighter_cid, _ = _find_pc_with_class(engine, CharacterClassType.FIGHTER)
+    target_id = engine._ctx.living(CombatSide.MONSTER)[0].id
+    engine._ctx.current_combatant_id = fighter_cid
+
+    action = CastSpellAction(
+        actor_id=fighter_cid,
+        spell_id="magic_missile",
+        slot_level=1,
+        target_ids=(target_id,),
+    )
+    reasons = action.validate(engine._ctx)
+    assert len(reasons) == 1
+    assert reasons[0].code == RejectionCode.INELIGIBLE_CASTER
+
+
+# ---------------------------------------------------------------------------
+# 17. Cast spell rejected for slot level mismatch (Fix 2b)
+# ---------------------------------------------------------------------------
+
+
+def test_cast_spell_rejected_slot_level_mismatch(default_party, weak_goblin_party):
+    """MU casting Hold Person (level 2) with slot_level=1 gets SLOT_LEVEL_MISMATCH."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Find a MU or Elf (they can cast spells, but hold_person is cleric-only)
+    # Instead, find a Cleric who has hold_person available but use wrong slot level
+    caster_cid, _ = _find_pc_with_class(engine, CharacterClassType.CLERIC)
+    target_id = engine._ctx.living(CombatSide.MONSTER)[0].id
+    engine._ctx.current_combatant_id = caster_cid
+
+    action = CastSpellAction(
+        actor_id=caster_cid,
+        spell_id="hold_person",
+        slot_level=1,  # Hold Person is spell_level 2
+        target_ids=(target_id,),
+    )
+    reasons = action.validate(engine._ctx)
+    assert len(reasons) == 1
+    assert reasons[0].code == RejectionCode.SLOT_LEVEL_MISMATCH
+
+
+# ---------------------------------------------------------------------------
+# 18. Monster ranged intent rejected gracefully (Fix 3)
+# ---------------------------------------------------------------------------
+
+
+def test_monster_ranged_intent_rejected_not_faulted(default_party, weak_goblin_party):
+    """Monster RangedAttackIntent produces ActionRejected, not EncounterFaulted."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Find a monster
+    monster_cid = None
+    for cid, ref in engine._ctx.combatants.items():
+        if ref.side == CombatSide.MONSTER and ref.is_alive:
+            monster_cid = cid
+            break
+    assert monster_cid is not None
+
+    # Find a PC target
+    pc_cid = None
+    for cid, ref in engine._ctx.combatants.items():
+        if ref.side == CombatSide.PC and ref.is_alive:
+            pc_cid = cid
+            break
+    assert pc_cid is not None
+
+    engine._ctx.current_combatant_id = monster_cid
+    engine._state = EncounterState.VALIDATE_INTENT
+
+    intent = RangedAttackIntent(actor_id=monster_cid, target_id=pc_cid)
+    results = engine.step_until_decision(intent=intent)
+    all_events = [e for r in results for e in r.events]
+
+    rejected = _find_events(all_events, ActionRejected)
+    assert len(rejected) >= 1
+    assert any(
+        r.code == RejectionCode.MONSTER_ACTION_NOT_SUPPORTED
+        for rej in rejected
+        for r in rej.reasons
+    )
+
+    # Must NOT have faulted
+    from osrlib.combat.events import EncounterFaulted
+
+    faulted = _find_events(all_events, EncounterFaulted)
+    assert faulted == []
+
+
+# ---------------------------------------------------------------------------
+# 19. Spell choices filter to known spells (Fix 4)
+# ---------------------------------------------------------------------------
+
+
+def test_spell_choices_filter_to_known_spells(default_party, weak_goblin_party):
+    """Caster only sees spells they have in inventory, not the full catalog."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    # Find a MU (equipped with only Magic Missile by equip_party)
+    mu_cid, mu_pc = _find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
+
+    # Verify MU only has Magic Missile in inventory
+    known_spell_names = {s.name for s in mu_pc.inventory.spells}
+    assert "Magic Missile" in known_spell_names
+
+    engine._ctx.turn_queue.clear()
+    engine._ctx.turn_queue.append(mu_cid)
+    engine._state = EncounterState.TURN_START
+    engine._ctx.round_number = 1
+
+    result = engine.step()
+    need_actions = _find_events(list(result.events), NeedAction)
+    assert len(need_actions) == 1
+
+    spell_choices = [c for c in need_actions[0].available if c.ui_key == "cast_spell"]
+
+    # All spell choices must correspond to spells in the PC's inventory
+    for choice in spell_choices:
+        spell_name = choice.ui_args.get("spell_name", "")
+        assert spell_name in known_spell_names, (
+            f"Spell choice '{spell_name}' not in PC's known spells: {known_spell_names}"
+        )
+
+    # Spells NOT in inventory should not appear (e.g., Sleep if MU doesn't have it)
+    choice_spell_names = {c.ui_args.get("spell_name") for c in spell_choices}
+    for name in choice_spell_names:
+        assert name in known_spell_names

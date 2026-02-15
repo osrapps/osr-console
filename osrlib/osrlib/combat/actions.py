@@ -208,15 +208,22 @@ class RangedAttackAction(CombatAction):
             return base
 
         actor_ref = ctx.combatants[self.actor_id]
-        if actor_ref.side == CombatSide.PC:
-            pc: PlayerCharacter = actor_ref.entity
-            if not pc.has_ranged_weapon_equipped():
-                return (
-                    Rejection(
-                        code=RejectionCode.NO_RANGED_WEAPON,
-                        message="no ranged weapon equipped",
-                    ),
-                )
+        if actor_ref.side != CombatSide.PC:
+            return (
+                Rejection(
+                    code=RejectionCode.MONSTER_ACTION_NOT_SUPPORTED,
+                    message="ranged attacks are not supported for monsters",
+                ),
+            )
+
+        pc: PlayerCharacter = actor_ref.entity
+        if not pc.has_ranged_weapon_equipped():
+            return (
+                Rejection(
+                    code=RejectionCode.NO_RANGED_WEAPON,
+                    message="no ranged weapon equipped",
+                ),
+            )
         return ()
 
     def execute(self, ctx: CombatContext) -> ActionResult:
@@ -293,6 +300,41 @@ class CastSpellAction(CombatAction):
                     message=f"unknown spell: {self.spell_id}",
                 ),
             )
+
+        # Caster class must be in spell's usable_by set
+        if isinstance(actor_ref.entity, PlayerCharacter):
+            pc: PlayerCharacter = actor_ref.entity
+            if pc.character_class.class_type not in spell_def.usable_by:
+                return (
+                    Rejection(
+                        code=RejectionCode.INELIGIBLE_CASTER,
+                        message=f"{pc.character_class.class_type.value} cannot cast {spell_def.name}",
+                    ),
+                )
+
+            # Slot level must match the spell's defined level
+            if self.slot_level != spell_def.spell_level:
+                return (
+                    Rejection(
+                        code=RejectionCode.SLOT_LEVEL_MISMATCH,
+                        message=(
+                            f"slot_level {self.slot_level} does not match "
+                            f"spell level {spell_def.spell_level}"
+                        ),
+                    ),
+                )
+
+            # PC's class level must have slots at the requested level
+            spell_slots = pc.character_class.current_level.spell_slots
+            if not spell_slots or not any(
+                int(sl) == self.slot_level and int(cnt) > 0 for sl, cnt in spell_slots
+            ):
+                return (
+                    Rejection(
+                        code=RejectionCode.NO_SPELL_SLOT,
+                        message=f"no level {self.slot_level} spell slots available for this class/level",
+                    ),
+                )
 
         # Validate targets — use `is None` not `not targets` per podcast warning
         if self.target_ids is None:
