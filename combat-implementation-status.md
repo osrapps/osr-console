@@ -311,11 +311,38 @@ Monster combatants continue to receive melee-only choices (spell-casting monster
 3. **Healing/self-buffs deferred.** Only offensive spells (damage + conditions on opponents) are supported. Ally/self targeting requires additional choice generation logic.
 4. **Spell catalog is not a full DSL.** Just data-driven definitions for exemplar combat spells. A full effects DSL is a future concern.
 
+### Post-review hardening (COMPLETE)
+
+Branch review (`combat-phase-4-branch-review.md`) identified 3 HIGH and 1 MEDIUM validation gaps. All resolved:
+
+1. **Failed slot consumption now blocks downstream effects.** `_handle_apply_effects()` uses `break` (not `continue`) when `ConsumeSlotEffect` raises `ValueError`, so no `DamageApplied`/`ConditionApplied` events leak through on a failed cast.
+
+2. **`CastSpellAction.validate()` enforces caster/spell/slot legality.** Three new checks after spell lookup:
+   - Caster class must be in `spell_def.usable_by` — rejects with `INELIGIBLE_CASTER`
+   - `slot_level` must match `spell_def.spell_level` — rejects with `SLOT_LEVEL_MISMATCH`
+   - PC's class level must define slots at the requested level — rejects with `NO_SPELL_SLOT`
+
+3. **Monster ranged intents reject gracefully.** `RangedAttackAction.validate()` rejects non-PC actors with `MONSTER_ACTION_NOT_SUPPORTED` instead of passing validation and faulting in `execute()`.
+
+4. **Spell choices filter to known spells.** `_build_choices_or_await()` now intersects `SPELL_CATALOG` entries with the PC's `inventory.spells` names, so only spells the PC actually owns appear as choices.
+
+New rejection codes added to `RejectionCode`: `INELIGIBLE_CASTER`, `SLOT_LEVEL_MISMATCH`, `MONSTER_ACTION_NOT_SUPPORTED`.
+
+**Known limitation:** `CastSpellAction.validate()` performs a *static* slot check (does the class/level define slots at this level?) but does not check encounter-time remaining slots. A second cast after all slots have been consumed will pass `validate()`, emit `SpellCast`, then get `ActionRejected(NO_SPELL_SLOT)` in `_handle_apply_effects`. Fix 1 ensures no damage/condition effects leak through in this case, so the invariant is safe — but the `SpellCast` event is emitted before the rejection. Fixing this would require threading the engine's `_spell_slots_remaining_by_caster` state into the action validation layer, breaking the current separation between stateless validation and stateful effect application.
+
+Additional tests (5 new in `test_unit_combat_ranged_spells.py`):
+
+- `test_failed_slot_consumption_blocks_downstream_effects`
+- `test_cast_spell_rejected_ineligible_class`
+- `test_cast_spell_rejected_slot_level_mismatch`
+- `test_monster_ranged_intent_rejected_not_faulted`
+- `test_spell_choices_filter_to_known_spells`
+
 ## Phase 5: Morale + flee (NOT STARTED)
 
 ## Current test count
 
 - `tests/test_unit_combat_engine.py`: 42 tests (Phases 1-3.5 + updated for Phase 4 intent types)
 - `tests/test_unit_combat_screen.py`: 11 tests (Phase 3 combat controller + updated for Phase 4 intent types)
-- `tests/test_unit_combat_ranged_spells.py`: 14 tests (Phase 4 ranged attacks, spells, spell slots)
-- Total suite: 334 passed, 3 skipped
+- `tests/test_unit_combat_ranged_spells.py`: 19 tests (Phase 4 ranged attacks, spells, spell slots, post-review hardening)
+- Total suite: 339 passed, 3 skipped
