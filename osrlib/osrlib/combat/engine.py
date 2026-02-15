@@ -8,7 +8,13 @@ from types import MappingProxyType
 from osrlib.monster import MonsterParty
 from osrlib.party import Party
 
-from osrlib.combat.actions import CombatAction, MeleeAttackAction
+from osrlib.combat.actions import (
+    CastSpellAction,
+    CombatAction,
+    MeleeAttackAction,
+    RangedAttackAction,
+)
+from osrlib.combat.spells import SPELL_CATALOG
 from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
 from osrlib.combat.dice_service import BXDiceService, DiceService
 from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
@@ -42,7 +48,13 @@ from osrlib.combat.events import (
     TurnStarted,
     VictoryDetermined,
 )
-from osrlib.combat.intents import ActionIntent, MeleeAttackIntent
+from osrlib.combat.intents import (
+    ActionIntent,
+    CastSpellIntent,
+    MeleeAttackIntent,
+    RangedAttackIntent,
+)
+from osrlib.player_character import PlayerCharacter
 from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterState
 
 
@@ -301,7 +313,8 @@ class CombatEngine:
             self._state = EncounterState.CHECK_VICTORY
             return
 
-        available_choices = tuple(
+        # Melee choices (always available)
+        choices: list[ActionChoice] = [
             ActionChoice(
                 ui_key="attack_target",
                 ui_args=MappingProxyType(
@@ -313,7 +326,87 @@ class CombatEngine:
                 intent=MeleeAttackIntent(actor_id=cid, target_id=target.id),
             )
             for target in living_targets
-        )
+        ]
+
+        # PC-only ranged and spell choices
+        if ref.side == CombatSide.PC and isinstance(ref.entity, PlayerCharacter):
+            pc: PlayerCharacter = ref.entity
+
+            # Ranged attack choices
+            if pc.has_ranged_weapon_equipped():
+                for target in living_targets:
+                    choices.append(
+                        ActionChoice(
+                            ui_key="ranged_attack_target",
+                            ui_args=MappingProxyType(
+                                {
+                                    "target_id": target.id,
+                                    "target_name": self._display_target_name(target.id),
+                                }
+                            ),
+                            intent=RangedAttackIntent(
+                                actor_id=cid, target_id=target.id
+                            ),
+                        )
+                    )
+
+            # Spell choices
+            slots = self._get_or_init_spell_slots(cid, pc)
+            if slots:
+                for spell_def in SPELL_CATALOG.values():
+                    if pc.character_class.class_type not in spell_def.usable_by:
+                        continue
+                    if slots.get(spell_def.spell_level, 0) <= 0:
+                        continue
+
+                    if spell_def.num_targets == -1:
+                        # AoE: one choice targeting all enemies
+                        all_target_ids = tuple(t.id for t in living_targets)
+                        target_label = "all enemies"
+                        choices.append(
+                            ActionChoice(
+                                ui_key="cast_spell",
+                                ui_args=MappingProxyType(
+                                    {
+                                        "spell_id": spell_def.spell_id,
+                                        "spell_name": spell_def.name,
+                                        "target_name": target_label,
+                                    }
+                                ),
+                                intent=CastSpellIntent(
+                                    actor_id=cid,
+                                    spell_id=spell_def.spell_id,
+                                    slot_level=spell_def.spell_level,
+                                    target_ids=all_target_ids,
+                                ),
+                            )
+                        )
+                    else:
+                        # Single-target: one choice per living target
+                        for target in living_targets:
+                            choices.append(
+                                ActionChoice(
+                                    ui_key="cast_spell",
+                                    ui_args=MappingProxyType(
+                                        {
+                                            "spell_id": spell_def.spell_id,
+                                            "spell_name": spell_def.name,
+                                            "target_id": target.id,
+                                            "target_name": self._display_target_name(
+                                                target.id
+                                            ),
+                                        }
+                                    ),
+                                    intent=CastSpellIntent(
+                                        actor_id=cid,
+                                        spell_id=spell_def.spell_id,
+                                        slot_level=spell_def.spell_level,
+                                        target_ids=(target.id,),
+                                    ),
+                                )
+                            )
+
+        available_choices = tuple(choices)
 
         if self._auto_resolve_intents or ref.side == CombatSide.MONSTER:
             self._pending_intent = self._tactical_provider.choose_intent(
@@ -507,6 +600,16 @@ class CombatEngine:
 
         self._state = EncounterState.CHECK_DEATHS
 
+    def _get_or_init_spell_slots(
+        self, caster_id: str, pc: PlayerCharacter
+    ) -> dict[int, int]:
+        """Lazy-init and return the remaining spell slots for a caster."""
+        if caster_id not in self._spell_slots_remaining_by_caster:
+            self._spell_slots_remaining_by_caster[caster_id] = (
+                self._extract_spell_slots(pc)
+            )
+        return self._spell_slots_remaining_by_caster[caster_id]
+
     def _consume_spell_slot(
         self, caster_id: str, caster_entity: object, level: int
     ) -> int:
@@ -517,7 +620,7 @@ class CombatEngine:
 
         if caster_id not in self._spell_slots_remaining_by_caster:
             self._spell_slots_remaining_by_caster[caster_id] = (
-                self._get_spell_slots_for_caster(caster_entity)
+                self._extract_spell_slots(caster_entity)
             )
 
         slots = self._spell_slots_remaining_by_caster[caster_id]
@@ -528,23 +631,43 @@ class CombatEngine:
         return slots[level]
 
     @staticmethod
-    def _get_spell_slots_for_caster(caster_entity: object) -> dict[int, int]:
-        """Extract spell-slot counts from the caster's current class level."""
+    def _extract_spell_slots(caster_entity: object) -> dict[int, int]:
+        """Extract spell-slot counts from the caster's current class level.
+
+        Handles ``PlayerCharacter`` directly and falls back to ``getattr``
+        for duck-typed entities.
+        """
+        if isinstance(caster_entity, PlayerCharacter):
+            spell_slots = caster_entity.character_class.current_level.spell_slots
+            if not spell_slots:
+                return {}
+            return {int(slot_level): int(count) for slot_level, count in spell_slots}
+
+        # Fallback for duck-typed entities
         character_class = getattr(caster_entity, "character_class", None)
         if character_class is None:
             return {}
-
         current_level = getattr(character_class, "current_level", None)
         spell_slots = getattr(current_level, "spell_slots", None)
         if not spell_slots:
             return {}
-
         return {int(slot_level): int(count) for slot_level, count in spell_slots}
 
     def _action_for_intent(self, intent: ActionIntent) -> CombatAction | None:
         if isinstance(intent, MeleeAttackIntent):
             return MeleeAttackAction(
                 actor_id=intent.actor_id, target_id=intent.target_id
+            )
+        if isinstance(intent, RangedAttackIntent):
+            return RangedAttackAction(
+                actor_id=intent.actor_id, target_id=intent.target_id
+            )
+        if isinstance(intent, CastSpellIntent):
+            return CastSpellAction(
+                actor_id=intent.actor_id,
+                spell_id=intent.spell_id,
+                slot_level=intent.slot_level,
+                target_ids=intent.target_ids,
             )
         return None
 

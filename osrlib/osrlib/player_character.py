@@ -1,4 +1,5 @@
 """Module containing the PlayerCharacter class. Use PlayerCharacter to represent a PC the player adds to their party."""
+
 from enum import Enum
 import datetime, json
 import osrlib.ability
@@ -141,24 +142,44 @@ class PlayerCharacter:
         return roll.total_with_modifier
 
     def get_attack_roll(self) -> DiceRoll:
-        """Roll a 1d20 to hit, add all applicable modifiers, and return the roll.
+        """Roll a 1d20 melee to-hit using the STR modifier.
 
         Returns:
-            DiceRoll: The result of the to hit roll.
+            DiceRoll: The result of the melee to-hit roll.
         """
-        # TODO: Get proper attack roll
-        # 1. TODO: Get active weapon/spell
-        # 2. TODO: Get applicable attack modifier(s)
-        #  - TODO: Melee: Strength modifier, enchanted/cursed weapon adjustment, buffs/curses
-        #  - TODO: Ranged: Dexterity modifier, enchanted/cursed weapon adjustment, buffs/curses
-
         melee_attack_modifier = self.abilities[AbilityType.STRENGTH].modifiers[
             ModifierType.TO_HIT
         ]
-        ranged_attack_modifier = self.abilities[AbilityType.DEXTERITY].modifiers[
+        return roll_dice("1d20", melee_attack_modifier)
+
+    def get_ranged_attack_roll(self) -> DiceRoll:
+        """Roll a 1d20 ranged to-hit using the DEX modifier (not STR).
+
+        Returns:
+            DiceRoll: The result of the ranged to-hit roll.
+        """
+        dex_to_hit = self.abilities[AbilityType.DEXTERITY].modifiers[
             ModifierType.TO_HIT
         ]
-        return roll_dice("1d20", melee_attack_modifier)
+        return roll_dice("1d20", dex_to_hit)
+
+    def get_ranged_damage_roll(self) -> DiceRoll:
+        """Roll weapon damage with NO ability modifier for ranged attacks.
+
+        Returns:
+            DiceRoll: The result of the ranged damage roll.
+        """
+        weapon = self.inventory.get_equipped_weapon()
+        return roll_dice(weapon.damage_die)
+
+    def has_ranged_weapon_equipped(self) -> bool:
+        """Check whether the currently equipped weapon has a range value.
+
+        Returns:
+            bool: True if the equipped weapon is ranged.
+        """
+        weapon = self.inventory.get_equipped_weapon()
+        return getattr(weapon, "range", None) is not None
 
     def get_damage_roll(self) -> DiceRoll:
         """Roll appropriate damage die, add all applicable modifiers, and return the roll.

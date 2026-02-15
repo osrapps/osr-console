@@ -18,6 +18,7 @@ from osrlib.combat.events import (
     InitiativeRolled,
     NeedAction,
     RoundStarted,
+    SpellCast,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -113,6 +114,13 @@ class EventFormatter:
                     f"{source} deals {amt} damage to {target}. "
                     f"{target} has {max(hp, 0)} HP remaining."
                 )
+
+            case SpellCast(caster_id=cid, spell_name=name, target_ids=tids):
+                caster = self._display_combatant(cid)
+                targets = ", ".join(self._display_combatant(t) for t in tids)
+                if targets:
+                    return f"{caster} casts {name} on {targets}."
+                return f"{caster} casts {name}."
 
             case SpellSlotConsumed(caster_id=cid, level=level, remaining=rem):
                 caster = self._display_combatant(cid)

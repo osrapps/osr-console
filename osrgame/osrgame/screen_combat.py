@@ -144,7 +144,7 @@ class CombatScreen(Screen):
         pc_name = combatant_id.split(":", 1)[1] if ":" in combatant_id else combatant_id
 
         prompt = self.query_one("#target_prompt", Label)
-        prompt.update(f"{pc_name}'s turn - select a target:")
+        prompt.update(f"{pc_name}'s turn - select an action:")
         prompt.display = True
 
         for i, choice in enumerate(need_action.available):

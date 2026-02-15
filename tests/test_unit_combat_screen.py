@@ -15,7 +15,7 @@ from osrlib.combat import (
     VictoryDetermined,
 )
 from osrlib.dice_roller import DiceRoll
-from osrlib.combat.intents import MeleeAttackIntent
+from osrlib.combat.intents import CastSpellIntent, MeleeAttackIntent, RangedAttackIntent
 from osrlib.combat.state import EncounterOutcome
 from osrlib.encounter import Encounter
 from osrlib.enums import CharacterClassType
@@ -184,10 +184,12 @@ class TestManualModeCombatLoop:
         need_action = need_actions[0]
         assert len(need_action.available) > 0
 
-        # Each choice should have a label and a MeleeAttackIntent
+        # Each choice should have a label and a valid intent type
         for choice in need_action.available:
             assert choice.label
-            assert isinstance(choice.intent, MeleeAttackIntent)
+            assert isinstance(
+                choice.intent, (MeleeAttackIntent, RangedAttackIntent, CastSpellIntent)
+            )
 
     def test_monster_turns_auto_resolved_by_engine(self, default_party, goblin_party):
         """In manual mode, monster turns are resolved by the engine's tactical provider.
@@ -233,9 +235,13 @@ class TestManualModeCombatLoop:
                 None,
             )
             assert need_action is not None
-            # All choices should target monsters
+            # All choices should target monsters (melee/ranged have target_id, spells have target_ids)
             for choice in need_action.available:
-                assert choice.intent.target_id.startswith("monster:")
+                intent = choice.intent
+                if hasattr(intent, "target_id"):
+                    assert intent.target_id.startswith("monster:")
+                elif hasattr(intent, "target_ids"):
+                    assert all(tid.startswith("monster:") for tid in intent.target_ids)
 
     def test_full_encounter_completes(self, default_party, goblin_party):
         """A full encounter should run to completion via the manual mode loop."""

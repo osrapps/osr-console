@@ -13,7 +13,13 @@ from osrlib.combat.effects import (
     DamageEffect,
     Effect,
 )
-from osrlib.combat.actions import ActionResult, CombatAction, MeleeAttackAction
+from osrlib.combat.actions import (
+    ActionResult,
+    CastSpellAction,
+    CombatAction,
+    MeleeAttackAction,
+    RangedAttackAction,
+)
 from osrlib.combat.engine import CombatEngine, StepResult
 from osrlib.combat.events import (
     ActionChoice,
@@ -32,6 +38,7 @@ from osrlib.combat.events import (
     RoundStarted,
     Rejection,
     RejectionCode,
+    SpellCast,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -40,8 +47,14 @@ from osrlib.combat.events import (
     VictoryDetermined,
 )
 from osrlib.combat.formatter import EventFormatter
-from osrlib.combat.intents import ActionIntent, MeleeAttackIntent
+from osrlib.combat.intents import (
+    ActionIntent,
+    CastSpellIntent,
+    MeleeAttackIntent,
+    RangedAttackIntent,
+)
 from osrlib.combat.serializer import EventSerializer
+from osrlib.combat.spells import SpellDefinition, get_spell
 from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
 from osrlib.combat.views import CombatView, CombatantView
 from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterState
@@ -54,6 +67,8 @@ __all__ = [
     "ApplyConditionEffect",
     "AttackRolled",
     "BXDiceService",
+    "CastSpellAction",
+    "CastSpellIntent",
     "CombatAction",
     "CombatContext",
     "CombatEngine",
@@ -82,9 +97,13 @@ __all__ = [
     "InitiativeRolled",
     "MeleeAttackIntent",
     "NeedAction",
+    "RangedAttackAction",
+    "RangedAttackIntent",
     "RoundStarted",
     "Rejection",
     "RejectionCode",
+    "SpellCast",
+    "SpellDefinition",
     "SpellSlotConsumed",
     "StepResult",
     "SurpriseRolled",
@@ -95,4 +114,5 @@ __all__ = [
     "TurnSkipped",
     "TurnStarted",
     "VictoryDetermined",
+    "get_spell",
 ]

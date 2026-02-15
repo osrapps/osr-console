@@ -19,6 +19,8 @@ class RejectionCode(Enum):
     INVALID_TARGET = auto()
     TARGET_NOT_OPPONENT = auto()
     NO_SPELL_SLOT = auto()
+    NO_RANGED_WEAPON = auto()
+    UNKNOWN_SPELL = auto()
     UNKNOWN_EFFECT_TYPE = auto()
     NO_VALIDATED_ACTION = auto()
 
@@ -107,6 +109,14 @@ def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
     """Render a human-readable label from structured action-choice data."""
     if ui_key == "attack_target":
         return f"Attack {ui_args.get('target_name', ui_args.get('target_id', '???'))}"
+    if ui_key == "ranged_attack_target":
+        return f"Ranged: {ui_args.get('target_name', ui_args.get('target_id', '???'))}"
+    if ui_key == "cast_spell":
+        spell_name = ui_args.get("spell_name", ui_args.get("spell_id", "???"))
+        target = ui_args.get("target_name", "")
+        if target:
+            return f"Cast {spell_name} on {target}"
+        return f"Cast {spell_name}"
     return ui_key
 
 
@@ -163,6 +173,16 @@ class ConditionApplied(EncounterEvent):
     target_id: str
     condition_id: str
     duration: int | None
+
+
+@dataclass(frozen=True)
+class SpellCast(EncounterEvent):
+    """Emitted when a spell is successfully cast."""
+
+    caster_id: str
+    spell_id: str
+    spell_name: str
+    target_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)

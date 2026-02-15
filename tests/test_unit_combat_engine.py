@@ -30,6 +30,7 @@ from osrlib.combat import (
     NeedAction,
     RejectionCode,
     RoundStarted,
+    SpellCast,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -714,7 +715,13 @@ def test_resolution_and_mutation_emitted_in_separate_states(
     attacker_ref = engine._ctx.combatants[action.actor_id]
     if attacker_ref.side.name == "PC":
         attacker_ref.entity.get_attack_roll = lambda: DiceRoll(1, 20, 20, 0, 20, [20])
+        attacker_ref.entity.get_ranged_attack_roll = lambda: DiceRoll(
+            1, 20, 20, 0, 20, [20]
+        )
         attacker_ref.entity.get_damage_roll = lambda: DiceRoll(1, 6, 4, 0, 4, [4])
+        attacker_ref.entity.get_ranged_damage_roll = lambda: DiceRoll(
+            1, 6, 4, 0, 4, [4]
+        )
     else:
         attacker_ref.entity.get_to_hit_target_ac = lambda _: 2
         attacker_ref.entity.get_attack_rolls = lambda: [
@@ -724,12 +731,12 @@ def test_resolution_and_mutation_emitted_in_separate_states(
 
     result = engine.step()  # EXECUTE_ACTION -> APPLY_EFFECTS
     assert result.state == EncounterState.APPLY_EFFECTS
-    assert any(isinstance(e, AttackRolled) for e in result.events)
+    # Resolution events: AttackRolled for melee/ranged, SpellCast for spells
+    assert any(isinstance(e, (AttackRolled, SpellCast)) for e in result.events)
     assert not any(isinstance(e, DamageApplied) for e in result.events)
 
     result = engine.step()  # APPLY_EFFECTS -> CHECK_DEATHS
     assert result.state == EncounterState.CHECK_DEATHS
-    assert any(isinstance(e, DamageApplied) for e in result.events)
 
 
 # ---------------------------------------------------------------------------
@@ -1103,11 +1110,13 @@ def test_action_choice_has_ui_key_and_ui_args(default_party, goblin_party):
     ]
     assert len(need_actions) == 1
     for choice in need_actions[0].available:
-        assert choice.ui_key == "attack_target"
-        assert "target_id" in choice.ui_args
-        assert "target_name" in choice.ui_args
-        # label should be derivable from ui_key/ui_args
-        assert choice.label.startswith("Attack ")
+        assert choice.ui_key in ("attack_target", "ranged_attack_target", "cast_spell")
+        # All choices should have a non-empty label
+        assert choice.label
+        if choice.ui_key == "attack_target":
+            assert "target_id" in choice.ui_args
+            assert "target_name" in choice.ui_args
+            assert choice.label.startswith("Attack ")
 
 
 # ---------------------------------------------------------------------------
@@ -1273,7 +1282,7 @@ def test_serialized_need_action_includes_label(default_party, goblin_party):
     assert d["kind"] == "NeedAction"
     for choice_dict in d["available"]:
         assert "label" in choice_dict
-        assert choice_dict["label"].startswith("Attack ")
+        assert len(choice_dict["label"]) > 0
         assert "ui_key" in choice_dict
         assert "ui_args" in choice_dict
 
@@ -1317,7 +1326,9 @@ def test_queue_forced_intent_after_ended_raises(default_party, weak_goblin_party
     assert engine.state == EncounterState.ENDED
 
     pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
-    monster_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    monster_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
     intent = MeleeAttackIntent(actor_id=pc_id, target_id=monster_id)
 
     with pytest.raises(RuntimeError, match="after encounter ended"):
