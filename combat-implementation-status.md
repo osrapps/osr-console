@@ -258,12 +258,91 @@ Additional tests added:
 - `test_queue_forced_intent_after_ended_raises`
 - `test_forced_rejection_event_ordering`
 
-## Phase 4: Ranged + spells + slots (NOT STARTED)
+## Phase 4: Ranged + spells + slots (COMPLETE)
+
+### What was built
+
+Ranged attacks and spell casting — the first real expansion of the action system beyond melee.
+
+| File | Change |
+|---|---|
+| `combat/spells.py` | **New.** `SpellDefinition` frozen dataclass + `SPELL_CATALOG` with 4 exemplar spells (Magic Missile, Sleep, Hold Person, Light). `get_spell()` lookup function. |
+| `combat/intents.py` | **Modified.** Added `RangedAttackIntent` and `CastSpellIntent` frozen dataclasses. Updated `ActionIntent` union to include all three types. |
+| `combat/actions.py` | **Modified.** Added `RangedAttackAction` (PC ranged with DEX to-hit, no STR damage) and `CastSpellAction` (spell catalog lookup, slot consumption, damage/condition effects). Extracted `_validate_actor_and_target()` shared helper. |
+| `combat/events.py` | **Modified.** Added `SpellCast` event, `NO_RANGED_WEAPON` and `UNKNOWN_SPELL` rejection codes. Updated `_render_choice_label()` for `ranged_attack_target` and `cast_spell` ui_keys. |
+| `combat/engine.py` | **Modified.** `_action_for_intent()` handles `RangedAttackIntent` and `CastSpellIntent`. `_build_choices_or_await()` generates ranged and spell choices for PCs based on equipped weapon and available spell slots. Added `_get_or_init_spell_slots()` helper. Tightened `_extract_spell_slots()` with direct `PlayerCharacter` isinstance check (addressing podcast feedback on duck-typed getattr chains). |
+| `combat/formatter.py` | **Modified.** Added `SpellCast` format case. |
+| `combat/__init__.py` | **Modified.** Exports all new public types (`RangedAttackIntent`, `CastSpellIntent`, `RangedAttackAction`, `CastSpellAction`, `SpellCast`, `SpellDefinition`, `get_spell`). |
+| `player_character.py` | **Modified.** Added `get_ranged_attack_roll()` (DEX modifier), `get_ranged_damage_roll()` (no ability modifier), `has_ranged_weapon_equipped()`. Cleaned up pre-existing dead `ranged_attack_modifier` variable. |
+| `item_factories.py` | **Modified.** Added `spell_data` dict + `SpellFactory.create_spell()`. Updated `equip_magic_user` (Magic Missile), `equip_elf` (Magic Missile), `equip_cleric` (Light). |
+| `screen_combat.py` | **Modified.** Changed prompt from "select a target:" to "select an action:" since choices now include ranged/spell options. |
+| `tests/test_unit_combat_ranged_spells.py` | **New.** 14 tests covering ranged attacks, spell casting, spell slot management, choice generation, and label rendering. |
+| `tests/test_unit_combat_engine.py` | **Modified.** Updated 3 tests to accept new intent/choice types alongside melee. |
+| `tests/test_unit_combat_screen.py` | **Modified.** Updated 2 tests to accept new intent types. |
+
+### Exemplar spells
+
+| Spell | Level | Classes | Effect |
+|---|---|---|---|
+| Magic Missile | 1 | Magic User, Elf | 1d6+1 damage, auto-hit, single target |
+| Sleep | 1 | Magic User, Elf | "asleep" condition on all enemies |
+| Hold Person | 2 | Cleric | "held" condition on single target, 9 rounds |
+| Light (offensive) | 1 | Cleric, MU, Elf | "blinded" condition on single target, 12 rounds |
+
+### Choice generation
+
+For PC combatants, `_build_choices_or_await()` now generates:
+
+1. **Melee choices** — always available (one per living opponent)
+2. **Ranged choices** — if `pc.has_ranged_weapon_equipped()` returns True
+3. **Spell choices** — for each catalog spell matching the PC's class and available slot level. AoE spells (`num_targets=-1`) get one choice targeting all enemies. Single-target spells get one choice per living target.
+
+Monster combatants continue to receive melee-only choices (spell-casting monsters deferred).
+
+### Podcast-flagged fixes
+
+1. **Duck-typed spell slot access** — `_extract_spell_slots()` now uses `isinstance(caster_entity, PlayerCharacter)` for direct attribute access, with `getattr` fallback only for duck-typed entities.
+2. **Empty `target_ids` vs `None` trap** — `CastSpellAction.validate()` uses `if self.target_ids is None` (not `if not target_ids`) per podcast warning. `CastSpellIntent.target_ids` is typed as `tuple[str, ...]` and is empty for self-targeting, never `None`.
+
+### Design decisions
+
+1. **Monster ranged/spells deferred.** Monster stat blocks lack spell infrastructure. Only PC spellcasting is implemented.
+2. **No saving throws.** Spell effects apply automatically. Saving throw mechanics deferred to a future phase.
+3. **Healing/self-buffs deferred.** Only offensive spells (damage + conditions on opponents) are supported. Ally/self targeting requires additional choice generation logic.
+4. **Spell catalog is not a full DSL.** Just data-driven definitions for exemplar combat spells. A full effects DSL is a future concern.
+
+### Post-review hardening (COMPLETE)
+
+Branch review (`combat-phase-4-branch-review.md`) identified 3 HIGH and 1 MEDIUM validation gaps. All resolved:
+
+1. **Failed slot consumption now blocks downstream effects.** `_handle_apply_effects()` uses `break` (not `continue`) when `ConsumeSlotEffect` raises `ValueError`, so no `DamageApplied`/`ConditionApplied` events leak through on a failed cast.
+
+2. **`CastSpellAction.validate()` enforces caster/spell/slot legality.** Three new checks after spell lookup:
+   - Caster class must be in `spell_def.usable_by` — rejects with `INELIGIBLE_CASTER`
+   - `slot_level` must match `spell_def.spell_level` — rejects with `SLOT_LEVEL_MISMATCH`
+   - PC's class level must define slots at the requested level — rejects with `NO_SPELL_SLOT`
+
+3. **Monster ranged intents reject gracefully.** `RangedAttackAction.validate()` rejects non-PC actors with `MONSTER_ACTION_NOT_SUPPORTED` instead of passing validation and faulting in `execute()`.
+
+4. **Spell choices filter to known spells.** `_build_choices_or_await()` now intersects `SPELL_CATALOG` entries with the PC's `inventory.spells` names, so only spells the PC actually owns appear as choices.
+
+New rejection codes added to `RejectionCode`: `INELIGIBLE_CASTER`, `SLOT_LEVEL_MISMATCH`, `MONSTER_ACTION_NOT_SUPPORTED`.
+
+**Known limitation:** `CastSpellAction.validate()` performs a *static* slot check (does the class/level define slots at this level?) but does not check encounter-time remaining slots. A second cast after all slots have been consumed will pass `validate()`, emit `SpellCast`, then get `ActionRejected(NO_SPELL_SLOT)` in `_handle_apply_effects`. Fix 1 ensures no damage/condition effects leak through in this case, so the invariant is safe — but the `SpellCast` event is emitted before the rejection. Fixing this would require threading the engine's `_spell_slots_remaining_by_caster` state into the action validation layer, breaking the current separation between stateless validation and stateful effect application.
+
+Additional tests (5 new in `test_unit_combat_ranged_spells.py`):
+
+- `test_failed_slot_consumption_blocks_downstream_effects`
+- `test_cast_spell_rejected_ineligible_class`
+- `test_cast_spell_rejected_slot_level_mismatch`
+- `test_monster_ranged_intent_rejected_not_faulted`
+- `test_spell_choices_filter_to_known_spells`
 
 ## Phase 5: Morale + flee (NOT STARTED)
 
 ## Current test count
 
-- `tests/test_unit_combat_engine.py`: 43 tests (Phases 1-3 + Phase 3.5 additions + post-review hardening)
-- `tests/test_unit_combat_screen.py`: 10 tests (Phase 3 combat controller + Phase 3.5 monster auto-resolve)
-- Total suite: 320 passed, 3 skipped
+- `tests/test_unit_combat_engine.py`: 42 tests (Phases 1-3.5 + updated for Phase 4 intent types)
+- `tests/test_unit_combat_screen.py`: 11 tests (Phase 3 combat controller + updated for Phase 4 intent types)
+- `tests/test_unit_combat_ranged_spells.py`: 19 tests (Phase 4 ranged attacks, spells, spell slots, post-review hardening)
+- Total suite: 339 passed, 3 skipped

@@ -11,5 +11,25 @@ class MeleeAttackIntent:
     target_id: str
 
 
-# Union type that expands in later phases (FleeIntent, RangedAttackIntent, CastSpellIntent).
-ActionIntent = MeleeAttackIntent
+@dataclass(frozen=True)
+class RangedAttackIntent:
+    """Intent to perform a ranged attack against a specific target."""
+
+    actor_id: str
+    target_id: str
+
+
+@dataclass(frozen=True)
+class CastSpellIntent:
+    """Intent to cast a spell.
+
+    ``target_ids`` is an empty tuple for self-targeting spells, never ``None``.
+    """
+
+    actor_id: str
+    spell_id: str
+    slot_level: int
+    target_ids: tuple[str, ...]
+
+
+ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent
