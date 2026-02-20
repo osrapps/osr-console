@@ -148,44 +148,6 @@ OptionList > .option-list--option-highlighted {
     height: 100%;
 }
 
-/* Explore screen */
-
-ExploreScreen {
-    layout: grid;
-    grid-size: 2;
-    grid-columns: 1fr 1fr;
-    grid-rows: 1fr 1fr 3;
-}
-
-#explore-map {
-    row-span: 1;
-    border: solid #4a4a8a;
-    background: #0e0e3a;
-    padding: 1;
-}
-
-#explore-roster {
-    row-span: 1;
-    border: solid #4a4a8a;
-    background: #0e0e3a;
-}
-
-#explore-narrative {
-    column-span: 2;
-    border: solid #4a4a8a;
-    background: #0e0e3a;
-    padding: 1;
-}
-
-#explore-commands {
-    column-span: 2;
-    height: 3;
-    background: #1a1a4e;
-    color: #c0c0c0;
-    padding: 0 1;
-    content-align: center middle;
-}
-
 /* Combat screen */
 
 CombatScreen {
