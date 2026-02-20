@@ -38,6 +38,10 @@ TrainingHallScreen {
     background: #0a0a2e;
 }
 
+#training-layout {
+    height: 1fr;
+}
+
 #training-left {
     width: 50%;
 }

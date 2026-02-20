@@ -19,7 +19,7 @@ class TownHubScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        with Horizontal():
+        with Horizontal(id="town-layout"):
             with Vertical(id="town-left"):
                 yield Static("Welcome to town", id="town-title")
                 with Vertical(id="town-grid"):

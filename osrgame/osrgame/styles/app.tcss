@@ -111,6 +111,10 @@ MainMenuScreen {
 
 /* Town hub screen */
 
+#town-layout {
+    height: 1fr;
+}
+
 #town-title {
     text-align: center;
     color: #ffd700;
