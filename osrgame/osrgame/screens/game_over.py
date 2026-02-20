@@ -12,18 +12,15 @@ class GameOverScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        with Center():
-            with Vertical(id="game-over-container"):
-                yield Static(
-                    "GAME OVER\n\nYour party has been slain...",
-                    id="game-over-text",
-                )
-                with Center():
-                    with Vertical():
-                        yield Button(
-                            "Load saved game", id="btn-load", variant="primary"
-                        )
-                        yield Button("Quit", id="btn-quit")
+        with Vertical(id="game-over-container"):
+            yield Static(
+                "GAME OVER\n\nYour party has been slain...",
+                id="game-over-text",
+            )
+            with Center():
+                with Vertical():
+                    yield Button("Load saved game", id="btn-load", variant="primary")
+                    yield Button("Quit", id="btn-quit")
         yield Footer()
 
     @on(Button.Pressed, "#btn-load")

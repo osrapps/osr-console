@@ -86,10 +86,13 @@ OptionList > .option-list--option-highlighted {
 
 /* Main menu screen */
 
-#main-menu-container {
+MainMenuScreen {
     align: center middle;
-    width: 100%;
-    height: 100%;
+}
+
+#main-menu-container {
+    width: auto;
+    height: auto;
 }
 
 #title-art {
@@ -181,10 +184,13 @@ CombatScreen {
 
 /* Game over screen */
 
-#game-over-container {
+GameOverScreen {
     align: center middle;
-    width: 100%;
-    height: 100%;
+}
+
+#game-over-container {
+    width: auto;
+    height: auto;
 }
 
 #game-over-text {

@@ -27,14 +27,13 @@ class MainMenuScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        with Center():
-            with Vertical(id="main-menu-container"):
-                yield Static(TITLE_ART, id="title-art")
-                with Center(id="menu-buttons"):
-                    with Vertical():
-                        yield Button("New game", id="btn-new-game", variant="primary")
-                        yield Button("Load game", id="btn-load-game")
-                        yield Button("Quit", id="btn-quit")
+        with Vertical(id="main-menu-container"):
+            yield Static(TITLE_ART, id="title-art")
+            with Center(id="menu-buttons"):
+                with Vertical():
+                    yield Button("New game", id="btn-new-game", variant="primary")
+                    yield Button("Load game", id="btn-load-game")
+                    yield Button("Quit", id="btn-quit")
         yield Footer()
 
     @on(Button.Pressed, "#btn-new-game")
