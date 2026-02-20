@@ -484,6 +484,11 @@ class TestFleeIntentFullPipeline:
             monster_party=low_morale_party,
             dice=dice,
         )
+        # Give monsters high HP so PCs can't kill them before their turn
+        for cid, ref in engine._ctx.combatants.items():
+            if ref.side == CombatSide.MONSTER:
+                ref.entity.hit_points = 100
+                ref.entity.max_hit_points = 100
         _advance_past_init(engine)
 
         # Step through ROUND_START to build turn queue
@@ -502,8 +507,19 @@ class TestFleeIntentFullPipeline:
         flee_intent = FleeIntent(actor_id=monster_id)
         engine.queue_forced_intent(monster_id, flee_intent, "morale failure")
 
-        # Run to end — the forced FleeIntent will be applied on the monster's turn
-        all_events = _run_to_end(engine)
+        # Step through turns until the monster's FleeIntent is processed
+        all_events = []
+        for _ in range(200):
+            result = engine.step()
+            all_events.extend(result.events)
+            # Stop once we see the EntityFled event for our monster
+            if any(
+                isinstance(e, EntityFled) and e.entity_id == monster_id
+                for e in result.events
+            ):
+                break
+            if engine.state == EncounterState.ENDED:
+                break
 
         # Verify the full pipeline: ForcedIntentApplied → EntityFled
         forced_applied = _events_of_type(all_events, ForcedIntentApplied)

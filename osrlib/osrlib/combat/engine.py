@@ -289,12 +289,14 @@ class CombatEngine:
 
         # Skip dead combatants
         if not ref.is_alive:
+            self._ctx.forced_intents.pop(cid, None)  # clean up orphaned forced intent
             events.append(TurnSkipped(combatant_id=cid, reason="dead"))
             self._state = EncounterState.TURN_START
             return
 
         # Skip fled combatants
         if ref.has_fled:
+            self._ctx.forced_intents.pop(cid, None)  # clean up orphaned forced intent
             events.append(TurnSkipped(combatant_id=cid, reason="fled"))
             self._state = EncounterState.TURN_START
             return
@@ -706,7 +708,9 @@ class CombatEngine:
             self._state = EncounterState.CHECK_VICTORY
             return
 
-        # Determine which trigger(s) apply
+        # Determine which trigger(s) apply.
+        # dead_monsters counts only actual deaths (not fled) for the first_death trigger.
+        # incapacitated counts dead + fled for the half_incapacitated trigger.
         dead_monsters = sum(
             1
             for ref in self._ctx.combatants.values()
@@ -743,7 +747,7 @@ class CombatEngine:
             MoraleChecked(
                 monster_morale=monster_morale_score,
                 roll=roll,
-                modifier=0,
+                modifier=0,  # scaffolding for future situational modifiers (-2 to +2)
                 passed=passed,
                 trigger=trigger,
                 checks_passed_total=morale.checks_passed,
