@@ -72,11 +72,11 @@ class CharSheetWidget(Vertical):
         # Inventory
         inv = self.query_one("#char-inventory", DataTable)
         inv.clear()
-        for item in pc.inventory.all_items:
+        for idx, item in enumerate(pc.inventory.all_items):
             inv.add_row(
                 item.name,
                 item.item_type.name,
                 Text("Yes" if item.is_equipped else "", justify="center"),
                 Text(str(item.gp_value), justify="center"),
-                key=item.name,
+                key=f"inv_{idx}",
             )
