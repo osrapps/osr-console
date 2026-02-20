@@ -127,12 +127,16 @@ MainMenuScreen {
 
 #town-grid {
     layout: grid;
-    grid-size: 3 2;
-    grid-gutter: 1;
-    align: center middle;
-    width: 80%;
+    grid-size: 2 3;
+    grid-gutter: 0;
+    width: 100%;
     height: auto;
-    margin: 2 0;
+    margin: 1 0;
+}
+
+#town-grid Button {
+    margin: 0 1;
+    min-width: 16;
 }
 
 #town-bottom {
