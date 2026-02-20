@@ -6,6 +6,7 @@ from osrlib.combat import (
     ApplyConditionEffect,
     ActionRejected,
     AttackRolled,
+    CastSpellAction,
     CombatSide,
     CombatEngine,
     CombatView,
@@ -14,6 +15,7 @@ from osrlib.combat import (
     ConsumeSlotEffect,
     DamageApplied,
     DamageEffect,
+    EncounterFaulted,
     EncounterLoopError,
     EncounterOutcome,
     EncounterStarted,
@@ -28,6 +30,7 @@ from osrlib.combat import (
     MeleeAttackAction,
     MeleeAttackIntent,
     NeedAction,
+    RangedAttackIntent,
     RejectionCode,
     RoundStarted,
     SpellCast,
@@ -246,18 +249,37 @@ def test_initiative_ordering(default_party, goblin_party):
 
 
 def test_pc_nat20_critical(default_party, weak_goblin_party):
-    engine = CombatEngine(pc_party=default_party, monster_party=weak_goblin_party)
+    """A forced nat-20 attack roll should produce a critical AttackRolled event."""
+
+    class MeleeOnlyProvider:
+        """Always pick melee attacks so spells don't steal the kill."""
+
+        def choose_intent(self, combatant_id, choices, ctx):
+            melee = [c for c in choices if c.ui_key == "attack_target"]
+            return (melee[0] if melee else choices[0]).intent
+
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=weak_goblin_party,
+        tactical_provider=MeleeOnlyProvider(),
+    )
+
+    # Force all PCs to roll nat 20s on attack
+    for cid, ref in engine._ctx.combatants.items():
+        if cid.startswith("pc:"):
+            ref.entity.get_attack_roll = lambda: DiceRoll(1, 20, 20, 0, 20, [20])
+            ref.entity.get_damage_roll = lambda: DiceRoll(1, 6, 6, 0, 6, [6])
+
     events = _collect_events(engine)
 
     attack_events = _find_events(events, AttackRolled)
-    # At least one attack should exist
     assert len(attack_events) > 0
 
-    # We can't guarantee a nat 20 with random dice, so just verify the event structure
-    for atk in attack_events:
-        if atk.critical:
-            assert atk.hit is True
-            assert atk.roll == 20
+    pc_crits = [e for e in attack_events if e.attacker_id.startswith("pc:") and e.critical]
+    assert len(pc_crits) > 0
+    for atk in pc_crits:
+        assert atk.hit is True
+        assert atk.roll == 20
 
 
 # ---------------------------------------------------------------------------
@@ -1375,3 +1397,146 @@ def test_forced_rejection_event_ordering(default_party, goblin_party):
 
     event_names = [type(e).__name__ for e in second.events]
     assert event_names.index("ActionRejected") < event_names.index("NeedAction")
+
+
+# ---------------------------------------------------------------------------
+# 41. Failed slot consumption blocks downstream spell effects
+# ---------------------------------------------------------------------------
+
+
+def test_failed_slot_consumption_blocks_downstream_effects(default_party, goblin_party):
+    """When ConsumeSlotEffect fails, subsequent DamageEffect and ApplyConditionEffect must not execute."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    # Pick a non-spellcaster (no slots) so ConsumeSlotEffect will fail
+    caster_id = None
+    for cid, ref in engine._ctx.combatants.items():
+        if not cid.startswith("pc:"):
+            continue
+        slots = getattr(ref.entity.character_class.current_level, "spell_slots", None)
+        if not slots:
+            caster_id = cid
+            break
+    assert caster_id is not None, "fixture party must include at least one non-spellcaster"
+
+    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    target = engine._ctx.combatants[target_id].entity
+    original_hp = target.hit_points
+
+    # Queue a consume-slot followed by damage and condition effects
+    engine._pending_effects = (
+        ConsumeSlotEffect(caster_id=caster_id, level=1),
+        DamageEffect(source_id=caster_id, target_id=target_id, amount=5),
+        ApplyConditionEffect(
+            source_id=caster_id, target_id=target_id, condition_id="asleep", duration=None
+        ),
+    )
+    events = []
+    engine._handle_apply_effects(events)
+
+    # Should see rejection but NO damage or condition applied
+    rejected = [e for e in events if isinstance(e, ActionRejected)]
+    assert len(rejected) == 1
+    assert rejected[0].reasons[0].code == RejectionCode.NO_SPELL_SLOT
+
+    assert not any(isinstance(e, DamageApplied) for e in events)
+    assert not any(isinstance(e, ConditionApplied) for e in events)
+    assert target.hit_points == original_hp
+
+
+# ---------------------------------------------------------------------------
+# 42. Class-ineligible spell casting is rejected
+# ---------------------------------------------------------------------------
+
+
+def test_cast_spell_rejected_for_ineligible_class(default_party, goblin_party):
+    """A Fighter should be rejected when attempting to cast Magic Missile."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    fighter_id = None
+    for cid, ref in engine._ctx.combatants.items():
+        if cid.startswith("pc:") and ref.entity.character_class.class_type == CharacterClassType.FIGHTER:
+            fighter_id = cid
+            break
+    assert fighter_id is not None, "default party must include a Fighter"
+
+    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    engine._ctx.current_combatant_id = fighter_id
+
+    action = CastSpellAction(
+        actor_id=fighter_id,
+        spell_id="magic_missile",
+        slot_level=1,
+        target_ids=(target_id,),
+    )
+    reasons = action.validate(engine._ctx)
+    assert len(reasons) > 0
+    assert reasons[0].code == RejectionCode.INELIGIBLE_CASTER
+
+
+# ---------------------------------------------------------------------------
+# 43. Slot-level/spell-level mismatch is rejected
+# ---------------------------------------------------------------------------
+
+
+def test_cast_spell_rejected_for_slot_level_mismatch(default_party, goblin_party):
+    """Casting a level-1 spell with slot_level=2 should be rejected."""
+    engine = CombatEngine(pc_party=default_party, monster_party=goblin_party)
+
+    caster_id = None
+    for cid, ref in engine._ctx.combatants.items():
+        if cid.startswith("pc:") and ref.entity.character_class.class_type in (
+            CharacterClassType.MAGIC_USER,
+            CharacterClassType.ELF,
+        ):
+            caster_id = cid
+            break
+    assert caster_id is not None, "default party must include a Magic User or Elf"
+
+    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    engine._ctx.current_combatant_id = caster_id
+
+    # Magic Missile is spell_level=1, but we pass slot_level=2
+    action = CastSpellAction(
+        actor_id=caster_id,
+        spell_id="magic_missile",
+        slot_level=2,
+        target_ids=(target_id,),
+    )
+    reasons = action.validate(engine._ctx)
+    assert len(reasons) > 0
+    assert reasons[0].code == RejectionCode.SLOT_LEVEL_MISMATCH
+
+
+# ---------------------------------------------------------------------------
+# 44. Monster RangedAttackIntent is rejected without faulting
+# ---------------------------------------------------------------------------
+
+
+def test_monster_ranged_intent_rejected_not_faulted(default_party, goblin_party):
+    """A RangedAttackIntent for a monster should emit ActionRejected, not EncounterFaulted."""
+    engine = CombatEngine(
+        pc_party=default_party,
+        monster_party=goblin_party,
+        auto_resolve_intents=False,
+    )
+
+    engine.step()  # INIT -> ROUND_START
+    engine.step()  # ROUND_START -> TURN_START
+
+    monster_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
+
+    # Force engine to the monster's turn with a ranged intent
+    engine._ctx.current_combatant_id = monster_id
+    engine._state = EncounterState.VALIDATE_INTENT
+    engine._pending_intent = RangedAttackIntent(actor_id=monster_id, target_id=pc_id)
+
+    result = engine.step()
+
+    assert not any(isinstance(e, EncounterFaulted) for e in result.events), (
+        "Monster ranged intent should not fault the encounter"
+    )
+    rejected = [e for e in result.events if isinstance(e, ActionRejected)]
+    assert len(rejected) == 1
+    assert rejected[0].reasons[0].code == RejectionCode.MONSTER_ACTION_NOT_SUPPORTED
