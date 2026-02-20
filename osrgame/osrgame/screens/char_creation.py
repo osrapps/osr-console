@@ -95,10 +95,10 @@ class CharCreationScreen(Screen):
             yield Button("Next", id="btn-next", variant="primary")
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         self.query_one("#btn-back").disabled = True
         self._roll_abilities()
-        self._render_step()
+        await self._render_step()
 
     def watch_step(self, step: int) -> None:
         title = self.query_one("#step-title", Static)
@@ -110,20 +110,20 @@ class CharCreationScreen(Screen):
     # --- Navigation ---
 
     @on(Button.Pressed, "#btn-next")
-    def next_step(self) -> None:
+    async def next_step(self) -> None:
         if not self._check_step_complete():
             return
         if self.step == 6:
             self._finish()
         else:
             self.step += 1
-            self._render_step()
+            await self._render_step()
 
     @on(Button.Pressed, "#btn-back")
-    def prev_step(self) -> None:
+    async def prev_step(self) -> None:
         if self.step > 0:
             self.step -= 1
-            self._render_step()
+            await self._render_step()
 
     @on(Button.Pressed, "#btn-cancel")
     def cancel(self) -> None:
@@ -155,10 +155,10 @@ class CharCreationScreen(Screen):
 
     # --- Step rendering ---
 
-    def _render_step(self) -> None:
+    async def _render_step(self) -> None:
         """Clear and re-render the step content area."""
         content = self.query_one("#step-content", Vertical)
-        content.remove_children()
+        await content.remove_children()
         render_fn = [
             self._render_step_abilities,
             self._render_step_class,
@@ -342,19 +342,19 @@ class CharCreationScreen(Screen):
     # --- Event handlers ---
 
     @on(Button.Pressed, "#btn-reroll")
-    def reroll_abilities(self) -> None:
+    async def reroll_abilities(self) -> None:
         self._roll_abilities()
-        self._render_step()
+        await self._render_step()
 
     @on(Button.Pressed, "#btn-toggle-method")
-    def toggle_roll_method(self) -> None:
+    async def toggle_roll_method(self) -> None:
         self._use_3d6 = not self._use_3d6
         self._roll_abilities()
-        self._render_step()
+        await self._render_step()
 
     @on(Button.Pressed, "#btn-reroll-hp")
-    def reroll_hp(self) -> None:
-        self._render_step()
+    async def reroll_hp(self) -> None:
+        await self._render_step()
 
     @on(RadioSet.Changed, "#class-radio")
     def class_selected(self, event: RadioSet.Changed) -> None:
