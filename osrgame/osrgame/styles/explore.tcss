@@ -1,0 +1,74 @@
+/* Explore screen: 2-column, 3-row grid */
+
+ExploreScreen {
+    layout: grid;
+    grid-size: 2;
+    grid-columns: 1fr 1fr;
+    grid-rows: 1fr 1fr auto;
+}
+
+#explore-map {
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+    padding: 1;
+    overflow-y: auto;
+}
+
+#explore-roster {
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#explore-narrative {
+    column-span: 2;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+    padding: 0 1;
+}
+
+#explore-narrative RichLog {
+    background: #0e0e3a;
+    color: #c0c0c0;
+}
+
+#explore-commands {
+    column-span: 2;
+    height: auto;
+    background: #1a1a4e;
+    padding: 0;
+}
+
+/* Camping screen: horizontal split */
+
+CampingScreen {
+    layout: horizontal;
+}
+
+#camp-left {
+    width: 60%;
+    height: 100%;
+}
+
+#camp-roster {
+    height: 40%;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#camp-log {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+    color: #c0c0c0;
+}
+
+#camp-right {
+    width: 40%;
+    height: 100%;
+    padding: 2;
+}
+
+#camp-right Button {
+    width: 100%;
+    margin: 1 2;
+}

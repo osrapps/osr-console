@@ -19,7 +19,7 @@ class TrainingHallScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("Training hall", id="town-title", classes="gold-heading")
-        with Horizontal():
+        with Horizontal(id="training-layout"):
             with Vertical(id="training-left"):
                 yield PartyRosterWidget(id="training-roster")
                 with Horizontal(id="training-actions"):

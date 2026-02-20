@@ -19,18 +19,16 @@ class TownHubScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        with Horizontal():
+        with Horizontal(id="town-layout"):
             with Vertical(id="town-left"):
                 yield Static("Welcome to town", id="town-title")
                 with Vertical(id="town-grid"):
-                    with Horizontal():
-                        yield Button("Training hall", id="btn-training")
-                        yield Button("Temple", id="btn-temple")
-                        yield Button("Shop", id="btn-shop")
-                    with Horizontal():
-                        yield Button("Tavern", id="btn-tavern")
-                        yield Button("Inn", id="btn-inn")
-                        yield Button("Depart", id="btn-depart", variant="warning")
+                    yield Button("Training hall", id="btn-training")
+                    yield Button("Temple", id="btn-temple")
+                    yield Button("Shop", id="btn-shop")
+                    yield Button("Tavern", id="btn-tavern")
+                    yield Button("Inn", id="btn-inn")
+                    yield Button("Depart", id="btn-depart", variant="warning")
             yield PartyRosterWidget(id="town-roster")
         yield Footer()
 

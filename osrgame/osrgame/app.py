@@ -20,7 +20,11 @@ from .screens.town_hub import TownHubScreen
 class OSRConsoleApp(App):
     """Gold Box-style dungeon crawler TUI."""
 
-    CSS_PATH = [Path("styles/app.tcss"), Path("styles/character.tcss")]
+    CSS_PATH = [
+        Path("styles/app.tcss"),
+        Path("styles/character.tcss"),
+        Path("styles/explore.tcss"),
+    ]
 
     BINDINGS = [
         ("q", "quit", "Quit"),

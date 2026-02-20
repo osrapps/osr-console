@@ -1,5 +1,6 @@
 """Screen modules for the Gold Box TUI."""
 
+from .camping import CampingScreen
 from .char_creation import CharCreationScreen
 from .combat import CombatScreen
 from .explore import ExploreScreen
@@ -11,6 +12,7 @@ from .town_hub import TownHubScreen
 from .town_training import TrainingHallScreen
 
 __all__ = [
+    "CampingScreen",
     "CharCreationScreen",
     "CombatScreen",
     "ExploreScreen",
