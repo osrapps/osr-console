@@ -11,6 +11,7 @@ from osrlib.party import Party
 from osrlib.combat.actions import (
     CastSpellAction,
     CombatAction,
+    FleeAction,
     MeleeAttackAction,
     RangedAttackAction,
 )
@@ -24,6 +25,7 @@ from osrlib.combat.effects import (
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
+    FleeEffect,
 )
 from osrlib.combat.events import (
     ActionChoice,
@@ -34,9 +36,11 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
     InitiativeRolled,
+    MoraleChecked,
     NeedAction,
     RoundStarted,
     Rejection,
@@ -51,6 +55,7 @@ from osrlib.combat.events import (
 from osrlib.combat.intents import (
     ActionIntent,
     CastSpellIntent,
+    FleeIntent,
     MeleeAttackIntent,
     RangedAttackIntent,
 )
@@ -126,6 +131,7 @@ class CombatEngine:
                 max_hp=ref.entity.max_hit_points,
                 armor_class=ref.armor_class,
                 is_alive=ref.is_alive,
+                has_fled=ref.has_fled,
             )
             for ref in self._ctx.combatants.values()
         )
@@ -253,10 +259,10 @@ class CombatEngine:
         self._ctx.round_number += 1
         events.append(RoundStarted(round_number=self._ctx.round_number))
 
-        # Roll initiative for every living combatant
+        # Roll initiative for every living, non-fled combatant
         initiative: list[tuple[str, int]] = []
         for cid, ref in self._ctx.combatants.items():
-            if ref.is_alive:
+            if ref.is_alive and not ref.has_fled:
                 roll = ref.entity.get_initiative_roll()
                 initiative.append((cid, roll))
 
@@ -284,6 +290,12 @@ class CombatEngine:
         # Skip dead combatants
         if not ref.is_alive:
             events.append(TurnSkipped(combatant_id=cid, reason="dead"))
+            self._state = EncounterState.TURN_START
+            return
+
+        # Skip fled combatants
+        if ref.has_fled:
+            events.append(TurnSkipped(combatant_id=cid, reason="fled"))
             self._state = EncounterState.TURN_START
             return
 
@@ -588,6 +600,10 @@ class CombatEngine:
                             duration=duration,
                         )
                     )
+                case FleeEffect(combatant_id=combatant_id):
+                    ref = self._ctx.combatants[combatant_id]
+                    ref.has_fled = True
+                    events.append(EntityFled(entity_id=combatant_id))
                 case _:
                     events.append(
                         ActionRejected(
@@ -672,6 +688,8 @@ class CombatEngine:
                 slot_level=intent.slot_level,
                 target_ids=intent.target_ids,
             )
+        if isinstance(intent, FleeIntent):
+            return FleeAction(actor_id=intent.actor_id)
         return None
 
     def _handle_check_deaths(self, events: list[EncounterEvent]) -> None:
@@ -682,7 +700,65 @@ class CombatEngine:
         self._state = EncounterState.CHECK_MORALE
 
     def _handle_check_morale(self, events: list[EncounterEvent]) -> None:
-        # Phase 2: pass-through, no morale checks yet.
+        morale = self._ctx.morale
+
+        if morale.is_immune:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+
+        # Determine which trigger(s) apply
+        dead_monsters = sum(
+            1
+            for ref in self._ctx.combatants.values()
+            if ref.side == CombatSide.MONSTER and not ref.is_alive
+        )
+        incapacitated = self._ctx.monsters_incapacitated_count()
+        trigger: str | None = None
+
+        if dead_monsters > 0 and not morale.first_death_checked:
+            trigger = "first_death"
+            morale.first_death_checked = True
+        elif (
+            incapacitated >= morale.initial_monster_count / 2
+            and not morale.half_incapacitated_checked
+        ):
+            trigger = "half_incapacitated"
+            morale.half_incapacitated_checked = True
+
+        if trigger is None:
+            self._state = EncounterState.CHECK_VICTORY
+            return
+
+        # Get the morale score from the first monster (group morale)
+        monster_morale_score = self._ctx.monster_party.members[0].morale
+        roll = self._dice.roll("2d6")
+        passed = roll <= monster_morale_score
+
+        if passed:
+            morale.checks_passed += 1
+            if morale.checks_passed >= 2:
+                morale.is_immune = True
+
+        events.append(
+            MoraleChecked(
+                monster_morale=monster_morale_score,
+                roll=roll,
+                modifier=0,
+                passed=passed,
+                trigger=trigger,
+                checks_passed_total=morale.checks_passed,
+                now_immune=morale.is_immune,
+            )
+        )
+
+        if not passed:
+            # Queue FleeIntent for all living, non-fled monsters
+            for cid, ref in self._ctx.combatants.items():
+                if ref.side == CombatSide.MONSTER and ref.is_alive and not ref.has_fled:
+                    self.queue_forced_intent(
+                        cid, FleeIntent(actor_id=cid), "morale failure"
+                    )
+
         self._state = EncounterState.CHECK_VICTORY
 
     def _handle_check_victory(self, events: list[EncounterEvent]) -> None:

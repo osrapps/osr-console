@@ -30,4 +30,11 @@ class ApplyConditionEffect:
     duration: int | None = None
 
 
-Effect = DamageEffect | ConsumeSlotEffect | ApplyConditionEffect
+@dataclass(frozen=True)
+class FleeEffect:
+    """Remove a combatant from active combat (fled)."""
+
+    combatant_id: str
+
+
+Effect = DamageEffect | ConsumeSlotEffect | ApplyConditionEffect | FleeEffect

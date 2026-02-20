@@ -7,7 +7,7 @@ from osrlib.monster_manual import monster_stats_blocks
 from osrlib.utils import logger, last_message_handler as pylog
 from osrlib.dice_roller import roll_dice
 from osrlib.treasure import Treasure, TreasureType
-from osrlib.combat import CombatEngine, EncounterState, EventFormatter
+from osrlib.combat import CombatEngine, EncounterOutcome, EncounterState, EventFormatter
 
 
 class Encounter:
@@ -117,7 +117,9 @@ class Encounter:
             if self.engine.state == EncounterState.ENDED:
                 break
             if result.needs_intent:
-                logger.warning("Combat engine unexpectedly awaiting intent in synchronous mode")
+                logger.warning(
+                    "Combat engine unexpectedly awaiting intent in synchronous mode"
+                )
                 break
 
         self.end_encounter()
@@ -148,14 +150,27 @@ class Encounter:
 
         if self.pc_party and self.monster_party:
             self.log_mesg(pylog.last_message)
-            if self.pc_party.is_alive and not self.monster_party.is_alive:
+
+            # Determine victory: prefer engine outcome (handles fled monsters),
+            # fall back to HP-based check for legacy/non-engine paths.
+            pc_won = False
+            if self.engine and self.engine.outcome == EncounterOutcome.PARTY_VICTORY:
+                pc_won = True
+            elif (
+                not self.engine
+                and self.pc_party.is_alive
+                and not self.monster_party.is_alive
+            ):
+                pc_won = True
+
+            if pc_won:
                 awarded_xp = self.monster_party.xp_value + self.treasure.xp_gp_value
                 logger.debug(
                     f"{self.pc_party.name} won the battle! Awarding {awarded_xp} experience points to the party..."
                 )
                 self.log_mesg(pylog.last_message)
                 self.pc_party.grant_xp(awarded_xp)
-            elif not self.pc_party.is_alive and self.monster_party.is_alive:
+            elif not self.pc_party.is_alive:
                 logger.debug(f"{self.pc_party.name} lost the battle.")
                 self.log_mesg(pylog.last_message)
 
@@ -223,7 +238,7 @@ class Encounter:
         return encounter_dict
 
     @classmethod
-    def from_dict(cls, encounter_dict: dict) -> 'Encounter':
+    def from_dict(cls, encounter_dict: dict) -> "Encounter":
         """Deserialize a dictionary into an [Encounter][osrlib.encounter.Encounter] instance.
 
         This class method creates a new instance of `Encounter` using the data in the dictionary.
@@ -253,8 +268,13 @@ class Encounter:
             description = encounter_dict["description"]
             monster_party = MonsterParty.from_dict(encounter_dict["monsters"])
             treasure_type = TreasureType(
-                next(filter(lambda x: x.value[0] == encounter_dict["treasure_type"], TreasureType))
-            ) # Convert back to TreasureType enum
+                next(
+                    filter(
+                        lambda x: x.value[0] == encounter_dict["treasure_type"],
+                        TreasureType,
+                    )
+                )
+            )  # Convert back to TreasureType enum
             is_ended = encounter_dict.get("is_ended", False)
 
             encounter = cls(

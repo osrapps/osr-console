@@ -16,6 +16,7 @@ class CombatantView:
     max_hp: int
     armor_class: int
     is_alive: bool
+    has_fled: bool = False
 
 
 @dataclass(frozen=True)
