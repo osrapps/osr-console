@@ -1,6 +1,7 @@
 """The party module contains the [Party][osrlib.party.Party] class and functions related to managing a party of player characters (collection of [PlayerCharacter][osrlib.player_character.PlayerCharacter])."""
 
 import random
+from dataclasses import dataclass, field
 from typing import List
 
 from osrlib.player_character import PlayerCharacter
@@ -17,6 +18,48 @@ from osrlib.constants import (
     HALFLING_NAMES,
     MAGIC_USER_NAMES
 )
+
+@dataclass
+class PartyTreasury:
+    """Tracks the party's shared treasure pool."""
+
+    gold: int = 0
+    gems: list[dict] = field(default_factory=list)
+    jewelry: list[dict] = field(default_factory=list)
+
+    def add_coins(self, gold: int = 0) -> None:
+        """Add gold pieces to the treasury."""
+        self.gold += gold
+
+    def spend_gold(self, amount: int) -> bool:
+        """Spend gold from the treasury. Returns False if insufficient funds."""
+        if amount > self.gold:
+            return False
+        self.gold -= amount
+        return True
+
+    @property
+    def total_gp_value(self) -> int:
+        """Total value of all treasure in gold pieces."""
+        gem_value = sum(g.get("gp_value", 0) for g in self.gems)
+        jewelry_value = sum(j.get("gp_value", 0) for j in self.jewelry)
+        return self.gold + gem_value + jewelry_value
+
+    def to_dict(self) -> dict:
+        return {
+            "gold": self.gold,
+            "gems": list(self.gems),
+            "jewelry": list(self.jewelry),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PartyTreasury":
+        return cls(
+            gold=data.get("gold", 0),
+            gems=data.get("gems", []),
+            jewelry=data.get("jewelry", []),
+        )
+
 
 class PartyAtCapacityError(Exception):
     """Raised when attempting to add a player character to a party that already has the maximum number of members."""
@@ -97,6 +140,7 @@ class Party:
         self.members = characters if characters is not None else []
         self.active_character = None
         self.current_adventure = None
+        self.treasury = PartyTreasury()
         # TODO: Marching order (two or three abreast)
         self.is_surprised = False
 

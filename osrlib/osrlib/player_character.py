@@ -46,9 +46,11 @@ class PlayerCharacter:
         character_class_type: CharacterClassType,
         level: int = 1,
         xp_adjustment_percentage: int = 0,
+        alignment: "Alignment | None" = None,
     ):
         """Initialize a new PlayerCharacter (PC) instance."""
         self.name = name
+        self.alignment = alignment or Alignment.NEUTRAL
         self.character_class = None
         self.abilities = {}
         self.roll_abilities()  # TODO: Should NOT roll abilities when loading a saved character
@@ -272,7 +274,7 @@ class PlayerCharacter:
         self.character_class.hp = min(new_hp, self.character_class.max_hp)
 
     def roll_abilities(self):
-        """Rolls the ability scores for the character."""
+        """Roll ability scores using 4d6 drop lowest."""
         self.abilities = {}
         for ability_class in [
             Strength,
@@ -288,6 +290,24 @@ class PlayerCharacter:
             self.abilities[ability_instance.ability_type] = ability_instance
             logger.debug(
                 f"{self.name} rolled {ability_instance.ability_type.name}:{roll}"
+            )
+
+    def roll_abilities_3d6(self):
+        """Roll ability scores using 3d6 in order (OSE standard method)."""
+        self.abilities = {}
+        for ability_class in [
+            Strength,
+            Intelligence,
+            Wisdom,
+            Dexterity,
+            Constitution,
+            Charisma,
+        ]:
+            roll = roll_dice("3d6")
+            ability_instance = ability_class(roll.total)
+            self.abilities[ability_instance.ability_type] = ability_instance
+            logger.debug(
+                f"{self.name} rolled {ability_instance.ability_type.name}:{roll.total} (3d6)"
             )
 
     def roll_hp(self) -> DiceRoll:
@@ -311,6 +331,7 @@ class PlayerCharacter:
     def to_dict(self):
         return {
             "name": self.name,
+            "alignment": self.alignment.name,
             "character_class_type": self.character_class.class_type.name,
             "level": self.character_class.current_level.level_num,
             "max_hp": self.character_class.max_hp,
@@ -322,10 +343,12 @@ class PlayerCharacter:
 
     @classmethod
     def from_dict(cls, data_dict: dict):
+        alignment_name = data_dict.get("alignment", "NEUTRAL")
         pc = cls(
             name=data_dict["name"],
             character_class_type=CharacterClassType[data_dict["character_class_type"]],
             level=data_dict["level"],
+            alignment=Alignment[alignment_name],
         )
         pc.abilities = {
             AbilityType[k.upper()]: getattr(

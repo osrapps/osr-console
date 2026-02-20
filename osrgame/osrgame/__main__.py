@@ -1,4 +1,6 @@
-from .osrgame import OSRConsole
+"""Entry point for ``python -m osrgame``."""
 
-app = OSRConsole()
+from .app import OSRConsoleApp
+
+app = OSRConsoleApp()
 app.run()

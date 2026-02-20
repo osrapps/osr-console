@@ -2,7 +2,7 @@
 from typing import List, Tuple, Union
 
 from osrlib.dice_roller import DiceRoll, roll_dice
-from osrlib.enums import CharacterClassType
+from osrlib.enums import AbilityType, CharacterClassType
 from osrlib.saving_throws import get_saving_throws_for_class_and_level
 from osrlib.utils import logger
 
@@ -297,3 +297,34 @@ all_character_classes = [
     CharacterClass(CharacterClassType.MAGIC_USER),
     CharacterClass(CharacterClassType.COMMONER),
 ]
+
+
+# Minimum ability scores required per OSE SRD.
+# Classes not listed here (Fighter, Cleric, Thief, Magic-User) have no minimums.
+CLASS_REQUIREMENTS: dict[CharacterClassType, dict[AbilityType, int]] = {
+    CharacterClassType.CLERIC: {},
+    CharacterClassType.DWARF: {AbilityType.CONSTITUTION: 9},
+    CharacterClassType.ELF: {AbilityType.INTELLIGENCE: 9},
+    CharacterClassType.FIGHTER: {},
+    CharacterClassType.HALFLING: {AbilityType.DEXTERITY: 9, AbilityType.CONSTITUTION: 9},
+    CharacterClassType.MAGIC_USER: {},
+    CharacterClassType.THIEF: {},
+}
+
+
+def meets_class_requirements(abilities: dict, class_type: CharacterClassType) -> bool:
+    """Check if a set of ability scores meets the minimum requirements for a class.
+
+    Args:
+        abilities: Dict mapping AbilityType to Ability instances (must have .score).
+        class_type: The character class to check requirements for.
+
+    Returns:
+        True if all minimum requirements are met, False otherwise.
+    """
+    reqs = CLASS_REQUIREMENTS.get(class_type, {})
+    for ability_type, min_score in reqs.items():
+        ability = abilities.get(ability_type)
+        if ability is None or ability.score < min_score:
+            return False
+    return True
