@@ -1,0 +1,87 @@
+/* Character creation and character sheet layouts */
+
+CharCreationScreen {
+    background: #0a0a2e;
+}
+
+#step-title {
+    dock: top;
+    height: 3;
+    padding: 1;
+    text-align: center;
+    color: #ffd700;
+    text-style: bold;
+    background: #1a1a4e;
+}
+
+#step-content {
+    height: 1fr;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+#nav-buttons {
+    dock: bottom;
+    height: auto;
+    align: center middle;
+    padding: 1;
+    background: #1a1a4e;
+}
+
+#nav-buttons Button {
+    margin: 0 2;
+}
+
+/* Training hall */
+
+TrainingHallScreen {
+    background: #0a0a2e;
+}
+
+#training-left {
+    width: 50%;
+}
+
+#training-roster {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#training-sheet {
+    width: 50%;
+}
+
+#training-actions {
+    height: auto;
+    align: center middle;
+    padding: 1;
+}
+
+#training-actions Button {
+    margin: 0 1;
+}
+
+/* Level up */
+
+LevelUpScreen {
+    background: #0a0a2e;
+}
+
+#level-up-container {
+    width: 60%;
+    height: auto;
+    padding: 2;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#level-up-title {
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#level-up-info {
+    padding: 1;
+    color: #c0c0c0;
+}

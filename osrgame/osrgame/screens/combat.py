@@ -1,9 +1,10 @@
-"""Bard's Tale-style interactive combat screen."""
+"""Interactive combat screen using the CombatEngine in manual mode."""
 
+from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Label, Log, OptionList
+from textual.widgets import DataTable, Footer, Header, Label, Log, OptionList
 from textual.widgets.option_list import Option
 
 from osrlib.combat import (
@@ -13,16 +14,17 @@ from osrlib.combat import (
     NeedAction,
     VictoryDetermined,
 )
+from osrlib.combat.context import CombatSide
 from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome
 from osrlib.encounter import Encounter
 from osrlib.party import Party
 
-from .widgets import MonsterRosterTable, PartyRosterTable
+from ..widgets import PartyRosterWidget
 
 
 class CombatScreen(Screen):
-    """Interactive combat screen driven by the state-machine CombatEngine in manual mode."""
+    """Tactical combat driven by the state-machine CombatEngine in manual mode."""
 
     BINDINGS = [
         ("escape", "dismiss_screen", "End combat"),
@@ -46,25 +48,29 @@ class CombatScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield PartyRosterTable(id="combat_party_table", classes="box")
-        yield Log(id="combat_log", auto_scroll=True, classes="box")
-        yield MonsterRosterTable(id="monster_roster", classes="box")
+        yield PartyRosterWidget(id="combat-party-roster")
+        yield Log(id="combat-log", auto_scroll=True)
+        yield DataTable(id="combat-monster-roster", cursor_type=None)
         yield Container(
-            Label("Select a target:", id="target_prompt"),
-            OptionList(id="target_menu"),
-            id="action_panel",
+            Label("Select a target:", id="target-prompt"),
+            OptionList(id="target-menu"),
+            id="combat-action-panel",
         )
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#combat_log", Log).border_title = "Combat log"
-        self.query_one("#combat_party_table", PartyRosterTable).border_title = "Party"
-        self.query_one("#monster_roster", MonsterRosterTable).border_title = "Monsters"
-        self.query_one("#target_prompt", Label).display = False
-        self.query_one("#target_menu", OptionList).display = False
+        self.query_one("#combat-log", Log).border_title = "Combat log"
+        self.query_one("#combat-party-roster").border_title = "Party"
+        self.query_one("#target-prompt", Label).display = False
+        self.query_one("#target-menu", OptionList).display = False
+
+        # Set up monster roster table
+        monster_table = self.query_one("#combat-monster-roster", DataTable)
+        monster_table.add_columns("Monster", "HP", "Status")
+        monster_table.border_title = "Monsters"
 
         # Update party roster
-        self.query_one("#combat_party_table", PartyRosterTable).update_table()
+        self.query_one("#combat-party-roster", PartyRosterWidget).refresh_roster()
 
         # Create engine in manual mode
         self.engine = CombatEngine(
@@ -72,14 +78,9 @@ class CombatScreen(Screen):
             monster_party=self.encounter.monster_party,
             auto_resolve_intents=False,
         )
-
-        # Set pc_party so end_encounter() can award XP/treasure
         self.encounter.pc_party = self.party
-
-        # Store engine on encounter so the TUI callback can access the log
         self.encounter.engine = self.engine
 
-        # Kick off combat after first render
         self.set_timer(0.1, self._advance_combat)
 
     def _advance_combat(self, intent: ActionIntent | None = None) -> None:
@@ -94,25 +95,19 @@ class CombatScreen(Screen):
             self._finish_combat(EncounterOutcome.FAULTED)
             return
 
-        # Format and display all events from this batch
         for result in results:
             for event in result.events:
                 line = self._formatter.format(event)
                 self._write_log(line)
-
                 if isinstance(event, VictoryDetermined):
                     self._outcome = event.outcome
 
-        # Update rosters after each batch
         self._refresh_rosters()
 
-        # Check terminal state
         if self.engine.state == EncounterState.ENDED:
             self._finish_combat(self._outcome or self.engine.outcome)
             return
 
-        # Engine is awaiting intent — in manual mode this is always a PC turn
-        # (monsters are auto-resolved by the engine's tactical provider).
         last_result = results[-1]
         if not last_result.needs_intent:
             return
@@ -121,7 +116,6 @@ class CombatScreen(Screen):
         if combatant_id is None:
             return
 
-        # Find the NeedAction event to get available choices
         need_action = None
         for result in results:
             for event in result.events:
@@ -131,20 +125,17 @@ class CombatScreen(Screen):
         if need_action is None:
             return
 
-        # PC turn: show target selection
         self._pending_need_action = need_action
         self._show_target_menu(combatant_id, need_action)
 
     def _show_target_menu(self, combatant_id: str, need_action: NeedAction) -> None:
         """Populate and display the target OptionList for a PC's turn."""
-        option_list = self.query_one("#target_menu", OptionList)
+        option_list = self.query_one("#target-menu", OptionList)
         option_list.clear_options()
 
-        # Extract PC display name from combatant_id (format: "pc:Name")
         pc_name = combatant_id.split(":", 1)[1] if ":" in combatant_id else combatant_id
-
-        prompt = self.query_one("#target_prompt", Label)
-        prompt.update(f"{pc_name}'s turn - select an action:")
+        prompt = self.query_one("#target-prompt", Label)
+        prompt.update(f"{pc_name}'s turn — select an action:")
         prompt.display = True
 
         for i, choice in enumerate(need_action.available):
@@ -154,12 +145,10 @@ class CombatScreen(Screen):
         option_list.focus()
 
     def _hide_target_menu(self) -> None:
-        """Hide the target selection UI."""
-        self.query_one("#target_prompt", Label).display = False
-        self.query_one("#target_menu", OptionList).display = False
+        self.query_one("#target-prompt", Label).display = False
+        self.query_one("#target-menu", OptionList).display = False
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        """Handle player selecting a target from the option list."""
         event.stop()
         if self._pending_need_action is None or self._combat_ended:
             return
@@ -172,12 +161,9 @@ class CombatScreen(Screen):
         chosen_intent = choices[idx].intent
         self._pending_need_action = None
         self._hide_target_menu()
-
-        # Advance combat with the chosen intent
         self.set_timer(0.05, lambda: self._advance_combat(intent=chosen_intent))
 
     def _finish_combat(self, outcome: EncounterOutcome | None) -> None:
-        """Show outcome and prepare for dismissal."""
         self._combat_ended = True
         self._outcome = outcome
         self._hide_target_menu()
@@ -193,25 +179,29 @@ class CombatScreen(Screen):
             self._write_log("*** Combat ended. Press Escape to continue. ***")
 
     def _write_log(self, text: str) -> None:
-        """Write a line to the combat log."""
-        self.query_one("#combat_log", Log).write_line(text)
-        # Also record in encounter log for summarize_battle()
+        self.query_one("#combat-log", Log).write_line(text)
         self.encounter.log_mesg(text)
 
     def _refresh_rosters(self) -> None:
-        """Update party and monster roster tables from current engine state."""
-        self.query_one("#combat_party_table", PartyRosterTable).update_table()
+        self.query_one("#combat-party-roster", PartyRosterWidget).refresh_roster()
         view = self.engine.get_view()
-        self.query_one("#monster_roster", MonsterRosterTable).update_table(view)
+        monster_table = self.query_one("#combat-monster-roster", DataTable)
+        monster_table.clear()
+        for c in view.combatants:
+            if c.side != CombatSide.MONSTER:
+                continue
+            hp_text = str(c.hp) if c.is_alive else "0"
+            status = (
+                "Dead" if c.id in view.announced_deaths or not c.is_alive else "Alive"
+            )
+            monster_table.add_row(
+                c.name,
+                Text(hp_text, justify="center"),
+                Text(status, justify="center"),
+                key=c.id,
+            )
 
     def action_dismiss_screen(self) -> None:
-        """Dismiss the combat screen, returning outcome data."""
         if not self._combat_ended:
-            # Don't allow dismissing mid-combat
             return
-        self.dismiss(
-            {
-                "outcome": self._outcome,
-                "encounter": self.encounter,
-            }
-        )
+        self.dismiss({"outcome": self._outcome, "encounter": self.encounter})
