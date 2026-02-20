@@ -13,8 +13,8 @@ _DIR_OFFSETS = {
     Direction.SOUTH: (0, 1),
     Direction.EAST: (1, 0),
     Direction.WEST: (-1, 0),
-    Direction.UP: (0, 0),
-    Direction.DOWN: (0, 0),
+    Direction.UP: (0, -1),
+    Direction.DOWN: (0, 1),
 }
 
 
@@ -59,11 +59,23 @@ class DungeonMapWidget(Static):
                 if dest_id in positions:
                     continue
                 dc, dr = _DIR_OFFSETS[exit_obj.direction]
-                # UP/DOWN share position — offset slightly to avoid overlap
-                if exit_obj.direction in (Direction.UP, Direction.DOWN):
-                    positions[dest_id] = (col, row)
-                else:
-                    positions[dest_id] = (col + dc, row + dr)
+                target = (col + dc, row + dr)
+
+                # Avoid placing two different locations at the same cell
+                occupied = set(positions.values())
+                if target in occupied:
+                    for alt_dc, alt_dr in [
+                        (dc + 1, dr),
+                        (dc - 1, dr),
+                        (dc, dr + 1),
+                        (dc, dr - 1),
+                    ]:
+                        alt = (col + alt_dc, row + alt_dr)
+                        if alt not in occupied:
+                            target = alt
+                            break
+
+                positions[dest_id] = target
                 queue.append(dest_id)
 
         return positions
@@ -140,15 +152,7 @@ class DungeonMapWidget(Static):
 
                 # Horizontal connection to the east
                 if (col, row, "E") in connections:
-                    east_dest = grid.get((col + 1, row), [])
-                    if east_dest:
-                        eloc = dungeon.get_location_by_id(east_dest[0])
-                        if eloc and (eloc.is_visited or east_dest[0] == current_id):
-                            cell += "---"
-                        else:
-                            cell += "---"
-                    else:
-                        cell += "---"
+                    cell += "---"
                 else:
                     cell += "   "
 

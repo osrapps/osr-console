@@ -11,6 +11,10 @@ from osrlib.encounter import Encounter
 
 from ..widgets import PartyRosterWidget
 
+# Default dungeon level for encounter generation. Dungeon doesn't persist its
+# level yet, so this matches the get_random_dungeon(level=1) default.
+_DUNGEON_LEVEL = 1
+
 
 class CampingScreen(Screen):
     """Rest, set watch order, and manage camp activities."""
@@ -18,6 +22,10 @@ class CampingScreen(Screen):
     BINDINGS = [
         ("escape", "break_camp", "Break camp"),
     ]
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._has_rested = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -46,8 +54,8 @@ class CampingScreen(Screen):
         roll = roll_dice("1d6")
         if roll.total == 1:
             log.write_line("The camp is attacked during the night!")
-            encounter = Encounter.get_random_encounter(1)
-            self.dismiss({"interrupted": True, "encounter": encounter})
+            encounter = Encounter.get_random_encounter(_DUNGEON_LEVEL)
+            self.dismiss({"interrupted": True, "rested": False, "encounter": encounter})
             return
 
         # Successful rest — heal party
@@ -56,8 +64,12 @@ class CampingScreen(Screen):
         party.heal_party()
         gs.turn_count += 6
 
+        self._has_rested = True
         log.write_line("The party rests peacefully. HP restored.")
         self.query_one("#camp-roster", PartyRosterWidget).refresh_roster()
+
+        # Disable rest button — one rest per camp
+        self.query_one("#btn-rest", Button).disabled = True
 
     @on(Button.Pressed, "#btn-watch")
     def set_watch_order(self) -> None:
@@ -78,4 +90,4 @@ class CampingScreen(Screen):
 
     def action_break_camp(self) -> None:
         """Break camp and return to exploration."""
-        self.dismiss({"rested": True, "interrupted": False})
+        self.dismiss({"rested": self._has_rested, "interrupted": False})

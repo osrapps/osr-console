@@ -12,6 +12,13 @@ from osrlib.encounter import Encounter
 from ..widgets import CommandBar, DungeonMapWidget, NarrativePanel, PartyRosterWidget
 
 
+def _pluralize_monster(name: str, count: int) -> str:
+    """Return a properly pluralized monster encounter string."""
+    if count == 1:
+        return f"A {name} appears!"
+    return f"{count} {name}s appear!"
+
+
 class ExploreScreen(Screen):
     """Dungeon exploration with movement, encounters, and camping."""
 
@@ -26,6 +33,10 @@ class ExploreScreen(Screen):
         ("t", "return_to_town", "Town"),
         ("escape", "return_to_town", "Town"),
     ]
+
+    # Default dungeon level for encounter generation. Dungeon doesn't persist its
+    # level yet, so this matches the get_random_dungeon(level=1) default.
+    _DUNGEON_LEVEL = 1
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -44,7 +55,7 @@ class ExploreScreen(Screen):
         if loc is not None:
             loc.is_visited = True
             self._narrate(f"Entering {dungeon.name}")
-            self._narrate(f"{dungeon.description}")
+            self._narrate(dungeon.description)
             self._narrate("")
             self._describe_location(loc)
 
@@ -57,6 +68,10 @@ class ExploreScreen(Screen):
         gs = self.app.game_state
         dungeon = gs.adventure.active_dungeon
         loc = dungeon.current_party_location
+        if loc is None:
+            self._narrate("No current location.")
+            return
+
         direction = Direction[direction_name]
 
         # Check if exit exists
@@ -101,7 +116,7 @@ class ExploreScreen(Screen):
             if loc.keywords:
                 self._narrate(f"  {', '.join(loc.keywords)}")
         else:
-            self._narrate(f"Location {loc.id} — Exits: {exits_str}")
+            self._narrate(f"Location {loc.id} (visited) — Exits: {exits_str}")
 
     def _check_location_encounter(self, loc) -> None:
         """If the location has an active encounter with monsters, push combat."""
@@ -112,18 +127,20 @@ class ExploreScreen(Screen):
         if encounter.monster_party and len(encounter.monster_party.members) > 0:
             monster_name = encounter.monster_party.members[0].name
             count = len(encounter.monster_party.members)
-            self._narrate(f"Encounter! {count} {monster_name}(s) appear!")
+            self._narrate(f"Encounter! {_pluralize_monster(monster_name, count)}")
             self._push_combat(encounter)
 
     def _check_wandering_monsters(self) -> None:
         """Roll 1d6; on a 1, generate a wandering monster encounter."""
         roll = roll_dice("1d6")
         if roll.total == 1:
-            encounter = Encounter.get_random_encounter(1)
+            encounter = Encounter.get_random_encounter(self._DUNGEON_LEVEL)
             if encounter.monster_party and len(encounter.monster_party.members) > 0:
                 monster_name = encounter.monster_party.members[0].name
                 count = len(encounter.monster_party.members)
-                self._narrate(f"Wandering monsters! {count} {monster_name}(s) appear!")
+                self._narrate(
+                    f"Wandering monsters! {_pluralize_monster(monster_name, count)}"
+                )
                 self._push_combat(encounter)
 
     def _push_combat(self, encounter: Encounter) -> None:
@@ -176,7 +193,7 @@ class ExploreScreen(Screen):
                 self._narrate("The camp is attacked!")
                 self._push_combat(encounter)
         elif result.get("rested"):
-            self._narrate("The party breaks camp and continues exploring.")
+            self._narrate("The party breaks camp, well rested.")
 
         self._refresh_roster()
         self._refresh_map()

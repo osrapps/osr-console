@@ -28,6 +28,7 @@ class NarrativePanel(Vertical):
 
     def on_mount(self) -> None:
         self.query_one("#narrative-loading", LoadingIndicator).display = False
+        self.border_title = "Adventure log"
 
     def write(self, text: str) -> None:
         """Append text to the narrative log."""
