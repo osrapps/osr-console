@@ -10,6 +10,7 @@ from osrlib.combat.effects import (
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
+    FleeEffect,
 )
 from osrlib.combat.events import (
     AttackRolled,
@@ -393,3 +394,33 @@ class CastSpellAction(CombatAction):
                 )
 
         return ActionResult(events=tuple(events), effects=tuple(effects))
+
+
+@dataclass(frozen=True)
+class FleeAction(CombatAction):
+    """Resolve a flee action — the combatant leaves combat."""
+
+    actor_id: str
+
+    def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
+        actor_ref = ctx.combatants.get(self.actor_id)
+        if actor_ref is None:
+            return (
+                Rejection(code=RejectionCode.INVALID_ACTOR, message="actor is invalid"),
+            )
+        if self.actor_id != ctx.current_combatant_id:
+            return (
+                Rejection(
+                    code=RejectionCode.NOT_CURRENT_COMBATANT,
+                    message=f"not current combatant (expected {ctx.current_combatant_id})",
+                ),
+            )
+        if not actor_ref.is_alive:
+            return (Rejection(code=RejectionCode.ACTOR_DEAD, message="actor is dead"),)
+        return ()
+
+    def execute(self, ctx: CombatContext) -> ActionResult:
+        return ActionResult(
+            events=(),
+            effects=(FleeEffect(combatant_id=self.actor_id),),
+        )

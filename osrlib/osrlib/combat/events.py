@@ -189,8 +189,28 @@ class SpellCast(EncounterEvent):
 
 
 @dataclass(frozen=True)
+class MoraleChecked(EncounterEvent):
+    """Emitted when a B/X morale check is rolled for the monster group."""
+
+    monster_morale: int
+    roll: int
+    modifier: int
+    passed: bool
+    trigger: str  # "first_death" or "half_incapacitated"
+    checks_passed_total: int
+    now_immune: bool
+
+
+@dataclass(frozen=True)
 class EntityDied(EncounterEvent):
     """Emitted when a combatant's HP drops to zero."""
+
+    entity_id: str
+
+
+@dataclass(frozen=True)
+class EntityFled(EncounterEvent):
+    """Emitted when a combatant flees from combat."""
 
     entity_id: str
 

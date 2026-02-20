@@ -32,4 +32,11 @@ class CastSpellIntent:
     target_ids: tuple[str, ...]
 
 
-ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent
+@dataclass(frozen=True)
+class FleeIntent:
+    """Intent to flee from combat (morale failure)."""
+
+    actor_id: str
+
+
+ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent | FleeIntent

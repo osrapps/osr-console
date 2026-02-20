@@ -338,11 +338,78 @@ Additional tests (5 new in `test_unit_combat_ranged_spells.py`):
 - `test_monster_ranged_intent_rejected_not_faulted`
 - `test_spell_choices_filter_to_known_spells`
 
-## Phase 5: Morale + flee (NOT STARTED)
+## Phase 5: B/X morale checks + monster flee (COMPLETE)
+
+### What was built
+
+B/X morale check system: 2d6 group morale rolls on first-death and half-incapacitated triggers, with flee intent/action pipeline and encounter XP fix for routed monsters.
+
+| File | Change |
+|---|---|
+| `combat/context.py` | **Modified.** Added `MoraleState` dataclass (initial count, trigger flags, pass count, immunity). Added `has_fled: bool` to `CombatantRef`. Added `morale: MoraleState` to `CombatContext`. Updated `build()` to init morale state + morale-12 immunity. Updated `living()` and `monsters_alive()` to exclude fled combatants. Added `monsters_incapacitated_count()` helper. |
+| `combat/intents.py` | **Modified.** Added `FleeIntent` frozen dataclass. Updated `ActionIntent` union. |
+| `combat/effects.py` | **Modified.** Added `FleeEffect` frozen dataclass. Updated `Effect` union. |
+| `combat/events.py` | **Modified.** Added `MoraleChecked` event (morale score, roll, modifier, passed, trigger, pass count, immunity flag). Added `EntityFled` event. |
+| `combat/actions.py` | **Modified.** Added `FleeAction` — validates actor-alive + current-combatant, executes by returning `FleeEffect`. |
+| `combat/engine.py` | **Modified.** Six targeted changes: (a) `_handle_check_morale()` replaced stub with full B/X morale — first-death and half-incapacitated triggers, 2d6 roll vs morale score, FleeIntent queuing on fail, two-pass immunity. (b) `_handle_turn_start()` skips fled combatants with `TurnSkipped(reason="fled")`. (c) `_action_for_intent()` maps `FleeIntent` → `FleeAction`. (d) `_handle_apply_effects()` handles `FleeEffect` — sets `has_fled=True`, emits `EntityFled`. (e) `_handle_round_start()` excludes fled from initiative. (f) `get_view()` passes `has_fled` to `CombatantView`. |
+| `combat/views.py` | **Modified.** Added `has_fled: bool = False` to `CombatantView`. |
+| `combat/formatter.py` | **Modified.** Added format cases for `MoraleChecked` and `EntityFled`. |
+| `combat/__init__.py` | **Modified.** Exports `FleeIntent`, `FleeAction`, `FleeEffect`, `MoraleChecked`, `EntityFled`, `MoraleState`. |
+| `encounter.py` | **Modified.** `end_encounter()` now checks `engine.outcome == PARTY_VICTORY` first (handles routed monsters with HP > 0), with legacy HP-based fallback for non-engine paths. |
+| `tests/test_unit_combat_morale.py` | **New.** 20 tests covering morale checks, flee pipeline, and encounter XP. |
+
+### B/X morale rules implemented
+
+- **Ratings:** 2–12. Morale 12 = fight to death (immune at init, no checks).
+- **Mechanic:** Roll 2d6. If result > morale score → monster group flees. If ≤ → keep fighting.
+- **Triggers:** (1) First monster in group killed. (2) Half the group incapacitated (dead or fled).
+- **Two-pass immunity:** After 2 successful checks, fight to the death.
+- **Group morale:** All remaining living monsters flee on failure.
+- **Fled = alive but gone:** `has_fled` flag on `CombatantRef`. Fled monsters skip turns, are excluded from targeting and initiative, but retain HP for XP/narrative.
+
+### Tests
+
+`tests/test_unit_combat_morale.py` — 20 test cases:
+
+1. First death + morale fail → `MoraleChecked(passed=False)`, `ForcedIntentQueued` for living monsters
+2. First death + morale pass → no flee
+3. Half incapacitated → morale fail → flee
+4. Half incapacitated → morale pass
+5. Two passes → `is_immune=True`
+6. Morale 12 → immune at init, no checks ever
+7. Fled monster gets `TurnSkipped(reason="fled")`
+8. `living(MONSTER)` excludes fled
+9. All monsters fled → `PARTY_VICTORY`
+10. Fled monsters excluded from initiative/turn queue
+11. FleeIntent → FleeAction → FleeEffect → EntityFled full pipeline
+12. No deaths → pass-through, no morale roll
+13. First death trigger fires only once
+14. Half dead trigger fires only once
+15. Formatter output for `MoraleChecked` (fail)
+16. Formatter output for `MoraleChecked` (pass)
+17. Formatter output for `EntityFled`
+18. `CombatantView` reflects `has_fled` status
+19. Encounter awards XP on rout (engine PARTY_VICTORY, monsters alive)
+20. End-to-end: low-morale monsters, morale fail → `EntityFled` events → PARTY_VICTORY
+
+### Design decisions
+
+1. **Group morale.** B/X morale is per-group. When the `MonsterParty` fails a check, ALL remaining living monsters flee.
+2. **Fled = alive but gone.** `has_fled: bool` on `CombatantRef`. Fled monsters skip turns, can't be targeted, and don't count for victory. HP stays intact for XP/narrative.
+3. **Single check on dual-trigger.** When one death simultaneously triggers both "first death" and "half incapacitated," one morale check is rolled (common B/X referee practice).
+4. **Victory outcome.** All-monsters-fled = `PARTY_VICTORY`. `EntityFled` vs `EntityDied` events let callers distinguish for XP/treasure.
+
+### Out of scope (deferred)
+
+- **Parting shots** (+2 attack / ignore shield on retreat) — requires granting free attacks mid-turn
+- **Surrender/negotiation** — treat all morale failures as flee
+- **PC morale** — PCs don't check morale in B/X
+- **Situational modifiers** (-2 to +2) — `MoraleChecked` event includes a `modifier` field for future use
 
 ## Current test count
 
 - `tests/test_unit_combat_engine.py`: 42 tests (Phases 1-3.5 + updated for Phase 4 intent types)
 - `tests/test_unit_combat_screen.py`: 11 tests (Phase 3 combat controller + updated for Phase 4 intent types)
 - `tests/test_unit_combat_ranged_spells.py`: 19 tests (Phase 4 ranged attacks, spells, spell slots, post-review hardening)
-- Total suite: 339 passed, 3 skipped
+- `tests/test_unit_combat_morale.py`: 20 tests (Phase 5 morale checks, flee pipeline, encounter XP)
+- Total suite: 363 passed, 3 skipped

@@ -13,9 +13,11 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
     InitiativeRolled,
+    MoraleChecked,
     NeedAction,
     RoundStarted,
     SpellCast,
@@ -140,8 +142,23 @@ class EventFormatter:
             case ForcedIntentApplied(combatant_id=cid):
                 return f"{self._display_combatant(cid)}'s forced action is applied."
 
+            case MoraleChecked(
+                monster_morale=mm,
+                roll=roll,
+                passed=passed,
+                trigger=trigger,
+            ):
+                result = "passed" if passed else "failed"
+                trigger_text = trigger.replace("_", " ")
+                return (
+                    f"Morale check ({trigger_text}): rolled {roll} vs {mm} — {result}."
+                )
+
             case EntityDied(entity_id=eid):
                 return f"{self._display_combatant(eid)} falls!"
+
+            case EntityFled(entity_id=eid):
+                return f"{self._display_combatant(eid)} flees!"
 
             case VictoryDetermined(outcome=outcome):
                 if outcome == EncounterOutcome.PARTY_VICTORY:

@@ -5,18 +5,20 @@ Import public types from here::
     from osrlib.combat import CombatEngine, EncounterState, EventFormatter
 """
 
-from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
+from osrlib.combat.context import CombatContext, CombatSide, CombatantRef, MoraleState
 from osrlib.combat.dice_service import BXDiceService, DiceService, FixedDiceService
 from osrlib.combat.effects import (
     ApplyConditionEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
+    FleeEffect,
 )
 from osrlib.combat.actions import (
     ActionResult,
     CastSpellAction,
     CombatAction,
+    FleeAction,
     MeleeAttackAction,
     RangedAttackAction,
 )
@@ -31,9 +33,11 @@ from osrlib.combat.events import (
     EncounterFaulted,
     EncounterStarted,
     EntityDied,
+    EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
     InitiativeRolled,
+    MoraleChecked,
     NeedAction,
     RoundStarted,
     Rejection,
@@ -50,6 +54,7 @@ from osrlib.combat.formatter import EventFormatter
 from osrlib.combat.intents import (
     ActionIntent,
     CastSpellIntent,
+    FleeIntent,
     MeleeAttackIntent,
     RangedAttackIntent,
 )
@@ -89,6 +94,10 @@ __all__ = [
     "EncounterStarted",
     "EncounterState",
     "EntityDied",
+    "EntityFled",
+    "FleeAction",
+    "FleeEffect",
+    "FleeIntent",
     "ForcedIntentApplied",
     "ForcedIntentQueued",
     "EventFormatter",
@@ -96,6 +105,8 @@ __all__ = [
     "FixedDiceService",
     "InitiativeRolled",
     "MeleeAttackIntent",
+    "MoraleChecked",
+    "MoraleState",
     "NeedAction",
     "RangedAttackAction",
     "RangedAttackIntent",
