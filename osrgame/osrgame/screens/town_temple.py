@@ -133,6 +133,9 @@ class TempleScreen(Screen):
         if not party.treasury.spend_gold(500):
             self.notify("Not enough gold (need 500 gp).", severity="error", title="Temple")
             return
+        # TODO: Add a PlayerCharacter.resurrect() method instead of
+        # directly setting hp. The hp = 0 assignment bypasses heal()
+        # and any future side effects (logging, events, etc.).
         dead_pc.character_class.hp = 0
         dead_pc.heal(1)
         self.notify(f"{dead_pc.name} has been raised from the dead!", title="Temple")
