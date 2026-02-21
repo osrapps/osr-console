@@ -46,6 +46,7 @@ class CharSheetWidget(Vertical):
         header.update(
             f"{pc.name} — {pc.character_class.class_type.value} Lv{pc.level}"
             f"  HP: {pc.hit_points}/{pc.max_hit_points}  AC: {pc.armor_class}{align_str}"
+            f"  XP: {pc.xp}/{pc.xp_needed_for_next_level}"
         )
 
         # Abilities

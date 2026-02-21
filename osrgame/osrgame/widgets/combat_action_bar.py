@@ -105,11 +105,11 @@ class CombatActionBar(Widget):
         self._spell_choices = []
         self.mode = "idle"
 
-    def watch_mode(self, new_mode: str) -> None:
+    async def watch_mode(self, new_mode: str) -> None:
         """Rebuild buttons when mode changes."""
         label = self.query_one("#turn-label", Label)
         container = self.query_one("#action-buttons", Horizontal)
-        container.remove_children()
+        await container.remove_children()
 
         if new_mode == "idle":
             label.update("")
@@ -153,7 +153,7 @@ class CombatActionBar(Widget):
         """Build one button per individual target from the action choices."""
         for i, choice in enumerate(choices):
             label = choice.ui_args.get("target_name", "???")
-            container.mount(Button(label, id=f"target-{i}"))
+            container.mount(Button(label, id=f"target-{i}", classes="target-btn"))
         container.mount(Button("Back", id="btn-back", variant="default"))
 
     def _build_spell_pick_buttons(self, container: Horizontal) -> None:
@@ -165,7 +165,7 @@ class CombatActionBar(Widget):
                 continue
             seen_spells.add(spell_id)
             spell_name = choice.ui_args.get("spell_name", spell_id)
-            container.mount(Button(spell_name, id=f"spell-{spell_id}"))
+            container.mount(Button(spell_name, id=f"spell-{spell_id}", classes="spell-btn"))
         container.mount(Button("Back", id="btn-back", variant="default"))
 
     @on(Button.Pressed, "#cat-attack")
@@ -190,7 +190,7 @@ class CombatActionBar(Widget):
     def _on_back(self) -> None:
         self.mode = "category"
 
-    @on(Button.Pressed, "[id^='target-']")
+    @on(Button.Pressed, ".target-btn")
     def _on_target_selected(self, event: Button.Pressed) -> None:
         """Handle individual target selection in target or spell_target mode."""
         idx_str = event.button.id.replace("target-", "") if event.button.id else ""
@@ -213,7 +213,7 @@ class CombatActionBar(Widget):
 
         self.post_message(CombatActionChosen(choices[idx].intent))
 
-    @on(Button.Pressed, "[id^='spell-']")
+    @on(Button.Pressed, ".spell-btn")
     def _on_spell_selected(self, event: Button.Pressed) -> None:
         """Handle spell selection — either auto-target (AoE) or show target picker."""
         spell_id = (event.button.id or "").replace("spell-", "")
