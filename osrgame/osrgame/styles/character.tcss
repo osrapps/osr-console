@@ -89,3 +89,180 @@ LevelUpScreen {
     padding: 1;
     color: #c0c0c0;
 }
+
+/* Temple */
+
+TempleScreen {
+    background: #0a0a2e;
+}
+
+#temple-layout {
+    height: 1fr;
+}
+
+#temple-left {
+    width: 50%;
+}
+
+#temple-roster {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#temple-gold {
+    height: auto;
+    padding: 0 1;
+    color: #ffd700;
+    text-style: bold;
+}
+
+#temple-right {
+    width: 50%;
+    padding: 1;
+}
+
+#temple-info {
+    height: auto;
+    padding: 1;
+    color: #c0c0c0;
+}
+
+#temple-services {
+    height: auto;
+    padding: 1;
+}
+
+#temple-services Button {
+    margin: 0 0 1 0;
+}
+
+/* Shop */
+
+ShopScreen {
+    background: #0a0a2e;
+}
+
+#shop-layout {
+    height: 1fr;
+}
+
+#shop-left {
+    width: 40%;
+}
+
+#shop-roster {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#shop-inv-title {
+    height: auto;
+    padding: 0 1;
+}
+
+#shop-inventory {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#shop-right {
+    width: 60%;
+    padding: 1;
+}
+
+#shop-gold {
+    height: auto;
+    padding: 0 1;
+    color: #ffd700;
+    text-style: bold;
+}
+
+#shop-mode-bar {
+    height: auto;
+    padding: 0 1;
+}
+
+#shop-mode-bar Button {
+    margin: 0 1 0 0;
+}
+
+#shop-catalog {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#btn-shop-done {
+    margin: 1 0 0 1;
+}
+
+/* Inn */
+
+InnScreen {
+    background: #0a0a2e;
+    align: center middle;
+}
+
+#inn-container {
+    width: 60%;
+    height: auto;
+    padding: 2;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#inn-description {
+    padding: 1;
+    color: #c0c0c0;
+}
+
+#inn-container Button {
+    margin: 0 0 1 0;
+}
+
+/* Tavern */
+
+TavernScreen {
+    background: #0a0a2e;
+    align: center middle;
+}
+
+#tavern-container {
+    width: 60%;
+    height: auto;
+    padding: 2;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#tavern-log {
+    height: 12;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+    margin: 1 0;
+}
+
+/* Load game */
+
+LoadGameScreen {
+    background: #0a0a2e;
+    align: center middle;
+}
+
+#load-container {
+    width: 70%;
+    height: auto;
+    padding: 2;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#load-table {
+    height: 15;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+    margin: 1 0;
+}

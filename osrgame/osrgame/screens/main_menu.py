@@ -43,8 +43,10 @@ class MainMenuScreen(Screen):
 
     @on(Button.Pressed, "#btn-load-game")
     def load_game(self) -> None:
-        """Load a saved game (stub - goes to town with default party)."""
-        self.app.start_new_game()
+        """Open the load game screen to browse saved games."""
+        from .load_game import LoadGameScreen
+
+        self.app.push_screen(LoadGameScreen())
 
     @on(Button.Pressed, "#btn-quit")
     def quit_game(self) -> None:

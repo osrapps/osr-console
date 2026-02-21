@@ -470,9 +470,10 @@ class Party:
         return self.members.index(character)
 
     def heal_party(self):
-        """Heal all characters in the party to their maximum hit points."""
+        """Heal all living characters in the party to their maximum hit points."""
         for character in self.members:
-            character.heal(character.character_class.max_hp)
+            if character.is_alive:
+                character.heal(character.character_class.max_hp)
 
     def move_character_to_index(
         self, character: PlayerCharacter, index: int
@@ -558,12 +559,13 @@ class Party:
         party_dict = {
             "characters": [character.to_dict() for character in self.members],
             "name": self.name,
+            "treasury": self.treasury.to_dict(),
         }
         return party_dict
 
     @classmethod
     def from_dict(cls, party_dict: dict) -> "Party":
-        """Deserializes a dictionary representation of an `Exit` object. Typically done after getting the dictionary from persistent storage."""
+        """Deserializes a dictionary representation of a `Party` object. Typically done after getting the dictionary from persistent storage."""
         characters_from_dict = [
             PlayerCharacter.from_dict(character_dict)
             for character_dict in party_dict["characters"]
@@ -571,6 +573,7 @@ class Party:
         name = party_dict["name"]
         party = cls(name, characters=characters_from_dict)
         party.set_active_character(party.members[0])
+        party.treasury = PartyTreasury.from_dict(party_dict.get("treasury", {}))
         return party
 
     @staticmethod
