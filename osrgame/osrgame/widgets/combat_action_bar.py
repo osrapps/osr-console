@@ -1,7 +1,5 @@
 """Two-level combat action bar for per-character turn selection."""
 
-from dataclasses import dataclass
-
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -23,23 +21,15 @@ class CombatActionChosen(Message):
         self.intent = intent
 
 
-@dataclass
-class _MonsterGroup:
-    """A group of monster targets sharing a name."""
-
-    name: str
-    choices: list[ActionChoice]
-
-
 class CombatActionBar(Widget):
     """Two-level action menu: category buttons → target/spell selection.
 
     Modes:
 
     - **category**: Show action category buttons (Attack, Ranged, Cast spell, Flee)
-    - **target**: Show target buttons for the selected category
+    - **target**: Show individual target buttons for the selected category
     - **spell_pick**: Show available spells to pick from
-    - **spell_target**: Show monster group targets for a single-target spell
+    - **spell_target**: Show individual targets for a single-target spell
     - **idle**: No active PC turn — bar is hidden
     """
 
@@ -160,14 +150,10 @@ class CombatActionBar(Widget):
     def _build_target_buttons(
         self, container: Horizontal, choices: list[ActionChoice]
     ) -> None:
-        """Build monster group target buttons from a list of action choices."""
-        groups = self._group_targets(choices)
-        for i, group in enumerate(groups):
-            living_count = len(group.choices)
-            btn_label = (
-                f"{living_count} {group.name}" if living_count > 1 else group.name
-            )
-            container.mount(Button(btn_label, id=f"target-{i}"))
+        """Build one button per individual target from the action choices."""
+        for i, choice in enumerate(choices):
+            label = choice.ui_args.get("target_name", "???")
+            container.mount(Button(label, id=f"target-{i}"))
         container.mount(Button("Back", id="btn-back", variant="default"))
 
     def _build_spell_pick_buttons(self, container: Horizontal) -> None:
@@ -181,21 +167,6 @@ class CombatActionBar(Widget):
             spell_name = choice.ui_args.get("spell_name", spell_id)
             container.mount(Button(spell_name, id=f"spell-{spell_id}"))
         container.mount(Button("Back", id="btn-back", variant="default"))
-
-    @staticmethod
-    def _group_targets(choices: list[ActionChoice]) -> list[_MonsterGroup]:
-        """Group action choices by monster name."""
-        groups: dict[str, _MonsterGroup] = {}
-        for choice in choices:
-            target_name = choice.ui_args.get("target_name", "???")
-            # Strip the "#N" suffix to group by base name
-            base_name = (
-                target_name.rsplit(" #", 1)[0] if " #" in target_name else target_name
-            )
-            if base_name not in groups:
-                groups[base_name] = _MonsterGroup(name=base_name, choices=[])
-            groups[base_name].choices.append(choice)
-        return list(groups.values())
 
     @on(Button.Pressed, "#cat-attack")
     def _on_attack(self) -> None:
@@ -221,7 +192,7 @@ class CombatActionBar(Widget):
 
     @on(Button.Pressed, "[id^='target-']")
     def _on_target_selected(self, event: Button.Pressed) -> None:
-        """Handle target group selection in target or spell_target mode."""
+        """Handle individual target selection in target or spell_target mode."""
         idx_str = event.button.id.replace("target-", "") if event.button.id else ""
         if not idx_str.isdigit():
             return
@@ -229,23 +200,18 @@ class CombatActionBar(Widget):
         idx = int(idx_str)
 
         if self.mode == "target":
-            groups = self._group_targets(self._melee_choices)
+            choices = self._melee_choices
         elif self.mode == "ranged_target":
-            groups = self._group_targets(self._ranged_choices)
+            choices = self._ranged_choices
         elif self.mode == "spell_target":
-            groups = self._group_targets(self._pending_spell_choices)
+            choices = self._pending_spell_choices
         else:
             return
 
-        if idx >= len(groups):
+        if idx >= len(choices):
             return
 
-        # Bard's Tale-style group targeting: pick the first living member.
-        # B/X rules allow individual targeting, but this UI groups monsters
-        # by type for simplicity. Individual targeting could be a future option.
-        group = groups[idx]
-        if group.choices:
-            self.post_message(CombatActionChosen(group.choices[0].intent))
+        self.post_message(CombatActionChosen(choices[idx].intent))
 
     @on(Button.Pressed, "[id^='spell-']")
     def _on_spell_selected(self, event: Button.Pressed) -> None:
