@@ -26,13 +26,14 @@ from osrlib.combat.views import CombatView, CombatantView
 from osrlib.combat.effects import (
     ApplyConditionEffect,
     ApplyModifierEffect,
+    ConsumeItemEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
     FleeEffect,
     HealEffect,
 )
-from osrlib.combat.conditions import CONDITION_REGISTRY, ActiveCondition
+from osrlib.combat.conditions import CONDITION_REGISTRY, ActiveCondition, ConditionBehavior
 from osrlib.combat.modifiers import ActiveModifier, ModifiedStat
 from osrlib.combat.events import (
     ActionChoice,
@@ -764,8 +765,7 @@ class CombatEngine:
                     duration=duration,
                 ):
                     behavior = CONDITION_REGISTRY.get(
-                        condition_id,
-                        CONDITION_REGISTRY.get("blinded"),  # safe fallback
+                        condition_id, ConditionBehavior()
                     )
                     self._ctx.conditions.add(
                         target_id,
@@ -773,10 +773,8 @@ class CombatEngine:
                             condition_id=condition_id,
                             source_id=source_id,
                             remaining_rounds=duration,
-                            skip_turn=behavior.skip_turn if behavior else False,
-                            break_on_damage=behavior.break_on_damage
-                            if behavior
-                            else False,
+                            skip_turn=behavior.skip_turn,
+                            break_on_damage=behavior.break_on_damage,
                         ),
                     )
                     events.append(
@@ -829,6 +827,13 @@ class CombatEngine:
                             target_hp_after=target_ref.entity.hit_points,
                         )
                     )
+                case ConsumeItemEffect(actor_id=actor_id, item_name=item_name):
+                    actor_ref = self._ctx.combatants[actor_id]
+                    if isinstance(actor_ref.entity, PlayerCharacter):
+                        for item in actor_ref.entity.inventory.equipment:
+                            if item.name == item_name:
+                                actor_ref.entity.inventory.remove_item(item)
+                                break
                 case FleeEffect(combatant_id=combatant_id):
                     ref = self._ctx.combatants[combatant_id]
                     ref.has_fled = True

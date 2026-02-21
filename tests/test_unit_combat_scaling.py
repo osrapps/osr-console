@@ -1,7 +1,5 @@
 """Tests for Phase 4: caster-level scaling and reversed spells."""
 
-import pytest
-
 from osrlib.combat import (
     CastSpellAction,
     CombatEngine,
@@ -10,63 +8,11 @@ from osrlib.combat import (
     NeedAction,
 )
 from osrlib.combat.effects import DamageEffect, HealEffect
-from osrlib.combat.events import SavingThrowRolled, SpellCast
-from osrlib.combat.spells import get_spell, SPELL_CATALOG
+from osrlib.combat.events import SavingThrowRolled
+from osrlib.combat.spells import get_spell
 from osrlib.enums import CharacterClassType
-from osrlib.item_factories import equip_party
-from osrlib.monster import MonsterParty, MonsterStatsBlock
-from osrlib.party import Party
-from osrlib.player_character import Alignment, PlayerCharacter
-from osrlib.treasure import TreasureType
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def default_party():
-    party = Party.get_default_party()
-    equip_party(party)
-    return party
-
-
-@pytest.fixture
-def goblin_stats():
-    return MonsterStatsBlock(
-        name="Goblin",
-        description="A small ugly humanoid.",
-        armor_class=6,
-        hit_dice="1d8",
-        num_appearing="2",
-        movement=60,
-        num_special_abilities=0,
-        attacks_per_round=1,
-        damage_per_attack="1d6",
-        save_as_class=CharacterClassType.FIGHTER,
-        save_as_level=1,
-        morale=7,
-        treasure_type=TreasureType.NONE,
-        alignment=Alignment.CHAOTIC,
-    )
-
-
-@pytest.fixture
-def goblin_party(goblin_stats):
-    return MonsterParty(goblin_stats)
-
-
-def _find_events(events, event_type):
-    return [e for e in events if isinstance(e, event_type)]
-
-
-def _find_pc_with_class(engine, class_type):
-    for cid, ref in engine._ctx.combatants.items():
-        if ref.side == CombatSide.PC and isinstance(ref.entity, PlayerCharacter):
-            if ref.entity.character_class.class_type == class_type:
-                return cid, ref.entity
-    pytest.skip(f"No {class_type.value} in party")
+from conftest import find_events, find_pc_with_class
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +51,7 @@ def test_magic_missile_single_projectile_at_level_1(default_party, goblin_party)
         auto_resolve_intents=False,
     )
 
-    mu_cid, mu_pc = _find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
+    mu_cid, _ = find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
     monster_cid = engine._ctx.living(CombatSide.MONSTER)[0].id
     engine._ctx.current_combatant_id = mu_cid
 
@@ -117,7 +63,6 @@ def test_magic_missile_single_projectile_at_level_1(default_party, goblin_party)
     )
     result = action.execute(engine._ctx)
 
-    # Level 1 MU: 1 projectile = 1 damage effect
     damage_effects = [e for e in result.effects if isinstance(e, DamageEffect)]
     assert len(damage_effects) == 1
 
@@ -129,8 +74,7 @@ def test_magic_missile_multiple_projectiles_at_level_6(default_party, goblin_par
         auto_resolve_intents=False,
     )
 
-    mu_cid, mu_pc = _find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
-    # Level up to 6 for 3 missiles
+    mu_cid, mu_pc = find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
     while mu_pc.level < 6:
         mu_pc.grant_xp(50000)
 
@@ -145,7 +89,6 @@ def test_magic_missile_multiple_projectiles_at_level_6(default_party, goblin_par
     )
     result = action.execute(engine._ctx)
 
-    # Level 6 MU: 3 projectiles = 3 damage effects
     damage_effects = [e for e in result.effects if isinstance(e, DamageEffect)]
     assert len(damage_effects) == 3
 
@@ -162,8 +105,7 @@ def test_fireball_scales_with_caster_level(default_party, goblin_party):
         auto_resolve_intents=False,
     )
 
-    mu_cid, mu_pc = _find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
-    # Level up to 5 for Fireball (level 3 spell)
+    mu_cid, mu_pc = find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
     while mu_pc.level < 5:
         mu_pc.grant_xp(50000)
 
@@ -178,16 +120,15 @@ def test_fireball_scales_with_caster_level(default_party, goblin_party):
     )
     result = action.execute(engine._ctx)
 
-    # Should have damage effects (even though save may halve)
+    # Fireball targets ALL_ENEMIES — should have one DamageEffect per target
     damage_effects = [e for e in result.effects if isinstance(e, DamageEffect)]
-    assert len(damage_effects) >= 1
+    assert len(damage_effects) == len(monster_ids)
 
-    # Each damage effect should be positive
     for de in damage_effects:
         assert de.amount > 0
 
-    # Should have saving throw events (Fireball allows save)
-    save_events = _find_events(list(result.events), SavingThrowRolled)
+    # Fireball allows a save for each target
+    save_events = find_events(list(result.events), SavingThrowRolled)
     assert len(save_events) == len(monster_ids)
 
 
@@ -218,11 +159,9 @@ def test_cleric_sees_reversed_spells(default_party, goblin_party):
         auto_resolve_intents=False,
     )
 
-    cleric_cid, cleric_pc = _find_pc_with_class(engine, CharacterClassType.CLERIC)
-    # Level up for spell slots
+    cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
     cleric_pc.grant_xp(1500)
 
-    # Verify Cleric knows CLW
     known = {s.name for s in cleric_pc.inventory.spells}
     assert "Cure Light Wounds" in known
 
@@ -232,12 +171,11 @@ def test_cleric_sees_reversed_spells(default_party, goblin_party):
     engine._ctx.round_number = 1
 
     result = engine.step()
-    need_actions = _find_events(list(result.events), NeedAction)
+    need_actions = find_events(list(result.events), NeedAction)
     assert len(need_actions) == 1
 
     spell_choices = [c for c in need_actions[0].available if c.ui_key == "cast_spell"]
     spell_names = {c.ui_args.get("spell_name") for c in spell_choices}
 
-    # Should see both Cure Light Wounds and Cause Light Wounds
     assert "Cure Light Wounds" in spell_names
     assert "Cause Light Wounds" in spell_names

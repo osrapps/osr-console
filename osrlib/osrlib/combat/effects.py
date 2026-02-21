@@ -52,6 +52,14 @@ class ApplyModifierEffect:
 
 
 @dataclass(frozen=True)
+class ConsumeItemEffect:
+    """Remove a consumable item from a combatant's inventory."""
+
+    actor_id: str
+    item_name: str
+
+
+@dataclass(frozen=True)
 class FleeEffect:
     """Remove a combatant from active combat (fled)."""
 
@@ -64,5 +72,6 @@ Effect = (
     | ApplyConditionEffect
     | HealEffect
     | ApplyModifierEffect
+    | ConsumeItemEffect
     | FleeEffect
 )

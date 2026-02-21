@@ -28,6 +28,7 @@ class RejectionCode(Enum):
     MONSTER_ACTION_NOT_SUPPORTED = auto()
     TARGET_NOT_ALLY = auto()
     ITEM_NOT_THROWABLE = auto()
+    ITEM_NOT_IN_INVENTORY = auto()
 
 
 @dataclass(frozen=True)

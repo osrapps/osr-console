@@ -9,6 +9,7 @@ from osrlib.combat.modifiers import ModifiedStat
 from osrlib.combat.effects import (
     ApplyConditionEffect,
     ApplyModifierEffect,
+    ConsumeItemEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
@@ -439,6 +440,39 @@ class CastSpellAction(CombatAction):
                 count = num_projectiles
         return count
 
+    @staticmethod
+    def _check_saving_throw(
+        ctx: CombatContext,
+        target_id: str,
+        spell_def,
+        events: list[EncounterEvent],
+    ) -> bool:
+        """Roll a saving throw for *target_id* against *spell_def*.
+
+        Appends a `SavingThrowRolled` event to *events* and returns True if
+        the target saved successfully.  Returns False (no save attempted) when
+        the spell allows no save.
+        """
+        if spell_def.save_type is None:
+            return False
+        target_ref = ctx.combatants.get(target_id)
+        if target_ref is None:
+            return False
+        target_number = _get_save_target(target_ref.entity, spell_def.save_type)
+        save_roll = roll_dice("1d20").total
+        saved = save_roll >= target_number
+        events.append(
+            SavingThrowRolled(
+                target_id=target_id,
+                save_type=spell_def.save_type.name,
+                target_number=target_number,
+                roll=save_roll,
+                success=saved,
+                spell_name=spell_def.name,
+            )
+        )
+        return saved
+
     def execute(self, ctx: CombatContext) -> ActionResult:
         spell_def = get_spell(self.spell_id)
         caster_level = self._get_caster_level(ctx, self.actor_id)
@@ -464,26 +498,7 @@ class CastSpellAction(CombatAction):
             targets = self.target_ids
             for i in range(num_projectiles):
                 tid = targets[i % len(targets)]
-                # Per-projectile saving throw (if applicable)
-                saved = False
-                if spell_def.save_type is not None:
-                    target_ref = ctx.combatants.get(tid)
-                    if target_ref is not None:
-                        target_number = _get_save_target(
-                            target_ref.entity, spell_def.save_type
-                        )
-                        save_roll = roll_dice("1d20").total
-                        saved = save_roll >= target_number
-                        events.append(
-                            SavingThrowRolled(
-                                target_id=tid,
-                                save_type=spell_def.save_type.name,
-                                target_number=target_number,
-                                roll=save_roll,
-                                success=saved,
-                                spell_name=spell_def.name,
-                            )
-                        )
+                saved = self._check_saving_throw(ctx, tid, spell_def, events)
                 if saved and spell_def.save_negates:
                     continue
                 dmg_roll = roll_dice(spell_def.damage_die)
@@ -498,29 +513,9 @@ class CastSpellAction(CombatAction):
             return ActionResult(events=tuple(events), effects=tuple(effects))
 
         for tid in self.target_ids:
-            # Saving throw check (if the spell allows one)
-            saved = False
-            if spell_def.save_type is not None:
-                target_ref = ctx.combatants.get(tid)
-                if target_ref is not None:
-                    target_number = _get_save_target(
-                        target_ref.entity, spell_def.save_type
-                    )
-                    save_roll = roll_dice("1d20").total
-                    saved = save_roll >= target_number
-                    events.append(
-                        SavingThrowRolled(
-                            target_id=tid,
-                            save_type=spell_def.save_type.name,
-                            target_number=target_number,
-                            roll=save_roll,
-                            success=saved,
-                            spell_name=spell_def.name,
-                        )
-                    )
+            saved = self._check_saving_throw(ctx, tid, spell_def, events)
 
             if saved and spell_def.save_negates:
-                # Save negates: skip all effects for this target
                 continue
 
             if spell_def.heal_die:
@@ -533,7 +528,6 @@ class CastSpellAction(CombatAction):
                     )
                 )
             elif spell_def.damage_per_level:
-                # Level-scaling damage (e.g. Fireball = caster_level * d6)
                 dice_expr = f"{caster_level}{spell_def.damage_per_level}"
                 dmg_roll = roll_dice(dice_expr)
                 amount = dmg_roll.total_with_modifier
@@ -550,7 +544,6 @@ class CastSpellAction(CombatAction):
                 dmg_roll = roll_dice(spell_def.damage_die)
                 amount = dmg_roll.total_with_modifier
                 if saved and not spell_def.save_negates:
-                    # Save halves damage
                     amount = max(1, amount // 2)
                 effects.append(
                     DamageEffect(
@@ -652,6 +645,22 @@ class UseItemAction(CombatAction):
                 ),
             )
 
+        # Verify the actor actually has the item in inventory
+        from osrlib.player_character import PlayerCharacter
+
+        if isinstance(actor_ref.entity, PlayerCharacter):
+            has_item = any(
+                item.name == self.item_name
+                for item in actor_ref.entity.inventory.equipment
+            )
+            if not has_item:
+                return (
+                    Rejection(
+                        code=RejectionCode.ITEM_NOT_IN_INVENTORY,
+                        message=f"{self.item_name} is not in inventory",
+                    ),
+                )
+
         for tid in self.target_ids:
             target_ref = ctx.combatants.get(tid)
             if target_ref is None or not target_ref.is_alive:
@@ -674,7 +683,9 @@ class UseItemAction(CombatAction):
                 target_ids=self.target_ids,
             )
         ]
-        effects: list[Effect] = []
+        effects: list[Effect] = [
+            ConsumeItemEffect(actor_id=self.actor_id, item_name=self.item_name),
+        ]
 
         for tid in self.target_ids:
             dmg_roll = roll_dice(damage_die)

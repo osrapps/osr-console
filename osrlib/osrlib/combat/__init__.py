@@ -16,6 +16,7 @@ from osrlib.combat.dice_service import BXDiceService, DiceService, FixedDiceServ
 from osrlib.combat.effects import (
     ApplyConditionEffect,
     ApplyModifierEffect,
+    ConsumeItemEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
@@ -106,6 +107,7 @@ __all__ = [
     "ConditionBehavior",
     "ConditionExpired",
     "ConditionTracker",
+    "ConsumeItemEffect",
     "ConsumeSlotEffect",
     "DamageEffect",
     "DamageApplied",
