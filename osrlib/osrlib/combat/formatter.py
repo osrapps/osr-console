@@ -10,6 +10,7 @@ from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
     ConditionApplied,
+    ConditionExpired,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
@@ -18,10 +19,15 @@ from osrlib.combat.events import (
     EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
+    HealingApplied,
     InitiativeRolled,
+    ItemUsed,
+    ModifierApplied,
+    ModifierExpired,
     MoraleChecked,
     NeedAction,
     RoundStarted,
+    SavingThrowRolled,
     SpellCast,
     SpellSlotConsumed,
     SurpriseRolled,
@@ -138,6 +144,64 @@ class EventFormatter:
                 target = self._display_combatant(tid)
                 return f"{source} applies {cond} to {target} ({duration_text})."
 
+            case SavingThrowRolled(
+                target_id=tid,
+                save_type=st,
+                target_number=tn,
+                roll=roll,
+                success=success,
+                spell_name=sn,
+            ):
+                target = self._display_combatant(tid)
+                result = "saves" if success else "fails"
+                save_label = st.replace("_", " ").lower()
+                return (
+                    f"{target} {result} vs {sn} "
+                    f"({save_label}: rolled {roll}, needed {tn})."
+                )
+
+            case ConditionExpired(
+                combatant_id=cid, condition_id=cond, reason=reason
+            ):
+                target = self._display_combatant(cid)
+                return f"{target} is no longer {cond} ({reason})."
+
+            case HealingApplied(
+                source_id=sid, target_id=tid, amount=amt, target_hp_after=hp
+            ):
+                source = self._display_combatant(sid)
+                target = self._display_combatant(tid)
+                return (
+                    f"{source} heals {target} for {amt} HP. "
+                    f"{target} now has {hp} HP."
+                )
+
+            case ModifierApplied(
+                source_id=sid,
+                target_id=tid,
+                modifier_id=mid,
+                stat=stat,
+                value=val,
+                duration=dur,
+            ):
+                source = self._display_combatant(sid)
+                target = self._display_combatant(tid)
+                sign = "+" if val > 0 else ""
+                stat_label = stat.replace("_", " ").lower()
+                return (
+                    f"{source} applies {sign}{val} {stat_label} to "
+                    f"{target} for {dur} rounds."
+                )
+
+            case ModifierExpired(combatant_id=cid, modifier_id=mid):
+                target = self._display_combatant(cid)
+                return f"{target}'s {mid} modifier has expired."
+
+            case ItemUsed(actor_id=aid, item_name=name, target_ids=tids):
+                actor = self._display_combatant(aid)
+                targets = ", ".join(self._display_combatant(t) for t in tids)
+                return f"{actor} throws {name} at {targets}."
+
             case ForcedIntentQueued(combatant_id=cid, reason=reason):
                 return f"{self._display_combatant(cid)} is forced to act ({reason})."
 
@@ -217,6 +281,8 @@ class ColorEventFormatter:
                 return Text(plain, style="red")
             case SpellCast():
                 return Text(plain, style="cyan")
+            case HealingApplied():
+                return Text(plain, style="green")
             case EntityDied():
                 return Text(plain, style="bold red")
             case EntityFled():

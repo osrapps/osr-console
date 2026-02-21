@@ -513,6 +513,12 @@ spell_data = {
         "range": 180,
         "usable_by": {CharacterClassType.CLERIC},
     },
+    "Cure Light Wounds": {
+        "spell_level": 1,
+        "damage_die": None,
+        "range": 0,
+        "usable_by": {CharacterClassType.CLERIC},
+    },
 }
 
 
@@ -577,6 +583,7 @@ def equip_cleric(character: "PlayerCharacter"):
     backpack = EquipmentFactory.create_item("Backpack")
     holy_symbol = EquipmentFactory.create_item("Holy Symbol")
     light_spell = SpellFactory.create_spell("Light")
+    clw_spell = SpellFactory.create_spell("Cure Light Wounds")
 
     character.inventory.add_item(mace)
     character.inventory.add_item(shield)
@@ -584,6 +591,7 @@ def equip_cleric(character: "PlayerCharacter"):
     character.inventory.add_item(backpack)
     character.inventory.add_item(holy_symbol)
     character.inventory.add_item(light_spell)
+    character.inventory.add_item(clw_spell)
 
     character.inventory.equip_item(mace)
     character.inventory.equip_item(shield)

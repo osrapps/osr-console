@@ -5,24 +5,32 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from osrlib.combat.context import CombatContext, CombatSide
+from osrlib.combat.modifiers import ModifiedStat
 from osrlib.combat.effects import (
     ApplyConditionEffect,
+    ApplyModifierEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
     FleeEffect,
+    HealEffect,
 )
+from osrlib.combat.targeting import TargetMode
 from osrlib.combat.events import (
     AttackRolled,
     EncounterEvent,
+    ItemUsed,
     Rejection,
     RejectionCode,
+    SavingThrowRolled,
     SpellCast,
 )
 from osrlib.combat.spells import get_spell
 from osrlib.dice_roller import roll_dice
+from osrlib.enums import AttackType
 from osrlib.monster import Monster
 from osrlib.player_character import PlayerCharacter
+from osrlib.saving_throws import get_saving_throws_for_class_and_level
 
 
 @dataclass(frozen=True)
@@ -96,12 +104,18 @@ class MeleeAttackAction(CombatAction):
         attacker_ref = ctx.combatants[self.actor_id]
         defender_ref = ctx.combatants[self.target_id]
 
+        # Gather modifiers from buffs/debuffs
+        atk_mod = ctx.modifiers.get_total(self.actor_id, ModifiedStat.ATTACK)
+        def_ac_mod = ctx.modifiers.get_total(self.target_id, ModifiedStat.ARMOR_CLASS)
+
         if attacker_ref.side == CombatSide.PC:
             return self._execute_pc_attack(
                 attacker_id=attacker_ref.id,
                 defender_id=defender_ref.id,
                 attacker=attacker_ref.entity,
                 defender=defender_ref.entity,
+                attack_modifier=atk_mod,
+                defender_ac_modifier=def_ac_mod,
             )
 
         return self._execute_monster_attack(
@@ -109,6 +123,8 @@ class MeleeAttackAction(CombatAction):
             defender_id=defender_ref.id,
             attacker=attacker_ref.entity,
             defender=defender_ref.entity,
+            attack_modifier=atk_mod,
+            defender_ac_modifier=def_ac_mod,
         )
 
     @staticmethod
@@ -117,13 +133,16 @@ class MeleeAttackAction(CombatAction):
         defender_id: str,
         attacker: PlayerCharacter,
         defender: Monster,
+        attack_modifier: int = 0,
+        defender_ac_modifier: int = 0,
     ) -> ActionResult:
+        effective_ac = defender.armor_class + defender_ac_modifier
         needed = attacker.character_class.current_level.get_to_hit_target_ac(
-            defender.armor_class
+            effective_ac
         )
         attack_roll = attacker.get_attack_roll()
         raw = attack_roll.total
-        total = attack_roll.total_with_modifier
+        total = attack_roll.total_with_modifier + attack_modifier
 
         is_critical = raw == 20
         is_hit = is_critical or (raw > 1 and total >= needed)
@@ -159,8 +178,11 @@ class MeleeAttackAction(CombatAction):
         defender_id: str,
         attacker: Monster,
         defender: PlayerCharacter,
+        attack_modifier: int = 0,
+        defender_ac_modifier: int = 0,
     ) -> ActionResult:
-        needed = attacker.get_to_hit_target_ac(defender.armor_class)
+        effective_ac = defender.armor_class + defender_ac_modifier
+        needed = attacker.get_to_hit_target_ac(effective_ac)
         defender_hp = defender.hit_points
 
         events: list[EncounterEvent] = []
@@ -168,7 +190,7 @@ class MeleeAttackAction(CombatAction):
 
         for attack_roll in attacker.get_attack_rolls():
             raw = attack_roll.total
-            total = attack_roll.total_with_modifier
+            total = attack_roll.total_with_modifier + attack_modifier
             is_hit = defender_hp > 0 and total >= needed
 
             events.append(
@@ -232,12 +254,16 @@ class RangedAttackAction(CombatAction):
         defender_ref = ctx.combatants[self.target_id]
         attacker: PlayerCharacter = attacker_ref.entity
 
+        atk_mod = ctx.modifiers.get_total(self.actor_id, ModifiedStat.ATTACK)
+        def_ac_mod = ctx.modifiers.get_total(self.target_id, ModifiedStat.ARMOR_CLASS)
+
+        effective_ac = defender_ref.armor_class + def_ac_mod
         needed = attacker.character_class.current_level.get_to_hit_target_ac(
-            defender_ref.armor_class
+            effective_ac
         )
         attack_roll = attacker.get_ranged_attack_roll()
         raw = attack_roll.total
-        total = attack_roll.total_with_modifier
+        total = attack_roll.total_with_modifier + atk_mod
 
         is_critical = raw == 20
         is_hit = is_critical or (raw > 1 and total >= needed)
@@ -266,6 +292,27 @@ class RangedAttackAction(CombatAction):
             )
 
         return ActionResult(events=tuple(events), effects=tuple(effects))
+
+
+def _get_save_target(entity: PlayerCharacter | Monster, attack_type: AttackType) -> int:
+    """Look up the saving throw target number for a PC or Monster.
+
+    Returns:
+        The target number the entity must roll >= on 1d20 to save.
+    """
+    if isinstance(entity, PlayerCharacter):
+        saves = get_saving_throws_for_class_and_level(
+            entity.character_class.class_type, entity.level
+        )
+        if saves and attack_type in saves:
+            return saves[attack_type]
+        return 20  # fallback: nearly impossible save
+    if isinstance(entity, Monster):
+        saves = getattr(entity, "saving_throws", None)
+        if saves and attack_type in saves:
+            return saves[attack_type]
+        return 20
+    return 20
 
 
 @dataclass(frozen=True)
@@ -346,6 +393,8 @@ class CastSpellAction(CombatAction):
                 ),
             )
 
+        # Validate targets based on target_mode
+        ally_modes = {TargetMode.SINGLE_ALLY, TargetMode.ALL_ALLIES, TargetMode.SELF}
         for tid in self.target_ids:
             target_ref = ctx.combatants.get(tid)
             if target_ref is None or not target_ref.is_alive:
@@ -355,11 +404,44 @@ class CastSpellAction(CombatAction):
                         message=f"target {tid} is dead or invalid",
                     ),
                 )
+            # Ally-targeting spells must target same-side combatants
+            if spell_def.target_mode in ally_modes:
+                if target_ref.side != actor_ref.side:
+                    return (
+                        Rejection(
+                            code=RejectionCode.TARGET_NOT_ALLY,
+                            message=f"target {tid} must be an ally",
+                        ),
+                    )
 
         return ()
 
+    @staticmethod
+    def _get_caster_level(ctx: CombatContext, actor_id: str) -> int:
+        """Resolve the caster's level for scaling spells."""
+        ref = ctx.combatants.get(actor_id)
+        if ref is None:
+            return 1
+        entity = ref.entity
+        if isinstance(entity, PlayerCharacter):
+            return entity.level or 1
+        # Monsters: use save_as_level as a proxy for caster level
+        return getattr(entity, "save_as_level", 1) or 1
+
+    @staticmethod
+    def _resolve_projectile_count(
+        thresholds: tuple[tuple[int, int], ...], caster_level: int
+    ) -> int:
+        """Determine how many projectiles to fire based on caster level thresholds."""
+        count = 1
+        for level_min, num_projectiles in thresholds:
+            if caster_level >= level_min:
+                count = num_projectiles
+        return count
+
     def execute(self, ctx: CombatContext) -> ActionResult:
         spell_def = get_spell(self.spell_id)
+        caster_level = self._get_caster_level(ctx, self.actor_id)
 
         events: list[EncounterEvent] = [
             SpellCast(
@@ -373,14 +455,108 @@ class CastSpellAction(CombatAction):
             ConsumeSlotEffect(caster_id=self.actor_id, level=self.slot_level)
         ]
 
-        for tid in self.target_ids:
-            if spell_def.damage_die:
+        # Handle projectile-based spells (e.g. Magic Missile at higher levels)
+        if spell_def.projectile_thresholds and spell_def.damage_die:
+            num_projectiles = self._resolve_projectile_count(
+                spell_def.projectile_thresholds, caster_level
+            )
+            # Distribute projectiles across targets round-robin
+            targets = self.target_ids
+            for i in range(num_projectiles):
+                tid = targets[i % len(targets)]
+                # Per-projectile saving throw (if applicable)
+                saved = False
+                if spell_def.save_type is not None:
+                    target_ref = ctx.combatants.get(tid)
+                    if target_ref is not None:
+                        target_number = _get_save_target(
+                            target_ref.entity, spell_def.save_type
+                        )
+                        save_roll = roll_dice("1d20").total
+                        saved = save_roll >= target_number
+                        events.append(
+                            SavingThrowRolled(
+                                target_id=tid,
+                                save_type=spell_def.save_type.name,
+                                target_number=target_number,
+                                roll=save_roll,
+                                success=saved,
+                                spell_name=spell_def.name,
+                            )
+                        )
+                if saved and spell_def.save_negates:
+                    continue
                 dmg_roll = roll_dice(spell_def.damage_die)
+                amount = dmg_roll.total_with_modifier
+                if saved and not spell_def.save_negates:
+                    amount = max(1, amount // 2)
+                effects.append(
+                    DamageEffect(
+                        source_id=self.actor_id, target_id=tid, amount=amount
+                    )
+                )
+            return ActionResult(events=tuple(events), effects=tuple(effects))
+
+        for tid in self.target_ids:
+            # Saving throw check (if the spell allows one)
+            saved = False
+            if spell_def.save_type is not None:
+                target_ref = ctx.combatants.get(tid)
+                if target_ref is not None:
+                    target_number = _get_save_target(
+                        target_ref.entity, spell_def.save_type
+                    )
+                    save_roll = roll_dice("1d20").total
+                    saved = save_roll >= target_number
+                    events.append(
+                        SavingThrowRolled(
+                            target_id=tid,
+                            save_type=spell_def.save_type.name,
+                            target_number=target_number,
+                            roll=save_roll,
+                            success=saved,
+                            spell_name=spell_def.name,
+                        )
+                    )
+
+            if saved and spell_def.save_negates:
+                # Save negates: skip all effects for this target
+                continue
+
+            if spell_def.heal_die:
+                heal_roll = roll_dice(spell_def.heal_die)
+                effects.append(
+                    HealEffect(
+                        source_id=self.actor_id,
+                        target_id=tid,
+                        amount=heal_roll.total_with_modifier,
+                    )
+                )
+            elif spell_def.damage_per_level:
+                # Level-scaling damage (e.g. Fireball = caster_level * d6)
+                dice_expr = f"{caster_level}{spell_def.damage_per_level}"
+                dmg_roll = roll_dice(dice_expr)
+                amount = dmg_roll.total_with_modifier
+                if saved and not spell_def.save_negates:
+                    amount = max(1, amount // 2)
                 effects.append(
                     DamageEffect(
                         source_id=self.actor_id,
                         target_id=tid,
-                        amount=dmg_roll.total_with_modifier,
+                        amount=amount,
+                    )
+                )
+            elif spell_def.damage_die:
+                dmg_roll = roll_dice(spell_def.damage_die)
+                amount = dmg_roll.total_with_modifier
+                if saved and not spell_def.save_negates:
+                    # Save halves damage
+                    amount = max(1, amount // 2)
+                effects.append(
+                    DamageEffect(
+                        source_id=self.actor_id,
+                        target_id=tid,
+                        amount=amount,
                     )
                 )
             if spell_def.condition_id:
@@ -390,6 +566,17 @@ class CastSpellAction(CombatAction):
                         target_id=tid,
                         condition_id=spell_def.condition_id,
                         duration=spell_def.condition_duration,
+                    )
+                )
+            for spell_mod in spell_def.modifiers:
+                effects.append(
+                    ApplyModifierEffect(
+                        source_id=self.actor_id,
+                        target_id=tid,
+                        modifier_id=spell_mod.modifier_id,
+                        stat=spell_mod.stat,
+                        value=spell_mod.value,
+                        duration=spell_mod.duration,
                     )
                 )
 
@@ -424,3 +611,79 @@ class FleeAction(CombatAction):
             events=(),
             effects=(FleeEffect(combatant_id=self.actor_id),),
         )
+
+
+# Throwable combat item definitions
+THROWABLE_ITEMS: dict[str, dict] = {
+    "Flask of Oil": {"damage_die": "1d8", "range": 10},
+    "Holy Water": {"damage_die": "1d8", "range": 10},
+}
+
+
+@dataclass(frozen=True)
+class UseItemAction(CombatAction):
+    """Resolve using a thrown combat item (oil flask, holy water, etc.)."""
+
+    actor_id: str
+    item_name: str
+    target_ids: tuple[str, ...]
+
+    def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
+        actor_ref = ctx.combatants.get(self.actor_id)
+        if actor_ref is None:
+            return (
+                Rejection(code=RejectionCode.INVALID_ACTOR, message="actor is invalid"),
+            )
+        if self.actor_id != ctx.current_combatant_id:
+            return (
+                Rejection(
+                    code=RejectionCode.NOT_CURRENT_COMBATANT,
+                    message=f"not current combatant (expected {ctx.current_combatant_id})",
+                ),
+            )
+        if not actor_ref.is_alive:
+            return (Rejection(code=RejectionCode.ACTOR_DEAD, message="actor is dead"),)
+
+        if self.item_name not in THROWABLE_ITEMS:
+            return (
+                Rejection(
+                    code=RejectionCode.ITEM_NOT_THROWABLE,
+                    message=f"{self.item_name} is not a throwable combat item",
+                ),
+            )
+
+        for tid in self.target_ids:
+            target_ref = ctx.combatants.get(tid)
+            if target_ref is None or not target_ref.is_alive:
+                return (
+                    Rejection(
+                        code=RejectionCode.INVALID_TARGET,
+                        message=f"target {tid} is dead or invalid",
+                    ),
+                )
+        return ()
+
+    def execute(self, ctx: CombatContext) -> ActionResult:
+        item_data = THROWABLE_ITEMS.get(self.item_name, {})
+        damage_die = item_data.get("damage_die", "1d4")
+
+        events: list[EncounterEvent] = [
+            ItemUsed(
+                actor_id=self.actor_id,
+                item_name=self.item_name,
+                target_ids=self.target_ids,
+            )
+        ]
+        effects: list[Effect] = []
+
+        for tid in self.target_ids:
+            dmg_roll = roll_dice(damage_die)
+            effects.append(
+                DamageEffect(
+                    source_id=self.actor_id,
+                    target_id=tid,
+                    amount=dmg_roll.total_with_modifier,
+                )
+            )
+
+        return ActionResult(events=tuple(events), effects=tuple(effects))

@@ -5,15 +5,24 @@ Import public types from here::
     from osrlib.combat import CombatEngine, EncounterState, EventFormatter
 """
 
+from osrlib.combat.conditions import (
+    ActiveCondition,
+    ConditionBehavior,
+    ConditionTracker,
+    CONDITION_REGISTRY,
+)
 from osrlib.combat.context import CombatContext, CombatSide, CombatantRef, MoraleState
 from osrlib.combat.dice_service import BXDiceService, DiceService, FixedDiceService
 from osrlib.combat.effects import (
     ApplyConditionEffect,
+    ApplyModifierEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
     FleeEffect,
+    HealEffect,
 )
+from osrlib.combat.modifiers import ActiveModifier, ModifiedStat, ModifierTracker
 from osrlib.combat.actions import (
     ActionResult,
     CastSpellAction,
@@ -21,6 +30,8 @@ from osrlib.combat.actions import (
     FleeAction,
     MeleeAttackAction,
     RangedAttackAction,
+    UseItemAction,
+    THROWABLE_ITEMS,
 )
 from osrlib.combat.engine import CombatEngine, StepResult
 from osrlib.combat.events import (
@@ -28,7 +39,12 @@ from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
     ConditionApplied,
+    ConditionExpired,
     DamageApplied,
+    HealingApplied,
+    ItemUsed,
+    ModifierApplied,
+    ModifierExpired,
     EncounterEvent,
     EncounterFaulted,
     EncounterStarted,
@@ -42,6 +58,7 @@ from osrlib.combat.events import (
     RoundStarted,
     Rejection,
     RejectionCode,
+    SavingThrowRolled,
     SpellCast,
     SpellSlotConsumed,
     SurpriseRolled,
@@ -57,6 +74,7 @@ from osrlib.combat.intents import (
     FleeIntent,
     MeleeAttackIntent,
     RangedAttackIntent,
+    UseItemIntent,
 )
 from osrlib.combat.serializer import EventSerializer
 from osrlib.combat.spells import SpellDefinition, get_spell
@@ -69,6 +87,7 @@ __all__ = [
     "ActionChoice",
     "ActionResult",
     "ActionRejected",
+    "ActiveCondition",
     "ApplyConditionEffect",
     "AttackRolled",
     "BXDiceService",
@@ -82,7 +101,11 @@ __all__ = [
     "CombatView",
     "CombatantRef",
     "CombatantView",
+    "CONDITION_REGISTRY",
     "ConditionApplied",
+    "ConditionBehavior",
+    "ConditionExpired",
+    "ConditionTracker",
     "ConsumeSlotEffect",
     "DamageEffect",
     "DamageApplied",
@@ -98,6 +121,9 @@ __all__ = [
     "EntityFled",
     "FleeAction",
     "FleeEffect",
+    "HealEffect",
+    "HealingApplied",
+    "ItemUsed",
     "FleeIntent",
     "ForcedIntentApplied",
     "ForcedIntentQueued",
@@ -114,6 +140,7 @@ __all__ = [
     "RoundStarted",
     "Rejection",
     "RejectionCode",
+    "SavingThrowRolled",
     "SpellCast",
     "SpellDefinition",
     "SpellSlotConsumed",
@@ -124,7 +151,10 @@ __all__ = [
     "TacticalProvider",
     "TurnQueueBuilt",
     "TurnSkipped",
+    "THROWABLE_ITEMS",
     "TurnStarted",
+    "UseItemAction",
+    "UseItemIntent",
     "VictoryDetermined",
     "get_spell",
 ]

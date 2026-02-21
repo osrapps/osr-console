@@ -33,10 +33,19 @@ class CastSpellIntent:
 
 
 @dataclass(frozen=True)
+class UseItemIntent:
+    """Intent to use a combat item (thrown oil, holy water, etc.)."""
+
+    actor_id: str
+    item_name: str
+    target_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class FleeIntent:
     """Intent to flee from combat (morale failure)."""
 
     actor_id: str
 
 
-ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent | FleeIntent
+ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent | UseItemIntent | FleeIntent

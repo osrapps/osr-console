@@ -26,6 +26,8 @@ class RejectionCode(Enum):
     INELIGIBLE_CASTER = auto()
     SLOT_LEVEL_MISMATCH = auto()
     MONSTER_ACTION_NOT_SUPPORTED = auto()
+    TARGET_NOT_ALLY = auto()
+    ITEM_NOT_THROWABLE = auto()
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,12 @@ def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
         if target:
             return f"Cast {spell_name} on {target}"
         return f"Cast {spell_name}"
+    if ui_key == "use_item":
+        item_name = ui_args.get("item_name", "???")
+        target = ui_args.get("target_name", "")
+        if target:
+            return f"Throw {item_name} at {target}"
+        return f"Use {item_name}"
     if ui_key == "flee":
         return "Flee"
     return ui_key
@@ -252,6 +260,66 @@ class ForcedIntentApplied(EncounterEvent):
 
     combatant_id: str
     intent: ActionIntent
+
+
+@dataclass(frozen=True)
+class HealingApplied(EncounterEvent):
+    """Emitted when healing is applied to a combatant."""
+
+    source_id: str
+    target_id: str
+    amount: int
+    target_hp_after: int
+
+
+@dataclass(frozen=True)
+class ItemUsed(EncounterEvent):
+    """Emitted when a combat item is used (e.g. thrown oil flask)."""
+
+    actor_id: str
+    item_name: str
+    target_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ModifierApplied(EncounterEvent):
+    """Emitted when a temporary stat modifier is applied."""
+
+    source_id: str
+    target_id: str
+    modifier_id: str
+    stat: str
+    value: int
+    duration: int
+
+
+@dataclass(frozen=True)
+class ModifierExpired(EncounterEvent):
+    """Emitted when a temporary stat modifier expires."""
+
+    combatant_id: str
+    modifier_id: str
+
+
+@dataclass(frozen=True)
+class SavingThrowRolled(EncounterEvent):
+    """Emitted when a saving throw is rolled against a spell effect."""
+
+    target_id: str
+    save_type: str
+    target_number: int
+    roll: int
+    success: bool
+    spell_name: str
+
+
+@dataclass(frozen=True)
+class ConditionExpired(EncounterEvent):
+    """Emitted when a condition is removed from a combatant."""
+
+    combatant_id: str
+    condition_id: str
+    reason: str  # "duration", "damage", "dispelled"
 
 
 @dataclass(frozen=True)
