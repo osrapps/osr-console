@@ -66,6 +66,40 @@ TrainingHallScreen {
     margin: 0 1;
 }
 
+/* Party manager */
+
+PartyManagerScreen {
+    background: #0a0a2e;
+}
+
+#party-mgr-layout {
+    height: 1fr;
+}
+
+#party-mgr-left {
+    width: 50%;
+}
+
+#party-mgr-roster {
+    height: 1fr;
+    border: solid #4a4a8a;
+    background: #0e0e3a;
+}
+
+#party-mgr-sheet {
+    width: 50%;
+}
+
+#party-mgr-actions {
+    height: auto;
+    align: center middle;
+    padding: 1;
+}
+
+#party-mgr-actions Button {
+    margin: 0 1;
+}
+
 /* Level up */
 
 LevelUpScreen {

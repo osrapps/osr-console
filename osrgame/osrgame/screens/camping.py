@@ -76,7 +76,7 @@ class CampingScreen(Screen):
         """Push the party manager to reorder the party."""
         from .party_manager import PartyManagerScreen
 
-        self.app.push_screen(PartyManagerScreen(), callback=self._on_watch_return)
+        self.app.push_screen(PartyManagerScreen(allow_drop=False), callback=self._on_watch_return)
 
     def _on_watch_return(self, result=None) -> None:
         """Refresh roster when returning from watch order."""

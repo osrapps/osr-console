@@ -27,7 +27,7 @@ class TrainingHallScreen(Screen):
                         "Create character", id="btn-create-char", variant="primary"
                     )
                     yield Button("Level up", id="btn-level-up")
-                    yield Button("Manage order", id="btn-manage-order")
+                    yield Button("Manage party", id="btn-manage-order")
                     yield Button("Done", id="btn-done")
             yield CharSheetWidget(id="training-sheet")
         yield Footer()
@@ -74,7 +74,11 @@ class TrainingHallScreen(Screen):
     def manage_order(self) -> None:
         from .party_manager import PartyManagerScreen
 
-        self.app.push_screen(PartyManagerScreen())
+        self.app.push_screen(PartyManagerScreen(), callback=self._on_manage_return)
+
+    def _on_manage_return(self, result=None) -> None:
+        """Refresh roster when returning from party manager (character may have been dropped)."""
+        self.query_one("#training-roster", PartyRosterWidget).refresh_roster()
 
     @on(Button.Pressed, "#btn-done")
     def done(self) -> None:

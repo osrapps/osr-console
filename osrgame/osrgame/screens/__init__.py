@@ -2,6 +2,7 @@
 
 from .camping import CampingScreen
 from .char_creation import CharCreationScreen
+from .confirm_modal import ConfirmModal
 from .combat import CombatScreen
 from .explore import ExploreScreen
 from .game_over import GameOverScreen
@@ -20,6 +21,7 @@ __all__ = [
     "CampingScreen",
     "CharCreationScreen",
     "CombatScreen",
+    "ConfirmModal",
     "ExploreScreen",
     "GameOverScreen",
     "InnScreen",

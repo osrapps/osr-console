@@ -227,29 +227,3 @@ GameOverScreen {
     margin-bottom: 2;
 }
 
-/* Party manager screen */
-
-PartyManagerScreen {
-    layout: grid;
-    grid-size: 2;
-    grid-columns: 1fr 1fr;
-    grid-rows: 1fr auto;
-}
-
-#party-mgr-roster {
-    border: solid #4a4a8a;
-    background: #0e0e3a;
-}
-
-#party-mgr-details {
-    border: solid #4a4a8a;
-    background: #0e0e3a;
-    padding: 1;
-}
-
-#party-mgr-actions {
-    column-span: 2;
-    height: auto;
-    align: center middle;
-    padding: 1;
-}
