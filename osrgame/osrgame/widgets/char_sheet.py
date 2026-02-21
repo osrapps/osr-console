@@ -37,8 +37,18 @@ class CharSheetWidget(Vertical):
         inv = self.query_one("#char-inventory", DataTable)
         inv.add_columns("Item", "Type", "Equipped", "GP")
 
-    def update_character(self, pc: PlayerCharacter) -> None:
-        """Refresh all sub-tables from a PlayerCharacter instance."""
+    def update_character(self, pc: PlayerCharacter | None) -> None:
+        """Refresh all sub-tables from a PlayerCharacter instance.
+
+        Pass ``None`` to reset the widget to its empty state.
+        """
+        if pc is None:
+            self.query_one("#char-header", Static).update("No character selected")
+            self.query_one("#char-abilities", DataTable).clear()
+            self.query_one("#char-saves", DataTable).clear()
+            self.query_one("#char-inventory", DataTable).clear()
+            return
+
         # Header
         header = self.query_one("#char-header", Static)
         alignment = getattr(pc, "alignment", None)
