@@ -47,19 +47,27 @@ class TownHubScreen(Screen):
 
     @on(Button.Pressed, "#btn-temple")
     def go_temple(self) -> None:
-        self.notify("Temple coming soon", title="Temple")
+        from .town_temple import TempleScreen
+
+        self.app.push_screen(TempleScreen(), callback=self._on_return)
 
     @on(Button.Pressed, "#btn-shop")
     def go_shop(self) -> None:
-        self.notify("Shop coming soon", title="Shop")
+        from .town_shop import ShopScreen
+
+        self.app.push_screen(ShopScreen(), callback=self._on_return)
 
     @on(Button.Pressed, "#btn-tavern")
     def go_tavern(self) -> None:
-        self.notify("Tavern coming soon", title="Tavern")
+        from .town_tavern import TavernScreen
+
+        self.app.push_screen(TavernScreen(), callback=self._on_return)
 
     @on(Button.Pressed, "#btn-inn")
     def go_inn(self) -> None:
-        self.notify("Inn coming soon", title="Inn")
+        from .town_inn import InnScreen
+
+        self.app.push_screen(InnScreen(), callback=self._on_return)
 
     @on(Button.Pressed, "#btn-depart")
     def depart(self) -> None:

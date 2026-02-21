@@ -65,9 +65,9 @@ class OSRConsoleApp(App):
         self.game_state.adventure = adventure
         self.game_state.turn_count = 0
         self.game_state.in_dungeon = False
-        self.game_state.party_gold = 0
-        self.game_state.party_gems = []
-        self.game_state.party_jewelry = []
+
+        # Give the party some starting gold
+        adventure.active_party.treasury.add_coins(100)
 
         self.push_screen(TownHubScreen())
 
