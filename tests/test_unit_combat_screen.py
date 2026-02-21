@@ -15,7 +15,12 @@ from osrlib.combat import (
     VictoryDetermined,
 )
 from osrlib.dice_roller import DiceRoll
-from osrlib.combat.intents import CastSpellIntent, MeleeAttackIntent, RangedAttackIntent
+from osrlib.combat.intents import (
+    CastSpellIntent,
+    FleeIntent,
+    MeleeAttackIntent,
+    RangedAttackIntent,
+)
 from osrlib.combat.state import EncounterOutcome
 from osrlib.encounter import Encounter
 from osrlib.enums import CharacterClassType
@@ -188,7 +193,8 @@ class TestManualModeCombatLoop:
         for choice in need_action.available:
             assert choice.label
             assert isinstance(
-                choice.intent, (MeleeAttackIntent, RangedAttackIntent, CastSpellIntent)
+                choice.intent,
+                (MeleeAttackIntent, RangedAttackIntent, CastSpellIntent, FleeIntent),
             )
 
     def test_monster_turns_auto_resolved_by_engine(self, default_party, goblin_party):

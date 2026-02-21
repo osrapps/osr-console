@@ -158,7 +158,10 @@ class EventFormatter:
                 return f"{self._display_combatant(eid)} falls!"
 
             case EntityFled(entity_id=eid):
-                return f"{self._display_combatant(eid)} flees!"
+                name = self._display_combatant(eid)
+                if eid.startswith("pc:"):
+                    return f"{name} flees the battle!"
+                return f"{name} flees!"
 
             case VictoryDetermined(outcome=outcome):
                 if outcome == EncounterOutcome.PARTY_VICTORY:

@@ -275,7 +275,9 @@ def test_pc_nat20_critical(default_party, weak_goblin_party):
     attack_events = _find_events(events, AttackRolled)
     assert len(attack_events) > 0
 
-    pc_crits = [e for e in attack_events if e.attacker_id.startswith("pc:") and e.critical]
+    pc_crits = [
+        e for e in attack_events if e.attacker_id.startswith("pc:") and e.critical
+    ]
     assert len(pc_crits) > 0
     for atk in pc_crits:
         assert atk.hit is True
@@ -1132,7 +1134,12 @@ def test_action_choice_has_ui_key_and_ui_args(default_party, goblin_party):
     ]
     assert len(need_actions) == 1
     for choice in need_actions[0].available:
-        assert choice.ui_key in ("attack_target", "ranged_attack_target", "cast_spell")
+        assert choice.ui_key in (
+            "attack_target",
+            "ranged_attack_target",
+            "cast_spell",
+            "flee",
+        )
         # All choices should have a non-empty label
         assert choice.label
         if choice.ui_key == "attack_target":
@@ -1417,9 +1424,13 @@ def test_failed_slot_consumption_blocks_downstream_effects(default_party, goblin
         if not slots:
             caster_id = cid
             break
-    assert caster_id is not None, "fixture party must include at least one non-spellcaster"
+    assert caster_id is not None, (
+        "fixture party must include at least one non-spellcaster"
+    )
 
-    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
     target = engine._ctx.combatants[target_id].entity
     original_hp = target.hit_points
 
@@ -1428,7 +1439,10 @@ def test_failed_slot_consumption_blocks_downstream_effects(default_party, goblin
         ConsumeSlotEffect(caster_id=caster_id, level=1),
         DamageEffect(source_id=caster_id, target_id=target_id, amount=5),
         ApplyConditionEffect(
-            source_id=caster_id, target_id=target_id, condition_id="asleep", duration=None
+            source_id=caster_id,
+            target_id=target_id,
+            condition_id="asleep",
+            duration=None,
         ),
     )
     events = []
@@ -1455,12 +1469,17 @@ def test_cast_spell_rejected_for_ineligible_class(default_party, goblin_party):
 
     fighter_id = None
     for cid, ref in engine._ctx.combatants.items():
-        if cid.startswith("pc:") and ref.entity.character_class.class_type == CharacterClassType.FIGHTER:
+        if (
+            cid.startswith("pc:")
+            and ref.entity.character_class.class_type == CharacterClassType.FIGHTER
+        ):
             fighter_id = cid
             break
     assert fighter_id is not None, "default party must include a Fighter"
 
-    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
     engine._ctx.current_combatant_id = fighter_id
 
     action = CastSpellAction(
@@ -1493,7 +1512,9 @@ def test_cast_spell_rejected_for_slot_level_mismatch(default_party, goblin_party
             break
     assert caster_id is not None, "default party must include a Magic User or Elf"
 
-    target_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    target_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
     engine._ctx.current_combatant_id = caster_id
 
     # Magic Missile is spell_level=1, but we pass slot_level=2
@@ -1524,7 +1545,9 @@ def test_monster_ranged_intent_rejected_not_faulted(default_party, goblin_party)
     engine.step()  # INIT -> ROUND_START
     engine.step()  # ROUND_START -> TURN_START
 
-    monster_id = next(cid for cid in engine._ctx.combatants if cid.startswith("monster:"))
+    monster_id = next(
+        cid for cid in engine._ctx.combatants if cid.startswith("monster:")
+    )
     pc_id = next(cid for cid in engine._ctx.combatants if cid.startswith("pc:"))
 
     # Force engine to the monster's turn with a ranged intent

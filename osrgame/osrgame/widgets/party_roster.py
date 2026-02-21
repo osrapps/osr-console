@@ -15,9 +15,24 @@ class PartyRosterWidget(DataTable):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(cursor_type="row", **kwargs)
+        self._highlighted_pc: str | None = None
 
     def on_mount(self) -> None:
         self.add_columns("Name", "Class", "Lv", "HP", "AC")
+
+    def highlight_pc(self, combatant_id: str) -> None:
+        """Visually mark the active character by moving the cursor to their row.
+
+        Args:
+            combatant_id: Canonical combatant ID (e.g. "pc:Thorin").
+        """
+        pc_name = combatant_id.split(":", 1)[1] if ":" in combatant_id else combatant_id
+        self._highlighted_pc = pc_name
+        # Move cursor to the matching row
+        for row_idx, row_key in enumerate(self.rows):
+            if str(row_key.value) == pc_name:
+                self.move_cursor(row=row_idx)
+                break
 
     def refresh_roster(self) -> None:
         """Rebuild rows from the current party."""
@@ -30,8 +45,12 @@ class PartyRosterWidget(DataTable):
             hp_text = (
                 "DEAD" if pc.hit_points <= 0 else f"{pc.hit_points}/{pc.max_hit_points}"
             )
+            # Mark the active PC with an arrow prefix
+            name_display = (
+                f"> {pc.name}" if pc.name == self._highlighted_pc else f"  {pc.name}"
+            )
             self.add_row(
-                pc.name,
+                name_display,
                 pc.character_class.class_type.value,
                 Text(str(pc.level), justify="center"),
                 Text(hp_text, justify="center"),

@@ -97,8 +97,9 @@ class CombatContext:
         ]
 
     def pcs_alive(self) -> bool:
+        """Return True if any PC is alive and has not fled."""
         return any(
-            ref.is_alive
+            ref.is_alive and not ref.has_fled
             for ref in self.combatants.values()
             if ref.side == CombatSide.PC
         )
