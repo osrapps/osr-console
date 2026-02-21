@@ -1,7 +1,7 @@
 """Load game screen — browse and restore saved games."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from textual import on
@@ -10,11 +10,7 @@ from textual.containers import Center, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Footer, Header, Static
 
-from ..game_state import GameState
-
-
-def _get_save_dir() -> Path:
-    return Path.home() / ".osrlib" / "saves"
+from ..game_state import GameState, get_save_dir
 
 
 class LoadGameScreen(Screen):
@@ -43,16 +39,16 @@ class LoadGameScreen(Screen):
         table = self.query_one("#load-table", DataTable)
         table.clear()
         self._save_files = []
-        save_dir = _get_save_dir()
+        save_dir = get_save_dir()
         if not save_dir.exists():
             return
         files = sorted(save_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
         for f in files:
             self._save_files.append(f)
-            mtime = datetime.fromtimestamp(f.stat().st_mtime)
+            mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc).astimezone()
             table.add_row(f.stem, mtime.strftime("%Y-%m-%d %H:%M"))
 
-    def on_data_table_row_selected(self, event) -> None:
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         event.stop()
         if event.cursor_row >= len(self._save_files):
             return
@@ -63,7 +59,7 @@ class LoadGameScreen(Screen):
             gs = GameState.from_dict(data)
             self.app.game_state = gs
             self.notify(f"Loaded {save_path.stem}", title="Load game")
-            # Pop this screen and push town hub
+            # Replace this screen with town hub (pop LoadGame, push TownHub)
             self.app.pop_screen()
             from .town_hub import TownHubScreen
 

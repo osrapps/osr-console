@@ -470,9 +470,10 @@ class Party:
         return self.members.index(character)
 
     def heal_party(self):
-        """Heal all characters in the party to their maximum hit points."""
+        """Heal all living characters in the party to their maximum hit points."""
         for character in self.members:
-            character.heal(character.character_class.max_hp)
+            if character.is_alive:
+                character.heal(character.character_class.max_hp)
 
     def move_character_to_index(
         self, character: PlayerCharacter, index: int

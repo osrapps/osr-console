@@ -72,7 +72,7 @@ class ShopScreen(Screen):
         else:
             catalog.load_items()
 
-    def on_data_table_row_selected(self, event) -> None:
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in both the roster and inventory tables."""
         table_id = event.data_table.id
         if table_id == "shop-roster":
@@ -141,7 +141,8 @@ class ShopScreen(Screen):
         item = items[row_index]
         sell_price = item.gp_value // 2
         if sell_price < 1:
-            sell_price = 1
+            self.notify(f"{item.name} has no resale value.", title="Shop")
+            return
 
         try:
             if item.is_equipped:

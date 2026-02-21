@@ -4,7 +4,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, DataTable, Footer, Header, Static
 
 from ..widgets import PartyRosterWidget
 
@@ -73,7 +73,7 @@ class TempleScreen(Screen):
         has_dead = any(not pc.is_alive for pc in party.members)
         self.query_one("#btn-raise", Button).disabled = not has_dead
 
-    def on_data_table_row_selected(self, event) -> None:
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         event.stop()
         party = self.app.game_state.adventure.active_party
         if event.cursor_row < len(party.members):
@@ -133,7 +133,8 @@ class TempleScreen(Screen):
         if not party.treasury.spend_gold(500):
             self.notify("Not enough gold (need 500 gp).", severity="error", title="Temple")
             return
-        dead_pc.character_class.hp = 1
+        dead_pc.character_class.hp = 0
+        dead_pc.heal(1)
         self.notify(f"{dead_pc.name} has been raised from the dead!", title="Temple")
         self._refresh_gold()
         self._refresh_info()

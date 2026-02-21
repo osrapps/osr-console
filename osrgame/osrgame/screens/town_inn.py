@@ -2,7 +2,6 @@
 
 import datetime
 import json
-from pathlib import Path
 
 from textual import on
 from textual.app import ComposeResult
@@ -10,12 +9,7 @@ from textual.containers import Center, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Static
 
-
-def _get_save_dir() -> Path:
-    """Return the save directory, creating it if needed."""
-    save_dir = Path.home() / ".osrlib" / "saves"
-    save_dir.mkdir(parents=True, exist_ok=True)
-    return save_dir
+from ..game_state import get_save_dir
 
 
 class InnScreen(Screen):
@@ -52,7 +46,7 @@ class InnScreen(Screen):
         timestamp = now.strftime("%Y%m%d_%H%M%S")
         adventure_name = gs.adventure.name.replace(" ", "_").lower()
         filename = f"{adventure_name}_{timestamp}.json"
-        save_path = _get_save_dir() / filename
+        save_path = get_save_dir() / filename
 
         try:
             with open(save_path, "w") as f:

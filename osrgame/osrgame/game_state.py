@@ -1,8 +1,16 @@
 """Centralized game state shared across all screens."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from osrlib.adventure import Adventure
+
+
+def get_save_dir() -> Path:
+    """Return the save directory, creating it if needed."""
+    save_dir = Path.home() / ".osrlib" / "saves"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    return save_dir
 
 
 @dataclass
