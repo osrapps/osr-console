@@ -182,7 +182,7 @@ CombatScreen {
     background: #0e0e3a;
 }
 
-RichLog {
+CombatScreen RichLog {
     background: #0e0e3a;
     color: #c0c0c0;
     border: solid #4a4a8a;

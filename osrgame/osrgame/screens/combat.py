@@ -7,20 +7,11 @@ from textual.screen import Screen
 from textual.widgets import Footer, Header, RichLog
 
 from osrlib.combat import (
+    ColorEventFormatter,
     CombatEngine,
     EncounterState,
-    EventFormatter,
     NeedAction,
     VictoryDetermined,
-)
-from osrlib.combat.events import (
-    AttackRolled,
-    DamageApplied,
-    EntityDied,
-    EntityFled,
-    EncounterEvent,
-    RoundStarted,
-    SpellCast,
 )
 from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome
@@ -30,43 +21,6 @@ from osrlib.party import Party
 from ..widgets import PartyRosterWidget
 from ..widgets.combat_action_bar import CombatActionBar, CombatActionChosen
 from ..widgets.monster_group import MonsterGroupWidget
-
-
-class ColorEventFormatter:
-    """Wraps EventFormatter with Rich Text styling by event type."""
-
-    def __init__(self) -> None:
-        self._fmt = EventFormatter()
-
-    def format(self, event: EncounterEvent) -> Text:
-        """Return a Rich Text object with color styling for the event."""
-        plain = self._fmt.format(event)
-
-        match event:
-            case RoundStarted():
-                return Text(plain, style="bold white")
-            case AttackRolled(hit=hit, critical=crit):
-                if crit:
-                    return Text(plain, style="bold red")
-                return Text(plain, style="dim") if not hit else Text(plain)
-            case DamageApplied():
-                return Text(plain, style="red")
-            case SpellCast():
-                return Text(plain, style="cyan")
-            case EntityDied():
-                return Text(plain, style="bold red")
-            case EntityFled():
-                return Text(plain, style="yellow")
-            case VictoryDetermined(outcome=outcome):
-                if outcome == EncounterOutcome.PARTY_VICTORY:
-                    return Text(plain, style="bold green")
-                return Text(plain, style="bold red")
-            case _:
-                return Text(plain)
-
-    def format_plain(self, event: EncounterEvent) -> str:
-        """Return plain text for encounter log storage."""
-        return self._fmt.format(event)
 
 
 class CombatScreen(Screen):

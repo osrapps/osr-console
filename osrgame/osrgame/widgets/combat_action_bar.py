@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from textual import on
+from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.reactive import reactive
@@ -35,7 +36,7 @@ class CombatActionBar(Widget):
 
     Modes:
 
-    - **category**: Show action category buttons (Attack, Ranged, Cast spell, Retreat, Flee)
+    - **category**: Show action category buttons (Attack, Ranged, Cast spell, Flee)
     - **target**: Show target buttons for the selected category
     - **spell_pick**: Show available spells to pick from
     - **spell_target**: Show monster group targets for a single-target spell
@@ -76,12 +77,12 @@ class CombatActionBar(Widget):
         self._melee_choices: list[ActionChoice] = []
         self._ranged_choices: list[ActionChoice] = []
         self._spell_choices: list[ActionChoice] = []  # all cast_spell choices
-        self._flee_enabled: bool = False
+        self._has_flee: bool = False
         # Pending spell for target selection
         self._pending_spell_id: str | None = None
         self._pending_spell_choices: list[ActionChoice] = []
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield Label("", id="turn-label")
         yield Horizontal(id="action-buttons", classes="action-row")
 
@@ -101,7 +102,7 @@ class CombatActionBar(Widget):
         self._spell_choices = [
             c for c in need_action.available if c.ui_key == "cast_spell"
         ]
-        self._flee_enabled = True  # Always show flee/retreat buttons
+        self._has_flee = any(c.ui_key == "flee" for c in need_action.available)
 
         self.mode = "category"
 
@@ -154,10 +155,7 @@ class CombatActionBar(Widget):
         container.mount(
             Button("Cast spell", id="cat-spell", disabled=not self._spell_choices)
         )
-        container.mount(
-            Button("Retreat", id="cat-retreat", disabled=not self._flee_enabled)
-        )
-        container.mount(Button("Flee", id="cat-flee", disabled=not self._flee_enabled))
+        container.mount(Button("Flee", id="cat-flee", disabled=not self._has_flee))
 
     def _build_target_buttons(
         self, container: Horizontal, choices: list[ActionChoice]
@@ -211,12 +209,6 @@ class CombatActionBar(Widget):
     def _on_spell(self) -> None:
         self.mode = "spell_pick"
 
-    @on(Button.Pressed, "#cat-retreat")
-    def _on_retreat(self) -> None:
-        if self._need_action:
-            cid = self._need_action.combatant_id
-            self.post_message(CombatActionChosen(FleeIntent(actor_id=cid)))
-
     @on(Button.Pressed, "#cat-flee")
     def _on_flee(self) -> None:
         if self._need_action:
@@ -248,7 +240,9 @@ class CombatActionBar(Widget):
         if idx >= len(groups):
             return
 
-        # Pick the first living member of the group
+        # Bard's Tale-style group targeting: pick the first living member.
+        # B/X rules allow individual targeting, but this UI groups monsters
+        # by type for simplicity. Individual targeting could be a future option.
         group = groups[idx]
         if group.choices:
             self.post_message(CombatActionChosen(group.choices[0].intent))

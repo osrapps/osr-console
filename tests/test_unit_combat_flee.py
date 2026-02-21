@@ -9,8 +9,10 @@ from osrlib.combat import (
     NeedAction,
     EntityFled,
     EventFormatter,
+    VictoryDetermined,
 )
 from osrlib.combat.intents import FleeIntent
+from osrlib.combat.state import EncounterOutcome
 from osrlib.enums import CharacterClassType
 from osrlib.monster import MonsterParty, MonsterStatsBlock
 from osrlib.party import Party
@@ -187,3 +189,44 @@ class TestPlayerFleeChoice:
 
         text = formatter.format(fled_events[0])
         assert "flees the battle" in text
+
+    def test_all_pcs_flee_ends_combat(self, default_party, goblin_party):
+        """Combat should end as opposition victory when all PCs flee."""
+        engine = CombatEngine(
+            pc_party=default_party,
+            monster_party=goblin_party,
+            auto_resolve_intents=False,
+        )
+
+        # Step until first decision to initialize combat
+        all_events = []
+        results = engine.step_until_decision()
+        for r in results:
+            all_events.extend(r.events)
+
+        # Keep fleeing every PC that gets a turn
+        for _ in range(100):
+            if engine.state == EncounterState.ENDED:
+                break
+
+            # Find the NeedAction from the last batch
+            need_action = None
+            for r in results:
+                for event in r.events:
+                    if isinstance(event, NeedAction):
+                        need_action = event
+
+            if need_action is None:
+                # Engine ended without needing input
+                break
+
+            pc_id = need_action.combatant_id
+            results = engine.step_until_decision(intent=FleeIntent(actor_id=pc_id))
+            for r in results:
+                all_events.extend(r.events)
+
+        assert engine.state == EncounterState.ENDED
+
+        victory_events = [e for e in all_events if isinstance(e, VictoryDetermined)]
+        assert len(victory_events) == 1
+        assert victory_events[0].outcome == EncounterOutcome.OPPOSITION_VICTORY

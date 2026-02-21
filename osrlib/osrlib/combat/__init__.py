@@ -50,7 +50,7 @@ from osrlib.combat.events import (
     TurnStarted,
     VictoryDetermined,
 )
-from osrlib.combat.formatter import EventFormatter
+from osrlib.combat.formatter import ColorEventFormatter, EventFormatter
 from osrlib.combat.intents import (
     ActionIntent,
     CastSpellIntent,
@@ -74,6 +74,7 @@ __all__ = [
     "BXDiceService",
     "CastSpellAction",
     "CastSpellIntent",
+    "ColorEventFormatter",
     "CombatAction",
     "CombatContext",
     "CombatEngine",
