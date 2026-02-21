@@ -162,32 +162,50 @@ MainMenuScreen {
 /* Combat screen */
 
 CombatScreen {
-    layout: grid;
-    grid-size: 2;
-    grid-columns: 0.4fr 0.6fr;
-    grid-rows: 30% 25% 1fr;
+    layout: vertical;
+}
+
+#combat-top {
+    layout: horizontal;
+    height: 1fr;
 }
 
 #combat-party-roster {
+    width: 25%;
     border: solid #4a4a8a;
     background: #0e0e3a;
 }
 
 #combat-log {
-    row-span: 3;
+    width: 1fr;
     border: solid #4a4a8a;
     background: #0e0e3a;
+}
+
+CombatScreen RichLog {
+    background: #0e0e3a;
+    color: #c0c0c0;
+    border: solid #4a4a8a;
 }
 
 #combat-monster-roster {
+    width: 25%;
     border: solid #4a4a8a;
     background: #0e0e3a;
 }
 
-#combat-action-panel {
+#combat-action-bar {
+    dock: bottom;
+    height: auto;
+    max-height: 6;
     border: solid #4a4a8a;
     background: #0e0e3a;
     padding: 0 1;
+}
+
+#combat-action-bar Button {
+    margin: 0 1 0 0;
+    min-width: 10;
 }
 
 /* Game over screen */

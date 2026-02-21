@@ -342,7 +342,7 @@ class CombatEngine:
             for target in living_targets
         ]
 
-        # PC-only ranged and spell choices
+        # PC-only ranged, spell, and flee choices
         if ref.side == CombatSide.PC and isinstance(ref.entity, PlayerCharacter):
             pc: PlayerCharacter = ref.entity
 
@@ -422,6 +422,17 @@ class CombatEngine:
                                     ),
                                 )
                             )
+
+            # Flee choice — available for PCs in manual mode only
+            # (auto-resolve tactical AI should not randomly flee)
+            if not self._auto_resolve_intents:
+                choices.append(
+                    ActionChoice(
+                        ui_key="flee",
+                        ui_args=MappingProxyType({}),
+                        intent=FleeIntent(actor_id=cid),
+                    )
+                )
 
         available_choices = tuple(choices)
 

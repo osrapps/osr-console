@@ -1,30 +1,33 @@
-"""Interactive combat screen using the CombatEngine in manual mode."""
+"""Bard's Tale-style combat screen with per-character action cycling."""
 
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import DataTable, Footer, Header, Label, Log, OptionList
-from textual.widgets.option_list import Option
+from textual.widgets import Footer, Header, RichLog
 
 from osrlib.combat import (
+    ColorEventFormatter,
     CombatEngine,
     EncounterState,
-    EventFormatter,
     NeedAction,
     VictoryDetermined,
 )
-from osrlib.combat.context import CombatSide
 from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome
 from osrlib.encounter import Encounter
 from osrlib.party import Party
 
 from ..widgets import PartyRosterWidget
+from ..widgets.combat_action_bar import CombatActionBar, CombatActionChosen
+from ..widgets.monster_group import MonsterGroupWidget
 
 
 class CombatScreen(Screen):
-    """Tactical combat driven by the state-machine CombatEngine in manual mode."""
+    """Bard's Tale-style combat with per-character action cycling.
+
+    Layout: 3-column top (party | combat log | monsters) + full-width action bar.
+    """
 
     BINDINGS = [
         ("escape", "dismiss_screen", "End combat"),
@@ -41,33 +44,28 @@ class CombatScreen(Screen):
         self.encounter = encounter
         self.party = party
         self.engine: CombatEngine | None = None
-        self._formatter = EventFormatter()
+        self._formatter = ColorEventFormatter()
         self._combat_ended = False
         self._outcome: EncounterOutcome | None = None
         self._pending_need_action: NeedAction | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield PartyRosterWidget(id="combat-party-roster")
-        yield Log(id="combat-log", auto_scroll=True)
-        yield DataTable(id="combat-monster-roster", cursor_type=None)
         yield Container(
-            Label("Select a target:", id="target-prompt"),
-            OptionList(id="target-menu"),
-            id="combat-action-panel",
+            PartyRosterWidget(id="combat-party-roster"),
+            RichLog(id="combat-log", auto_scroll=True, wrap=True, markup=True),
+            MonsterGroupWidget(id="combat-monster-roster"),
+            id="combat-top",
         )
+        yield CombatActionBar(id="combat-action-bar")
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#combat-log", Log).border_title = "Combat log"
-        self.query_one("#combat-party-roster").border_title = "Party"
-        self.query_one("#target-prompt", Label).display = False
-        self.query_one("#target-menu", OptionList).display = False
-
-        # Set up monster roster table
-        monster_table = self.query_one("#combat-monster-roster", DataTable)
-        monster_table.add_columns("Monster", "HP", "Status")
-        monster_table.border_title = "Monsters"
+        self.query_one("#combat-log", RichLog).border_title = "Combat log"
+        self.query_one("#combat-party-roster", PartyRosterWidget).border_title = "Party"
+        self.query_one(
+            "#combat-monster-roster", MonsterGroupWidget
+        ).border_title = "Monsters"
 
         # Update party roster
         self.query_one("#combat-party-roster", PartyRosterWidget).refresh_roster()
@@ -91,14 +89,16 @@ class CombatScreen(Screen):
         try:
             results = self.engine.step_until_decision(intent=intent)
         except Exception as exc:
-            self._write_log(f"Combat error: {exc}")
+            self._write_log(Text(f"Combat error: {exc}", style="bold red"))
             self._finish_combat(EncounterOutcome.FAULTED)
             return
 
         for result in results:
             for event in result.events:
-                line = self._formatter.format(event)
-                self._write_log(line)
+                styled = self._formatter.format(event)
+                self._write_log(styled)
+                # Also log plain text to encounter log
+                self.encounter.log_mesg(self._formatter.format_plain(event))
                 if isinstance(event, VictoryDetermined):
                     self._outcome = event.outcome
 
@@ -126,80 +126,66 @@ class CombatScreen(Screen):
             return
 
         self._pending_need_action = need_action
-        self._show_target_menu(combatant_id, need_action)
+        self._show_action_bar(combatant_id, need_action)
 
-    def _show_target_menu(self, combatant_id: str, need_action: NeedAction) -> None:
-        """Populate and display the target OptionList for a PC's turn."""
-        option_list = self.query_one("#target-menu", OptionList)
-        option_list.clear_options()
+    def _show_action_bar(self, combatant_id: str, need_action: NeedAction) -> None:
+        """Configure the action bar for a PC's turn."""
+        action_bar = self.query_one("#combat-action-bar", CombatActionBar)
+        action_bar.set_need_action(need_action)
 
-        pc_name = combatant_id.split(":", 1)[1] if ":" in combatant_id else combatant_id
-        prompt = self.query_one("#target-prompt", Label)
-        prompt.update(f"{pc_name}'s turn — select an action:")
-        prompt.display = True
+        # Highlight active PC in roster
+        roster = self.query_one("#combat-party-roster", PartyRosterWidget)
+        roster.highlight_pc(combatant_id)
 
-        for i, choice in enumerate(need_action.available):
-            option_list.add_option(Option(choice.label, id=str(i)))
+        action_bar.focus()
 
-        option_list.display = True
-        option_list.focus()
+    def _hide_action_bar(self) -> None:
+        action_bar = self.query_one("#combat-action-bar", CombatActionBar)
+        action_bar.clear_action()
 
-    def _hide_target_menu(self) -> None:
-        self.query_one("#target-prompt", Label).display = False
-        self.query_one("#target-menu", OptionList).display = False
-
-    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+    def on_combat_action_chosen(self, event: CombatActionChosen) -> None:
+        """Handle the CombatActionChosen message from the action bar."""
         event.stop()
         if self._pending_need_action is None or self._combat_ended:
             return
 
-        idx = int(event.option_id)
-        choices = self._pending_need_action.available
-        if idx >= len(choices):
-            return
-
-        chosen_intent = choices[idx].intent
+        chosen_intent = event.intent
         self._pending_need_action = None
-        self._hide_target_menu()
+        self._hide_action_bar()
         self.set_timer(0.05, lambda: self._advance_combat(intent=chosen_intent))
 
     def _finish_combat(self, outcome: EncounterOutcome | None) -> None:
         self._combat_ended = True
         self._outcome = outcome
-        self._hide_target_menu()
+        self._hide_action_bar()
 
+        log = self.query_one("#combat-log", RichLog)
+        log.write(Text(""))
         if outcome == EncounterOutcome.PARTY_VICTORY:
-            self._write_log("")
-            self._write_log("*** Victory! Press Escape to continue. ***")
+            log.write(
+                Text("*** Victory! Press Escape to continue. ***", style="bold green")
+            )
         elif outcome == EncounterOutcome.OPPOSITION_VICTORY:
-            self._write_log("")
-            self._write_log("*** Defeat... Press Escape to continue. ***")
+            log.write(
+                Text("*** Defeat... Press Escape to continue. ***", style="bold red")
+            )
         else:
-            self._write_log("")
-            self._write_log("*** Combat ended. Press Escape to continue. ***")
+            log.write(
+                Text(
+                    "*** Combat ended. Press Escape to continue. ***",
+                    style="bold yellow",
+                )
+            )
 
-    def _write_log(self, text: str) -> None:
-        self.query_one("#combat-log", Log).write_line(text)
-        self.encounter.log_mesg(text)
+    def _write_log(self, text: Text) -> None:
+        self.query_one("#combat-log", RichLog).write(text)
 
     def _refresh_rosters(self) -> None:
         self.query_one("#combat-party-roster", PartyRosterWidget).refresh_roster()
         view = self.engine.get_view()
-        monster_table = self.query_one("#combat-monster-roster", DataTable)
-        monster_table.clear()
-        for c in view.combatants:
-            if c.side != CombatSide.MONSTER:
-                continue
-            hp_text = str(c.hp) if c.is_alive else "0"
-            status = (
-                "Dead" if c.id in view.announced_deaths or not c.is_alive else "Alive"
-            )
-            monster_table.add_row(
-                c.name,
-                Text(hp_text, justify="center"),
-                Text(status, justify="center"),
-                key=c.id,
-            )
+        self.query_one("#combat-monster-roster", MonsterGroupWidget).refresh_from_view(
+            view
+        )
 
     def action_dismiss_screen(self) -> None:
         if not self._combat_ended:

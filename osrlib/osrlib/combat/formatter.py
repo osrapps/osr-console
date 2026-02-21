@@ -4,6 +4,8 @@ Output style is designed to match the existing log messages from ``encounter.py`
 so that ``DungeonAssistant.summarize_battle()`` receives similar input.
 """
 
+from rich.text import Text
+
 from osrlib.combat.events import (
     ActionRejected,
     AttackRolled,
@@ -158,7 +160,10 @@ class EventFormatter:
                 return f"{self._display_combatant(eid)} falls!"
 
             case EntityFled(entity_id=eid):
-                return f"{self._display_combatant(eid)} flees!"
+                name = self._display_combatant(eid)
+                if eid.startswith("pc:"):
+                    return f"{name} flees the battle!"
+                return f"{name} flees!"
 
             case VictoryDetermined(outcome=outcome):
                 if outcome == EncounterOutcome.PARTY_VICTORY:
@@ -184,3 +189,45 @@ class EventFormatter:
     ) -> str:
         """Format a sequence of events, joining with newlines."""
         return "\n".join(self.format(e) for e in events)
+
+
+class ColorEventFormatter:
+    """Wraps EventFormatter with Rich Text styling by event type.
+
+    Produces ``rich.text.Text`` objects suitable for ``RichLog`` display.
+    Color mapping: damage=red, miss=dim, spell=cyan, death=bold red,
+    round start=bold white, victory=green, flee=yellow.
+    """
+
+    def __init__(self) -> None:
+        self._fmt = EventFormatter()
+
+    def format(self, event: EncounterEvent) -> Text:
+        """Return a Rich Text object with color styling for the event."""
+        plain = self._fmt.format(event)
+
+        match event:
+            case RoundStarted():
+                return Text(plain, style="bold white")
+            case AttackRolled(hit=hit, critical=crit):
+                if crit:
+                    return Text(plain, style="bold red")
+                return Text(plain, style="dim") if not hit else Text(plain)
+            case DamageApplied():
+                return Text(plain, style="red")
+            case SpellCast():
+                return Text(plain, style="cyan")
+            case EntityDied():
+                return Text(plain, style="bold red")
+            case EntityFled():
+                return Text(plain, style="yellow")
+            case VictoryDetermined(outcome=outcome):
+                if outcome == EncounterOutcome.PARTY_VICTORY:
+                    return Text(plain, style="bold green")
+                return Text(plain, style="bold red")
+            case _:
+                return Text(plain)
+
+    def format_plain(self, event: EncounterEvent) -> str:
+        """Return plain text for encounter log storage."""
+        return self._fmt.format(event)

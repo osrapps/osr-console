@@ -120,6 +120,8 @@ def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
         if target:
             return f"Cast {spell_name} on {target}"
         return f"Cast {spell_name}"
+    if ui_key == "flee":
+        return "Flee"
     return ui_key
 
 

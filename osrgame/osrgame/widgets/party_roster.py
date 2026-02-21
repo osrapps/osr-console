@@ -17,7 +17,19 @@ class PartyRosterWidget(DataTable):
         super().__init__(cursor_type="row", **kwargs)
 
     def on_mount(self) -> None:
-        self.add_columns("Name", "Class", "Lv", "HP", "AC")
+        self.add_columns("Name", "Class", "Lv", "HP", "AC", "XP")
+
+    def highlight_pc(self, combatant_id: str) -> None:
+        """Visually mark the active character by moving the cursor to their row.
+
+        Args:
+            combatant_id: Canonical combatant ID (e.g. "pc:Thorin").
+        """
+        pc_name = combatant_id.split(":", 1)[1] if ":" in combatant_id else combatant_id
+        for row_idx, row_key in enumerate(self.rows):
+            if str(row_key.value) == pc_name:
+                self.move_cursor(row=row_idx)
+                break
 
     def refresh_roster(self) -> None:
         """Rebuild rows from the current party."""
@@ -30,11 +42,13 @@ class PartyRosterWidget(DataTable):
             hp_text = (
                 "DEAD" if pc.hit_points <= 0 else f"{pc.hit_points}/{pc.max_hit_points}"
             )
+            xp_text = f"{pc.xp}/{pc.xp_needed_for_next_level}"
             self.add_row(
                 pc.name,
                 pc.character_class.class_type.value,
                 Text(str(pc.level), justify="center"),
                 Text(hp_text, justify="center"),
                 Text(str(pc.armor_class), justify="center"),
+                Text(xp_text, justify="center"),
                 key=pc.name,
             )
