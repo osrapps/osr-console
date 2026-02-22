@@ -127,6 +127,8 @@ class TestChoiceCategorization:
         assert bar._item_choices == []
         assert bar._pending_item_name is None
         assert bar._pending_item_choices == []
+        assert bar._pending_spell_id is None
+        assert bar._pending_spell_choices == []
         assert bar.mode == "idle"
 
 
@@ -157,6 +159,16 @@ class TestTargetLabel:
         )
         label = CombatActionBar._target_label("Goblin #1", choice)
         assert label == "Goblin #1"
+
+    def test_group_target_label_capitalized_without_dice(self):
+        """'enemy group' for a spell without group_target_dice still capitalizes."""
+        choice = _cast_spell_choice(
+            spell_id="magic_missile",
+            spell_name="Magic Missile",
+            target="enemy group",
+        )
+        label = CombatActionBar._target_label("enemy group", choice)
+        assert label == "Enemy group"
 
     def test_non_group_target_unchanged(self):
         """Normal monster names pass through unchanged."""
@@ -342,3 +354,22 @@ class TestItemTargetRouting:
         assert isinstance(messages[0].intent, UseItemIntent)
         assert messages[0].intent.item_name == "Flask of Oil"
         assert messages[0].intent.target_ids == ("monster:Goblin #1",)
+
+    def test_item_selected_no_op_for_unknown_id(self):
+        """Non-matching item button ID should be a no-op."""
+        bar = CombatActionBar()
+        na = _need_action(
+            "pc:Fighter",
+            [_use_item_choice(item_name="Flask of Oil", target="monster:Goblin #1")],
+        )
+        bar.set_need_action(na)
+        bar.mode = "item_pick"
+
+        event = MagicMock()
+        event.button.id = "item-unknown-potion"
+        bar._on_item_selected(event)
+
+        # Should not have changed mode or set pending state
+        assert bar._pending_item_name is None
+        assert bar._pending_item_choices == []
+        assert bar.mode == "item_pick"

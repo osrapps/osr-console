@@ -9,7 +9,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Label
 
 from osrlib.combat.events import ActionChoice, NeedAction
-from osrlib.combat.intents import ActionIntent, FleeIntent, TurnUndeadIntent
+from osrlib.combat.intents import ActionIntent, FleeIntent
 from osrlib.combat.spells import SPELL_CATALOG
 
 
@@ -118,6 +118,8 @@ class CombatActionBar(Widget):
         self._melee_choices = []
         self._ranged_choices = []
         self._spell_choices = []
+        self._pending_spell_id = None
+        self._pending_spell_choices = []
         self._turn_undead_choices = []
         self._item_choices = []
         self._pending_item_name = None
@@ -194,6 +196,7 @@ class CombatActionBar(Widget):
             spell_def = SPELL_CATALOG.get(spell_id) if spell_id else None
             if spell_def and spell_def.group_target_dice:
                 return f"Enemy group ({spell_def.group_target_dice})"
+            return "Enemy group"
         return target_name
 
     def _build_spell_pick_buttons(self, container: Horizontal) -> None:
