@@ -14,23 +14,32 @@ from osrlib.combat.actions import (
     FleeAction,
     MeleeAttackAction,
     RangedAttackAction,
+    UseItemAction,
+    THROWABLE_ITEMS,
 )
-from osrlib.combat.spells import SPELL_CATALOG
+from osrlib.combat.spells import SPELL_CATALOG, get_spell
+from osrlib.combat.targeting import TargetMode
 from osrlib.combat.context import CombatContext, CombatSide, CombatantRef
 from osrlib.combat.dice_service import BXDiceService, DiceService
 from osrlib.combat.tactical_providers import RandomMonsterProvider, TacticalProvider
 from osrlib.combat.views import CombatView, CombatantView
 from osrlib.combat.effects import (
     ApplyConditionEffect,
+    ApplyModifierEffect,
+    ConsumeItemEffect,
     ConsumeSlotEffect,
     DamageEffect,
     Effect,
     FleeEffect,
+    HealEffect,
 )
+from osrlib.combat.conditions import CONDITION_REGISTRY, ActiveCondition, ConditionBehavior
+from osrlib.combat.modifiers import ActiveModifier, ModifiedStat
 from osrlib.combat.events import (
     ActionChoice,
     ActionRejected,
     ConditionApplied,
+    ConditionExpired,
     DamageApplied,
     EncounterEvent,
     EncounterFaulted,
@@ -39,12 +48,16 @@ from osrlib.combat.events import (
     EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
+    HealingApplied,
     InitiativeRolled,
+    ModifierApplied,
+    ModifierExpired,
     MoraleChecked,
     NeedAction,
     RoundStarted,
     Rejection,
     RejectionCode,
+    SavingThrowRolled,
     SpellSlotConsumed,
     SurpriseRolled,
     TurnQueueBuilt,
@@ -58,7 +71,9 @@ from osrlib.combat.intents import (
     FleeIntent,
     MeleeAttackIntent,
     RangedAttackIntent,
+    UseItemIntent,
 )
+from osrlib.enums import CharacterClassType
 from osrlib.player_character import PlayerCharacter
 from osrlib.combat.state import EncounterLoopError, EncounterOutcome, EncounterState
 
@@ -132,6 +147,9 @@ class CombatEngine:
                 armor_class=ref.armor_class,
                 is_alive=ref.is_alive,
                 has_fled=ref.has_fled,
+                conditions=tuple(
+                    c.condition_id for c in self._ctx.conditions.get_all(ref.id)
+                ),
             )
             for ref in self._ctx.combatants.values()
         )
@@ -259,6 +277,25 @@ class CombatEngine:
         self._ctx.round_number += 1
         events.append(RoundStarted(round_number=self._ctx.round_number))
 
+        # Tick condition durations and emit expiry events
+        for combatant_id, condition_id in self._ctx.conditions.tick_round():
+            events.append(
+                ConditionExpired(
+                    combatant_id=combatant_id,
+                    condition_id=condition_id,
+                    reason="duration",
+                )
+            )
+
+        # Tick modifier durations and emit expiry events
+        for combatant_id, modifier_id in self._ctx.modifiers.tick_round():
+            events.append(
+                ModifierExpired(
+                    combatant_id=combatant_id,
+                    modifier_id=modifier_id,
+                )
+            )
+
         # Roll initiative for every living, non-fled combatant
         initiative: list[tuple[str, int]] = []
         for cid, ref in self._ctx.combatants.items():
@@ -298,6 +335,14 @@ class CombatEngine:
         if ref.has_fled:
             self._ctx.forced_intents.pop(cid, None)  # clean up orphaned forced intent
             events.append(TurnSkipped(combatant_id=cid, reason="fled"))
+            self._state = EncounterState.TURN_START
+            return
+
+        # Skip combatants with turn-preventing conditions (held, asleep)
+        skip_reason = self._ctx.conditions.skip_reason(cid)
+        if skip_reason is not None:
+            self._ctx.forced_intents.pop(cid, None)
+            events.append(TurnSkipped(combatant_id=cid, reason=skip_reason))
             self._state = EncounterState.TURN_START
             return
 
@@ -365,42 +410,36 @@ class CombatEngine:
                     )
 
             # Spell choices — only show spells the PC actually knows
+            # Divine casters (Clerics) can also cast reversed forms on the fly
             slots = self._get_or_init_spell_slots(cid, pc)
             known_spell_names = {s.name for s in pc.inventory.spells}
+            is_divine = pc.character_class.class_type == CharacterClassType.CLERIC
             if slots and known_spell_names:
                 for spell_def in SPELL_CATALOG.values():
-                    if spell_def.name not in known_spell_names:
+                    # Check if the spell is directly known
+                    directly_known = spell_def.name in known_spell_names
+                    # Check if this is a reversed spell whose base is known
+                    reverse_available = (
+                        is_divine
+                        and spell_def.is_reversed
+                        and spell_def.reverse_id is not None
+                    )
+                    if reverse_available:
+                        base_spell = get_spell(spell_def.reverse_id)
+                        reverse_available = (
+                            base_spell is not None
+                            and base_spell.name in known_spell_names
+                        )
+                    if not directly_known and not reverse_available:
                         continue
                     if pc.character_class.class_type not in spell_def.usable_by:
                         continue
                     if slots.get(spell_def.spell_level, 0) <= 0:
                         continue
 
-                    if spell_def.num_targets == -1:
-                        # AoE: one choice targeting all enemies
-                        all_target_ids = tuple(t.id for t in living_targets)
-                        target_label = "all enemies"
-                        choices.append(
-                            ActionChoice(
-                                ui_key="cast_spell",
-                                ui_args=MappingProxyType(
-                                    {
-                                        "spell_id": spell_def.spell_id,
-                                        "spell_name": spell_def.name,
-                                        "target_name": target_label,
-                                    }
-                                ),
-                                intent=CastSpellIntent(
-                                    actor_id=cid,
-                                    spell_id=spell_def.spell_id,
-                                    slot_level=spell_def.spell_level,
-                                    target_ids=all_target_ids,
-                                ),
-                            )
-                        )
-                    else:
-                        # Single-target: one choice per living target
-                        for target in living_targets:
+                    match spell_def.target_mode:
+                        case TargetMode.ALL_ENEMIES:
+                            all_target_ids = tuple(t.id for t in living_targets)
                             choices.append(
                                 ActionChoice(
                                     ui_key="cast_spell",
@@ -408,20 +447,129 @@ class CombatEngine:
                                         {
                                             "spell_id": spell_def.spell_id,
                                             "spell_name": spell_def.name,
-                                            "target_id": target.id,
-                                            "target_name": self._display_target_name(
-                                                target.id
-                                            ),
+                                            "target_name": "all enemies",
                                         }
                                     ),
                                     intent=CastSpellIntent(
                                         actor_id=cid,
                                         spell_id=spell_def.spell_id,
                                         slot_level=spell_def.spell_level,
-                                        target_ids=(target.id,),
+                                        target_ids=all_target_ids,
                                     ),
                                 )
                             )
+                        case TargetMode.SINGLE_ALLY:
+                            living_allies = self._ctx.living(ref.side)
+                            for ally in living_allies:
+                                choices.append(
+                                    ActionChoice(
+                                        ui_key="cast_spell",
+                                        ui_args=MappingProxyType(
+                                            {
+                                                "spell_id": spell_def.spell_id,
+                                                "spell_name": spell_def.name,
+                                                "target_id": ally.id,
+                                                "target_name": self._display_target_name(
+                                                    ally.id
+                                                ),
+                                            }
+                                        ),
+                                        intent=CastSpellIntent(
+                                            actor_id=cid,
+                                            spell_id=spell_def.spell_id,
+                                            slot_level=spell_def.spell_level,
+                                            target_ids=(ally.id,),
+                                        ),
+                                    )
+                                )
+                        case TargetMode.ALL_ALLIES:
+                            living_allies = self._ctx.living(ref.side)
+                            all_ally_ids = tuple(a.id for a in living_allies)
+                            choices.append(
+                                ActionChoice(
+                                    ui_key="cast_spell",
+                                    ui_args=MappingProxyType(
+                                        {
+                                            "spell_id": spell_def.spell_id,
+                                            "spell_name": spell_def.name,
+                                            "target_name": "all allies",
+                                        }
+                                    ),
+                                    intent=CastSpellIntent(
+                                        actor_id=cid,
+                                        spell_id=spell_def.spell_id,
+                                        slot_level=spell_def.spell_level,
+                                        target_ids=all_ally_ids,
+                                    ),
+                                )
+                            )
+                        case TargetMode.SELF:
+                            choices.append(
+                                ActionChoice(
+                                    ui_key="cast_spell",
+                                    ui_args=MappingProxyType(
+                                        {
+                                            "spell_id": spell_def.spell_id,
+                                            "spell_name": spell_def.name,
+                                            "target_name": "self",
+                                        }
+                                    ),
+                                    intent=CastSpellIntent(
+                                        actor_id=cid,
+                                        spell_id=spell_def.spell_id,
+                                        slot_level=spell_def.spell_level,
+                                        target_ids=(cid,),
+                                    ),
+                                )
+                            )
+                        case _:
+                            # SINGLE_ENEMY, ENEMY_GROUP: one choice per enemy
+                            for target in living_targets:
+                                choices.append(
+                                    ActionChoice(
+                                        ui_key="cast_spell",
+                                        ui_args=MappingProxyType(
+                                            {
+                                                "spell_id": spell_def.spell_id,
+                                                "spell_name": spell_def.name,
+                                                "target_id": target.id,
+                                                "target_name": self._display_target_name(
+                                                    target.id
+                                                ),
+                                            }
+                                        ),
+                                        intent=CastSpellIntent(
+                                            actor_id=cid,
+                                            spell_id=spell_def.spell_id,
+                                            slot_level=spell_def.spell_level,
+                                            target_ids=(target.id,),
+                                        ),
+                                    )
+                                )
+
+            # Throwable item choices (oil flask, holy water)
+            for item in pc.inventory.equipment:
+                if item.name in THROWABLE_ITEMS:
+                    for target in living_targets:
+                        choices.append(
+                            ActionChoice(
+                                ui_key="use_item",
+                                ui_args=MappingProxyType(
+                                    {
+                                        "item_name": item.name,
+                                        "target_id": target.id,
+                                        "target_name": self._display_target_name(
+                                            target.id
+                                        ),
+                                    }
+                                ),
+                                intent=UseItemIntent(
+                                    actor_id=cid,
+                                    item_name=item.name,
+                                    target_ids=(target.id,),
+                                ),
+                            )
+                        )
 
             # Flee choice — available for PCs in manual mode only
             # (auto-resolve tactical AI should not randomly flee)
@@ -571,6 +719,17 @@ class CombatEngine:
                             target_hp_after=target_ref.entity.hit_points,
                         )
                     )
+                    # Break conditions that end on damage (e.g. asleep)
+                    for broken_cid in self._ctx.conditions.remove_break_on_damage(
+                        target_id
+                    ):
+                        events.append(
+                            ConditionExpired(
+                                combatant_id=target_id,
+                                condition_id=broken_cid,
+                                reason="damage",
+                            )
+                        )
                 case ConsumeSlotEffect(caster_id=caster_id, level=level):
                     caster_ref = self._ctx.combatants[caster_id]
                     try:
@@ -605,6 +764,19 @@ class CombatEngine:
                     condition_id=condition_id,
                     duration=duration,
                 ):
+                    behavior = CONDITION_REGISTRY.get(
+                        condition_id, ConditionBehavior()
+                    )
+                    self._ctx.conditions.add(
+                        target_id,
+                        ActiveCondition(
+                            condition_id=condition_id,
+                            source_id=source_id,
+                            remaining_rounds=duration,
+                            skip_turn=behavior.skip_turn,
+                            break_on_damage=behavior.break_on_damage,
+                        ),
+                    )
                     events.append(
                         ConditionApplied(
                             source_id=source_id,
@@ -613,6 +785,55 @@ class CombatEngine:
                             duration=duration,
                         )
                     )
+                case ApplyModifierEffect(
+                    source_id=source_id,
+                    target_id=target_id,
+                    modifier_id=modifier_id,
+                    stat=stat_name,
+                    value=value,
+                    duration=duration,
+                ):
+                    stat = ModifiedStat[stat_name]
+                    self._ctx.modifiers.add(
+                        target_id,
+                        ActiveModifier(
+                            modifier_id=modifier_id,
+                            source_id=source_id,
+                            stat=stat,
+                            value=value,
+                            remaining_rounds=duration,
+                        ),
+                    )
+                    events.append(
+                        ModifierApplied(
+                            source_id=source_id,
+                            target_id=target_id,
+                            modifier_id=modifier_id,
+                            stat=stat_name,
+                            value=value,
+                            duration=duration,
+                        )
+                    )
+                case HealEffect(
+                    source_id=source_id, target_id=target_id, amount=amount
+                ):
+                    target_ref = self._ctx.combatants[target_id]
+                    target_ref.entity.heal(amount)
+                    events.append(
+                        HealingApplied(
+                            source_id=source_id,
+                            target_id=target_id,
+                            amount=amount,
+                            target_hp_after=target_ref.entity.hit_points,
+                        )
+                    )
+                case ConsumeItemEffect(actor_id=actor_id, item_name=item_name):
+                    actor_ref = self._ctx.combatants[actor_id]
+                    if isinstance(actor_ref.entity, PlayerCharacter):
+                        for item in actor_ref.entity.inventory.equipment:
+                            if item.name == item_name:
+                                actor_ref.entity.inventory.remove_item(item)
+                                break
                 case FleeEffect(combatant_id=combatant_id):
                     ref = self._ctx.combatants[combatant_id]
                     ref.has_fled = True
@@ -699,6 +920,12 @@ class CombatEngine:
                 actor_id=intent.actor_id,
                 spell_id=intent.spell_id,
                 slot_level=intent.slot_level,
+                target_ids=intent.target_ids,
+            )
+        if isinstance(intent, UseItemIntent):
+            return UseItemAction(
+                actor_id=intent.actor_id,
+                item_name=intent.item_name,
                 target_ids=intent.target_ids,
             )
         if isinstance(intent, FleeIntent):

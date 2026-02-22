@@ -31,10 +31,47 @@ class ApplyConditionEffect:
 
 
 @dataclass(frozen=True)
+class HealEffect:
+    """Restore HP to a combatant."""
+
+    source_id: str
+    target_id: str
+    amount: int
+
+
+@dataclass(frozen=True)
+class ApplyModifierEffect:
+    """Apply a temporary stat modifier to a combatant."""
+
+    source_id: str
+    target_id: str
+    modifier_id: str
+    stat: str  # ModifiedStat name
+    value: int
+    duration: int
+
+
+@dataclass(frozen=True)
+class ConsumeItemEffect:
+    """Remove a consumable item from a combatant's inventory."""
+
+    actor_id: str
+    item_name: str
+
+
+@dataclass(frozen=True)
 class FleeEffect:
     """Remove a combatant from active combat (fled)."""
 
     combatant_id: str
 
 
-Effect = DamageEffect | ConsumeSlotEffect | ApplyConditionEffect | FleeEffect
+Effect = (
+    DamageEffect
+    | ConsumeSlotEffect
+    | ApplyConditionEffect
+    | HealEffect
+    | ApplyModifierEffect
+    | ConsumeItemEffect
+    | FleeEffect
+)

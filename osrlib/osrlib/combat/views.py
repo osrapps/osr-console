@@ -17,6 +17,7 @@ class CombatantView:
     armor_class: int
     is_alive: bool
     has_fled: bool = False
+    conditions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

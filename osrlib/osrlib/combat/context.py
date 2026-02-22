@@ -4,7 +4,9 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
+from osrlib.combat.conditions import ConditionTracker
 from osrlib.combat.intents import ActionIntent
+from osrlib.combat.modifiers import ModifierTracker
 from osrlib.monster import Monster, MonsterParty
 from osrlib.party import Party
 from osrlib.player_character import PlayerCharacter
@@ -63,6 +65,8 @@ class CombatContext:
     pc_party: Party | None = None
     monster_party: MonsterParty | None = None
     morale: MoraleState = field(default_factory=MoraleState)
+    conditions: ConditionTracker = field(default_factory=ConditionTracker)
+    modifiers: ModifierTracker = field(default_factory=ModifierTracker)
 
     @staticmethod
     def build(pc_party: Party, monster_party: MonsterParty) -> "CombatContext":
