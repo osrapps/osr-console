@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from osrlib.monster import MonsterParty
+from osrlib.monster import Monster, MonsterParty
 from osrlib.party import Party
 
 from osrlib.combat.actions import (
@@ -14,6 +14,7 @@ from osrlib.combat.actions import (
     FleeAction,
     MeleeAttackAction,
     RangedAttackAction,
+    TurnUndeadAction,
     UseItemAction,
     THROWABLE_ITEMS,
 )
@@ -71,6 +72,7 @@ from osrlib.combat.intents import (
     FleeIntent,
     MeleeAttackIntent,
     RangedAttackIntent,
+    TurnUndeadIntent,
     UseItemIntent,
 )
 from osrlib.enums import CharacterClassType
@@ -458,6 +460,27 @@ class CombatEngine:
                                     ),
                                 )
                             )
+                        case TargetMode.HD_POOL:
+                            # Single "all enemies" choice; HD filtering at execution
+                            all_target_ids = tuple(t.id for t in living_targets)
+                            choices.append(
+                                ActionChoice(
+                                    ui_key="cast_spell",
+                                    ui_args=MappingProxyType(
+                                        {
+                                            "spell_id": spell_def.spell_id,
+                                            "spell_name": spell_def.name,
+                                            "target_name": "all enemies",
+                                        }
+                                    ),
+                                    intent=CastSpellIntent(
+                                        actor_id=cid,
+                                        spell_id=spell_def.spell_id,
+                                        slot_level=spell_def.spell_level,
+                                        target_ids=all_target_ids,
+                                    ),
+                                )
+                            )
                         case TargetMode.SINGLE_ALLY:
                             living_allies = self._ctx.living(ref.side)
                             for ally in living_allies:
@@ -523,7 +546,7 @@ class CombatEngine:
                                 )
                             )
                         case _:
-                            # SINGLE_ENEMY, ENEMY_GROUP: one choice per enemy
+                            # SINGLE_ENEMY: one choice per enemy
                             for target in living_targets:
                                 choices.append(
                                     ActionChoice(
@@ -543,6 +566,33 @@ class CombatEngine:
                                             spell_id=spell_def.spell_id,
                                             slot_level=spell_def.spell_level,
                                             target_ids=(target.id,),
+                                        ),
+                                    )
+                                )
+                            # Dual-mode: if group_target_dice is set and >1 enemy,
+                            # add an "enemy group" choice
+                            if (
+                                spell_def.group_target_dice is not None
+                                and len(living_targets) > 1
+                            ):
+                                all_target_ids = tuple(
+                                    t.id for t in living_targets
+                                )
+                                choices.append(
+                                    ActionChoice(
+                                        ui_key="cast_spell",
+                                        ui_args=MappingProxyType(
+                                            {
+                                                "spell_id": spell_def.spell_id,
+                                                "spell_name": spell_def.name,
+                                                "target_name": "enemy group",
+                                            }
+                                        ),
+                                        intent=CastSpellIntent(
+                                            actor_id=cid,
+                                            spell_id=spell_def.spell_id,
+                                            slot_level=spell_def.spell_level,
+                                            target_ids=all_target_ids,
                                         ),
                                     )
                                 )
@@ -570,6 +620,25 @@ class CombatEngine:
                                 ),
                             )
                         )
+
+            # Turn Undead choice for Clerics when undead enemies are present
+            if pc.character_class.class_type == CharacterClassType.CLERIC:
+                has_undead = any(
+                    ref.is_alive
+                    and not ref.has_fled
+                    and ref.side == CombatSide.MONSTER
+                    and isinstance(ref.entity, Monster)
+                    and getattr(ref.entity, "is_undead", False)
+                    for ref in self._ctx.combatants.values()
+                )
+                if has_undead:
+                    choices.append(
+                        ActionChoice(
+                            ui_key="turn_undead",
+                            ui_args=MappingProxyType({}),
+                            intent=TurnUndeadIntent(actor_id=cid),
+                        )
+                    )
 
             # Flee choice — available for PCs in manual mode only
             # (auto-resolve tactical AI should not randomly flee)
@@ -930,6 +999,8 @@ class CombatEngine:
             )
         if isinstance(intent, FleeIntent):
             return FleeAction(actor_id=intent.actor_id)
+        if isinstance(intent, TurnUndeadIntent):
+            return TurnUndeadAction(actor_id=intent.actor_id)
         return None
 
     def _handle_check_deaths(self, events: list[EncounterEvent]) -> None:

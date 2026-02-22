@@ -128,6 +128,7 @@ class MonsterStatsBlock:
         morale: int = 12,  # roll 2d6, if result is higher than this, monster flees
         treasure_type=TreasureType.NONE,
         alignment=Alignment.NEUTRAL,
+        is_undead: bool = False,
     ):
         """Initialize a new instance of MonsterStatsBlock with the provided attributes."""
         self.name = name
@@ -145,6 +146,7 @@ class MonsterStatsBlock:
         self.morale = morale
         self.treasure_type = treasure_type
         self.alignment = alignment
+        self.is_undead = is_undead
 
     def to_dict(self) -> dict[str, any]:
         """
@@ -171,6 +173,7 @@ class MonsterStatsBlock:
             "morale": self.morale,
             "treasure_type": self.treasure_type.name, # Enum to string (we deserialize the string back to an enum in the from_dict method
             "alignment": self.alignment.name, # Enum to string (we deserialize the string back to an enum in the from_dict method
+            "is_undead": self.is_undead,
         }
 
     @classmethod
@@ -197,6 +200,7 @@ class MonsterStatsBlock:
         monster_stats_block_dict['save_as_class'] = CharacterClassType[monster_stats_block_dict['save_as_class']]
         monster_stats_block_dict['treasure_type'] = TreasureType[monster_stats_block_dict['treasure_type']]
         monster_stats_block_dict['alignment'] = Alignment[monster_stats_block_dict['alignment']]
+        monster_stats_block_dict.setdefault('is_undead', False)
 
         return cls(**monster_stats_block_dict)
 
@@ -222,6 +226,8 @@ class Monster:
         )  # TODO: Instead of populating a saving_throws property, maybe we call a function in saving_throws to make the saving throw check?
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
+        self.is_undead = monster_stats.is_undead
+        self.num_special_abilities = monster_stats.num_special_abilities
 
         self.treasure = Treasure(monster_stats.treasure_type)
 

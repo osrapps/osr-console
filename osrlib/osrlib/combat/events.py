@@ -8,6 +8,15 @@ from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome, EncounterState
 
 
+class TurnResult(Enum):
+    """Outcome of a Turn Undead attempt."""
+
+    IMPOSSIBLE = auto()
+    FAILED = auto()
+    TURNED = auto()
+    DESTROYED = auto()
+
+
 class RejectionCode(Enum):
     """Enumerated rejection codes for combat action validation failures."""
 
@@ -131,6 +140,8 @@ def _render_choice_label(ui_key: str, ui_args: MappingProxyType) -> str:
         return f"Use {item_name}"
     if ui_key == "flee":
         return "Flee"
+    if ui_key == "turn_undead":
+        return "Turn undead"
     return ui_key
 
 
@@ -312,6 +323,7 @@ class SavingThrowRolled(EncounterEvent):
     roll: int
     success: bool
     spell_name: str
+    penalty: int = 0
 
 
 @dataclass(frozen=True)
@@ -321,6 +333,35 @@ class ConditionExpired(EncounterEvent):
     combatant_id: str
     condition_id: str
     reason: str  # "duration", "damage", "dispelled"
+
+
+@dataclass(frozen=True)
+class GroupTargetsResolved(EncounterEvent):
+    """Emitted when a spell resolves its group/HD-pool targets."""
+
+    spell_name: str
+    pool_roll: int | None
+    resolved_target_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TurnUndeadAttempted(EncounterEvent):
+    """Emitted when a cleric attempts to turn undead."""
+
+    actor_id: str
+    roll: int
+    target_number: int | None
+    result: TurnResult
+
+
+@dataclass(frozen=True)
+class UndeadTurned(EncounterEvent):
+    """Emitted for each undead affected by Turn Undead."""
+
+    actor_id: str
+    target_id: str
+    destroyed: bool
+    hd_spent: int
 
 
 @dataclass(frozen=True)

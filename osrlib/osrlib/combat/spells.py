@@ -39,10 +39,22 @@ class SpellDefinition:
     heal_die: str | None = None  # e.g. "1d6+1" for Cure Light Wounds
     modifiers: tuple[SpellModifier, ...] = ()  # buff/debuff modifiers
     # Phase 4: scaling fields
-    damage_per_level: str | None = None  # e.g. "1d6" — damage = Nd6 where N=caster_level
-    projectile_thresholds: tuple[tuple[int, int], ...] = ()  # ((1,1),(6,3),(11,5)) for MM
+    damage_per_level: str | None = (
+        None  # e.g. "1d6" — damage = Nd6 where N=caster_level
+    )
+    projectile_thresholds: tuple[
+        tuple[int, int], ...
+    ] = ()  # ((1,1),(6,3),(11,5)) for MM
     reverse_id: str | None = None  # spell_id of the reversed form
     is_reversed: bool = False
+    # HD-pool targeting (Sleep): dice expression for the pool budget
+    hd_pool_dice: str | None = None
+    # Group targeting (Hold Person): dice for random target count in group mode
+    group_target_dice: str | None = None
+    # Save penalty for single-target mode (negative = harder save for target)
+    single_save_penalty: int = 0
+    # HD cap for spell eligibility (targets above this HD are immune)
+    max_target_hd: int | None = None
 
 
 SPELL_CATALOG: dict[str, SpellDefinition] = {}
@@ -77,7 +89,9 @@ _register(
         condition_id="asleep",
         condition_duration=None,
         usable_by=frozenset({CharacterClassType.MAGIC_USER, CharacterClassType.ELF}),
-        target_mode=TargetMode.ALL_ENEMIES,
+        target_mode=TargetMode.HD_POOL,
+        hd_pool_dice="2d8",
+        max_target_hd=4,
     ),
     SpellDefinition(
         spell_id="hold_person",
@@ -91,6 +105,9 @@ _register(
         usable_by=frozenset({CharacterClassType.CLERIC}),
         save_type=AttackType.RODS_STAVES_SPELLS,
         target_mode=TargetMode.SINGLE_ENEMY,
+        group_target_dice="1d4",
+        single_save_penalty=-2,
+        max_target_hd=4,
     ),
     SpellDefinition(
         spell_id="light_offensive",

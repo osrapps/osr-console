@@ -19,6 +19,7 @@ from osrlib.combat.events import (
     EntityFled,
     ForcedIntentApplied,
     ForcedIntentQueued,
+    GroupTargetsResolved,
     HealingApplied,
     InitiativeRolled,
     ItemUsed,
@@ -34,6 +35,9 @@ from osrlib.combat.events import (
     TurnQueueBuilt,
     TurnSkipped,
     TurnStarted,
+    TurnResult,
+    TurnUndeadAttempted,
+    UndeadTurned,
     VictoryDetermined,
 )
 from osrlib.combat.state import EncounterOutcome
@@ -151,13 +155,18 @@ class EventFormatter:
                 roll=roll,
                 success=success,
                 spell_name=sn,
+                penalty=penalty,
             ):
                 target = self._display_combatant(tid)
                 result = "saves" if success else "fails"
                 save_label = st.replace("_", " ").lower()
+                penalty_text = ""
+                if penalty != 0:
+                    sign = "+" if penalty > 0 else ""
+                    penalty_text = f" [{sign}{penalty} penalty]"
                 return (
                     f"{target} {result} vs {sn} "
-                    f"({save_label}: rolled {roll}, needed {tn})."
+                    f"({save_label}: rolled {roll}, needed {tn}){penalty_text}."
                 )
 
             case ConditionExpired(
@@ -242,6 +251,33 @@ class EventFormatter:
                     f"Action rejected for {self._display_combatant(cid)}: {reason_text}"
                 )
 
+            case GroupTargetsResolved(
+                spell_name=sn, pool_roll=pr, resolved_target_ids=tids
+            ):
+                targets = ", ".join(self._display_combatant(t) for t in tids)
+                pool_text = f" (pool: {pr})" if pr is not None else ""
+                count = len(tids)
+                return f"{sn} targets {count} creature{'s' if count != 1 else ''}{pool_text}: {targets}."
+
+            case TurnUndeadAttempted(
+                actor_id=aid, roll=roll, target_number=tn, result=result
+            ):
+                actor = self._display_combatant(aid)
+                if result is TurnResult.IMPOSSIBLE:
+                    return f"{actor} attempts to turn undead — impossible!"
+                if result is TurnResult.FAILED:
+                    return f"{actor} attempts to turn undead — failed (rolled {roll}, needed {tn})."
+                label = "destroyed" if result is TurnResult.DESTROYED else "turned"
+                return f"{actor} turns undead — {label}!"
+
+            case UndeadTurned(
+                actor_id=aid, target_id=tid, destroyed=destroyed, hd_spent=hd
+            ):
+                target = self._display_combatant(tid)
+                if destroyed:
+                    return f"{target} is destroyed! ({hd} HD)"
+                return f"{target} is turned and flees! ({hd} HD)"
+
             case EncounterFaulted(state=st, error_type=et, message=msg):
                 return f"FAULT in {st.name}: [{et}] {msg}"
 
@@ -286,6 +322,18 @@ class ColorEventFormatter:
             case EntityDied():
                 return Text(plain, style="bold red")
             case EntityFled():
+                return Text(plain, style="yellow")
+            case GroupTargetsResolved():
+                return Text(plain, style="cyan")
+            case TurnUndeadAttempted(result=result):
+                if result is TurnResult.DESTROYED:
+                    return Text(plain, style="bold red")
+                if result is TurnResult.TURNED:
+                    return Text(plain, style="bold cyan")
+                return Text(plain, style="yellow")
+            case UndeadTurned(destroyed=destroyed):
+                if destroyed:
+                    return Text(plain, style="bold red")
                 return Text(plain, style="yellow")
             case VictoryDetermined(outcome=outcome):
                 if outcome == EncounterOutcome.PARTY_VICTORY:
