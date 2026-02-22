@@ -7,6 +7,7 @@ from osrlib.combat import (
     CombatSide,
     EncounterState,
     NeedAction,
+    TurnResult,
     TurnUndeadAction,
 )
 from osrlib.combat.effects import ApplyConditionEffect, DamageEffect, FleeEffect
@@ -128,10 +129,10 @@ def test_turn_undead_validate_no_undead(default_party, goblin_party):
 
 
 def test_turn_undead_impossible(default_party):
-    """Level 1 cleric vs 4 HD undead (tier 4): impossible."""
+    """Level 1 cleric vs 3 HD Wight (tier 4): impossible."""
     stats = MonsterStatsBlock(
         name="Wight",
-        hit_dice="4d8",
+        hit_dice="3d8",
         num_appearing="1",
         morale=12,
         is_undead=True,
@@ -154,7 +155,7 @@ def test_turn_undead_impossible(default_party):
     result = action.execute(engine._ctx)
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "impossible"
+    assert attempt_events[0].result is TurnResult.IMPOSSIBLE
 
 
 def test_turn_undead_success_roll(default_party):
@@ -198,7 +199,7 @@ def test_turn_undead_success_roll(default_party):
 
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "turned"
+    assert attempt_events[0].result is TurnResult.TURNED
 
     turned_events = find_events(list(result.events), UndeadTurned)
     assert len(turned_events) > 0
@@ -238,7 +239,7 @@ def test_turn_undead_failure_roll(default_party):
 
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "failed"
+    assert attempt_events[0].result is TurnResult.FAILED
 
     turned_events = find_events(list(result.events), UndeadTurned)
     assert len(turned_events) == 0
@@ -281,7 +282,7 @@ def test_turn_undead_auto_turn(default_party):
 
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "turned"
+    assert attempt_events[0].result is TurnResult.TURNED
 
     # Should have flee effects for turned undead
     flee_effects = [e for e in result.effects if isinstance(e, FleeEffect)]
@@ -326,7 +327,7 @@ def test_turn_undead_auto_destroy(default_party):
 
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "destroyed"
+    assert attempt_events[0].result is TurnResult.DESTROYED
 
     # Should have damage effects for destroyed undead (not flee)
     damage_effects = [e for e in result.effects if isinstance(e, DamageEffect)]
@@ -353,7 +354,7 @@ def test_turn_undead_lowest_hd_first(default_party):
     )
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    # Level 3: auto-turn (T) on tier 1 skeletons, need 7 on tier 3 wights
+    # Level 3: auto-turn (T) on tier 1 skeletons, need 9 on tier 4 Wights
     cleric_pc.grant_xp(1500)  # -> level 2
     cleric_pc.grant_xp(1500)  # -> level 3
     assert cleric_pc.level == 3
@@ -618,7 +619,7 @@ def test_turn_undead_mixed_tiers_high_tier_impossible(default_party):
     # Should succeed overall (skeleton is tier 1, auto-turn for level 2)
     attempt_events = find_events(list(result.events), TurnUndeadAttempted)
     assert len(attempt_events) == 1
-    assert attempt_events[0].result == "turned"
+    assert attempt_events[0].result is TurnResult.TURNED
 
     turned_events = find_events(list(result.events), UndeadTurned)
     # Only skeleton should be affected — vampire tier 8 is impossible at level 2

@@ -8,6 +8,15 @@ from osrlib.combat.intents import ActionIntent
 from osrlib.combat.state import EncounterOutcome, EncounterState
 
 
+class TurnResult(Enum):
+    """Outcome of a Turn Undead attempt."""
+
+    IMPOSSIBLE = auto()
+    FAILED = auto()
+    TURNED = auto()
+    DESTROYED = auto()
+
+
 class RejectionCode(Enum):
     """Enumerated rejection codes for combat action validation failures."""
 
@@ -342,7 +351,7 @@ class TurnUndeadAttempted(EncounterEvent):
     actor_id: str
     roll: int
     target_number: int | None
-    result: str  # "impossible", "failed", "turned", "destroyed"
+    result: TurnResult
 
 
 @dataclass(frozen=True)

@@ -35,6 +35,7 @@ from osrlib.combat.events import (
     TurnQueueBuilt,
     TurnSkipped,
     TurnStarted,
+    TurnResult,
     TurnUndeadAttempted,
     UndeadTurned,
     VictoryDetermined,
@@ -262,11 +263,12 @@ class EventFormatter:
                 actor_id=aid, roll=roll, target_number=tn, result=result
             ):
                 actor = self._display_combatant(aid)
-                if result == "impossible":
+                if result is TurnResult.IMPOSSIBLE:
                     return f"{actor} attempts to turn undead — impossible!"
-                if result == "failed":
+                if result is TurnResult.FAILED:
                     return f"{actor} attempts to turn undead — failed (rolled {roll}, needed {tn})."
-                return f"{actor} turns undead — {result}!"
+                label = "destroyed" if result is TurnResult.DESTROYED else "turned"
+                return f"{actor} turns undead — {label}!"
 
             case UndeadTurned(
                 actor_id=aid, target_id=tid, destroyed=destroyed, hd_spent=hd
@@ -324,9 +326,9 @@ class ColorEventFormatter:
             case GroupTargetsResolved():
                 return Text(plain, style="cyan")
             case TurnUndeadAttempted(result=result):
-                if result == "destroyed":
+                if result is TurnResult.DESTROYED:
                     return Text(plain, style="bold red")
-                if result == "turned":
+                if result is TurnResult.TURNED:
                     return Text(plain, style="bold cyan")
                 return Text(plain, style="yellow")
             case UndeadTurned(destroyed=destroyed):

@@ -266,21 +266,20 @@ def test_saving_throw_penalty_backward_compat(default_party, goblin_party):
         auto_resolve_intents=False,
     )
 
-    # Use Light (offensive) which has a save but no penalty fields
+    # Use Fireball which has save_type=DRAGON_BREATH but no single_save_penalty
     caster_cid, _ = find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
     monster_cid = engine._ctx.living(CombatSide.MONSTER)[0].id
     engine._ctx.current_combatant_id = caster_cid
 
     action = CastSpellAction(
         actor_id=caster_cid,
-        spell_id="light_offensive",
-        slot_level=1,
+        spell_id="fireball",
+        slot_level=3,
         target_ids=(monster_cid,),
     )
     result = action.execute(engine._ctx)
 
     save_events = find_events(list(result.events), SavingThrowRolled)
-    # Light has a save — should have at least one
-    # But since it uses default penalty=0, verify backward compat
+    assert len(save_events) >= 1, "Fireball should trigger at least one saving throw"
     for se in save_events:
         assert se.penalty == 0

@@ -546,7 +546,7 @@ class CombatEngine:
                                 )
                             )
                         case _:
-                            # SINGLE_ENEMY, ENEMY_GROUP: one choice per enemy
+                            # SINGLE_ENEMY: one choice per enemy
                             for target in living_targets:
                                 choices.append(
                                     ActionChoice(

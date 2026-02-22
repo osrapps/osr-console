@@ -26,6 +26,7 @@ from osrlib.combat.events import (
     RejectionCode,
     SavingThrowRolled,
     SpellCast,
+    TurnResult,
     TurnUndeadAttempted,
     UndeadTurned,
 )
@@ -805,14 +806,21 @@ class TurnUndeadAction(CombatAction):
 
     @staticmethod
     def _get_undead_tier(monster: Monster) -> int:
-        """Map a monster to its undead tier (1-8) for the turn table."""
+        """Map a monster to its undead tier (1-8) for the turn table.
+
+        The table columns are: 1=Skeleton, 2=Zombie, 2*=Ghoul (index 2),
+        3=Wight (index 3), 4=Wraith, 5=Mummy, 6=Spectre, 7-9=Vampire.
+        Because the 2* slot inserts an extra column between HD 2 and HD 3,
+        monsters with HD >= 3 must shift +1 to land on the correct column.
+        """
         hd = monster.hp_roll.num_dice
-        num_special = getattr(monster, "_num_special_abilities", 0)
-        tier = min(hd, 7)
-        # 2* case (e.g. Ghouls): HD 2 with special abilities bumps tier
-        if hd == 2 and num_special > 0:
-            tier += 1
-        return max(min(tier, 8), 1)
+        if hd <= 1:
+            return 1
+        if hd == 2:
+            num_special = monster.num_special_abilities
+            return 3 if num_special > 0 else 2
+        # HD 3+ shift by 1 to account for the 2* slot
+        return min(hd + 1, 8)
 
     def validate(self, ctx: CombatContext) -> tuple[Rejection, ...]:
         actor_ref = ctx.combatants.get(self.actor_id)
@@ -892,7 +900,7 @@ class TurnUndeadAction(CombatAction):
                     actor_id=self.actor_id,
                     roll=0,
                     target_number=None,
-                    result="impossible",
+                    result=TurnResult.IMPOSSIBLE,
                 )
             )
             return ActionResult(events=tuple(events), effects=tuple(effects))
@@ -907,7 +915,7 @@ class TurnUndeadAction(CombatAction):
                     actor_id=self.actor_id,
                     roll=0,
                     target_number=None,
-                    result="impossible",
+                    result=TurnResult.IMPOSSIBLE,
                 )
             )
             return ActionResult(events=tuple(events), effects=tuple(effects))
@@ -921,25 +929,22 @@ class TurnUndeadAction(CombatAction):
                         actor_id=self.actor_id,
                         roll=turn_roll,
                         target_number=table_entry,
-                        result="failed",
+                        result=TurnResult.FAILED,
                     )
                 )
                 return ActionResult(events=tuple(events), effects=tuple(effects))
         else:
             turn_roll = 0
 
-        # Determine overall result string from the best-tier entry
-        if table_entry == -1:
-            result_str = "destroyed"
-        else:
-            result_str = "turned"
+        # Determine overall result from the best-tier entry
+        overall_result = TurnResult.DESTROYED if table_entry == -1 else TurnResult.TURNED
 
         events.append(
             TurnUndeadAttempted(
                 actor_id=self.actor_id,
                 roll=turn_roll,
                 target_number=table_entry if table_entry > 0 else None,
-                result=result_str,
+                result=overall_result,
             )
         )
 

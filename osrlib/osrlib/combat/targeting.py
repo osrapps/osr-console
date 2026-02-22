@@ -12,7 +12,6 @@ class TargetMode(Enum):
     SELF = auto()  # caster only (Shield)
     SINGLE_ALLY = auto()  # pick one ally (Cure Light Wounds)
     ALL_ALLIES = auto()  # entire friendly side (Bless)
-    ENEMY_GROUP = auto()  # up to N random enemies (Hold Person group)
     HD_POOL = auto()  # HD-pool targeting (Sleep): affects lowest-HD first
 
 

@@ -227,7 +227,7 @@ class Monster:
         self.morale = monster_stats.morale
         self.alignment = monster_stats.alignment
         self.is_undead = monster_stats.is_undead
-        self._num_special_abilities = monster_stats.num_special_abilities
+        self.num_special_abilities = monster_stats.num_special_abilities
 
         self.treasure = Treasure(monster_stats.treasure_type)
 
