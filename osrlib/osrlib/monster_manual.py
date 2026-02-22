@@ -105,7 +105,8 @@ ghoul_stats = MonsterStatsBlock(
     save_as_level=2,
     morale=9,
     treasure_type=TreasureType.B,
-    alignment=Alignment.CHAOTIC
+    alignment=Alignment.CHAOTIC,
+    is_undead=True,
 )
 
 gnoll_stats = MonsterStatsBlock(
@@ -241,7 +242,8 @@ skeleton_stats = MonsterStatsBlock(
     save_as_level=1,
     morale=12,  # Skeletons are unyielding, hence a high morale
     treasure_type=TreasureType.P,  # (B) is noted but typically skeletons carry no treasure
-    alignment=Alignment.NEUTRAL
+    alignment=Alignment.NEUTRAL,
+    is_undead=True,
 )
 
 troglodyte_stats = MonsterStatsBlock(
@@ -292,7 +294,8 @@ zombie_stats = MonsterStatsBlock(
     save_as_level=1,
     morale=12,  # Zombies are unyielding, hence a high morale
     treasure_type=TreasureType.NONE,
-    alignment=Alignment.CHAOTIC
+    alignment=Alignment.CHAOTIC,
+    is_undead=True,
 )
 
 monster_stats_blocks = [

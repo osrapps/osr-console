@@ -48,4 +48,11 @@ class FleeIntent:
     actor_id: str
 
 
-ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent | UseItemIntent | FleeIntent
+@dataclass(frozen=True)
+class TurnUndeadIntent:
+    """Intent to use the Turn Undead cleric ability."""
+
+    actor_id: str
+
+
+ActionIntent = MeleeAttackIntent | RangedAttackIntent | CastSpellIntent | UseItemIntent | FleeIntent | TurnUndeadIntent

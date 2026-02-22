@@ -4,7 +4,7 @@ Manages active conditions (held, asleep, blinded) on combatants, including
 duration tracking, turn-skip enforcement, and break-on-damage behavior.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -58,8 +58,7 @@ class ConditionTracker:
     def has(self, target_id: str, condition_id: str) -> bool:
         """Check if a combatant has a specific active condition."""
         return any(
-            c.condition_id == condition_id
-            for c in self._conditions.get(target_id, [])
+            c.condition_id == condition_id for c in self._conditions.get(target_id, [])
         )
 
     def get_all(self, target_id: str) -> list[ActiveCondition]:
