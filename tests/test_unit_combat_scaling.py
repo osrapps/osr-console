@@ -160,7 +160,7 @@ def test_cleric_sees_reversed_spells(default_party, goblin_party):
     )
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    cleric_pc.grant_xp(1500)
+    cleric_pc.grant_xp(2000)
 
     known = {s.name for s in cleric_pc.inventory.spells}
     assert "Cure Light Wounds" in known

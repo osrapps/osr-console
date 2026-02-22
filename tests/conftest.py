@@ -45,7 +45,7 @@ def default_party_with_cleric_spells():
     equip_party(party)
     for pc in party.members:
         if pc.character_class.class_type == CharacterClassType.CLERIC:
-            pc.grant_xp(1500)
+            pc.grant_xp(2000)
     return party
 
 
