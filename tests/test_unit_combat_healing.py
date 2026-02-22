@@ -31,8 +31,12 @@ def test_cure_light_wounds_heals_ally(default_party_with_cleric_spells, goblin_p
     cleric_cid, _ = find_pc_with_class(engine, CharacterClassType.CLERIC)
 
     fighter_cid, fighter_pc = find_pc_with_class(engine, CharacterClassType.FIGHTER)
+    # Ensure fighter has enough HP to take meaningful damage
+    if fighter_pc.hit_points < 3:
+        fighter_pc.character_class.max_hp = 3
+        fighter_pc.character_class.hp = 3
     original_hp = fighter_pc.hit_points
-    damage = min(2, original_hp - 1)
+    damage = 2
     fighter_pc.apply_damage(damage)
     assert fighter_pc.hit_points == original_hp - damage
 
