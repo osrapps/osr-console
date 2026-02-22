@@ -18,10 +18,28 @@ from osrlib.player_character import PlayerCharacter
 
 from conftest import find_events, find_pc_with_class
 
+from osrlib.enums import AbilityType, ModifierType
+
 
 # ---------------------------------------------------------------------------
-# Helper: create undead monster party
+# Helpers
 # ---------------------------------------------------------------------------
+
+
+def _level_up_pc(pc: PlayerCharacter, target_level: int) -> None:
+    """Set a PC to *target_level* by writing XP directly, bypassing prime requisite adjustment.
+
+    ``grant_xp`` applies prime-requisite-based XP modifiers (up to -20% for
+    low WIS), which makes tests that depend on specific cleric levels flaky.
+    This helper sets ``character_class.xp`` to the exact threshold for each
+    intermediate level and calls ``level_up`` one level at a time.
+    """
+    hp_mod = pc.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
+    while pc.level < target_level:
+        next_xp = pc.character_class.xp_needed_for_next_level
+        pc.character_class.xp = next_xp
+        leveled = pc.character_class.level_up(hp_mod)
+        assert leveled, f"Failed to level {pc.name} to {pc.level + 1}"
 
 
 def _skeleton_party(count: int = 2) -> MonsterParty:
@@ -257,8 +275,7 @@ def test_turn_undead_auto_turn(default_party):
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
     # Level 2: auto-turn (T) for tier 1 skeletons
-    cleric_pc.grant_xp(1500)
-    assert cleric_pc.level == 2
+    _level_up_pc(cleric_pc, 2)
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod
@@ -301,10 +318,7 @@ def test_turn_undead_auto_destroy(default_party):
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
     # Level 4: auto-destroy (D) for tier 1 skeletons
-    cleric_pc.grant_xp(1500)  # -> level 2
-    cleric_pc.grant_xp(1500)  # -> level 3
-    cleric_pc.grant_xp(3000)  # -> level 4
-    assert cleric_pc.level == 4
+    _level_up_pc(cleric_pc, 4)
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod
@@ -355,9 +369,7 @@ def test_turn_undead_lowest_hd_first(default_party):
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
     # Level 3: auto-turn (T) on tier 1 skeletons, need 9 on tier 4 Wights
-    cleric_pc.grant_xp(1500)  # -> level 2
-    cleric_pc.grant_xp(1500)  # -> level 3
-    assert cleric_pc.level == 3
+    _level_up_pc(cleric_pc, 3)
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod
@@ -401,9 +413,7 @@ def test_turn_undead_at_least_one(default_party):
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
     # Level 3: auto-turn (T) on tier 2 zombies
-    cleric_pc.grant_xp(1500)  # -> level 2
-    cleric_pc.grant_xp(1500)  # -> level 3
-    assert cleric_pc.level == 3
+    _level_up_pc(cleric_pc, 3)
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod
@@ -443,8 +453,7 @@ def test_turn_undead_flee_effect(default_party):
     )
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    cleric_pc.grant_xp(1500)  # -> level 2 (auto-turn T for tier 1)
-    assert cleric_pc.level == 2
+    _level_up_pc(cleric_pc, 2)  # auto-turn T for tier 1
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod
@@ -485,10 +494,7 @@ def test_turn_undead_destroy_effect(default_party):
     )
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    cleric_pc.grant_xp(1500)  # -> level 2
-    cleric_pc.grant_xp(1500)  # -> level 3
-    cleric_pc.grant_xp(3000)  # -> level 4 (auto-destroy D for tier 1)
-    assert cleric_pc.level == 4
+    _level_up_pc(cleric_pc, 4)  # auto-destroy D for tier 1
     engine._ctx.current_combatant_id = cleric_cid
 
     monster_ref = engine._ctx.living(CombatSide.MONSTER)[0]
@@ -593,8 +599,7 @@ def test_turn_undead_mixed_tiers_high_tier_impossible(default_party):
     )
 
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    cleric_pc.grant_xp(1500)  # -> level 2
-    assert cleric_pc.level == 2
+    _level_up_pc(cleric_pc, 2)
     engine._ctx.current_combatant_id = cleric_cid
 
     import osrlib.combat.actions as actions_mod

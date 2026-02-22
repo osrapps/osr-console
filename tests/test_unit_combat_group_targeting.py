@@ -13,7 +13,7 @@ from osrlib.combat.effects import ApplyConditionEffect
 from osrlib.combat.events import GroupTargetsResolved, SavingThrowRolled
 from osrlib.combat.spells import get_spell
 from osrlib.combat.targeting import resolve_random_group
-from osrlib.enums import CharacterClassType
+from osrlib.enums import AbilityType, CharacterClassType, ModifierType
 from osrlib.monster import Monster, MonsterParty, MonsterStatsBlock
 from osrlib.player_character import Alignment, PlayerCharacter
 from osrlib.treasure import TreasureType
@@ -226,9 +226,11 @@ def test_engine_dual_mode_choices(default_party, goblin_party):
 
     # Advance engine to the cleric's NeedAction
     cleric_cid, cleric_pc = find_pc_with_class(engine, CharacterClassType.CLERIC)
-    # Level up to 4+ (grant_xp only levels one at a time)
-    for _ in range(5):
-        cleric_pc.grant_xp(6000)
+    # Level up to 4+ so the cleric has level 2 spell slots for Hold Person
+    hp_mod = cleric_pc.abilities[AbilityType.CONSTITUTION].modifiers[ModifierType.HP]
+    while cleric_pc.level < 4:
+        cleric_pc.character_class.xp = cleric_pc.character_class.xp_needed_for_next_level
+        cleric_pc.character_class.level_up(hp_mod)
     # Add Hold Person to known spells
     from osrlib.item import Spell
     cleric_pc.inventory.add_item(Spell("Hold Person", 2))
