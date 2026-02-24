@@ -64,6 +64,9 @@ CASTER_CLASSES = {
     CharacterClassType.ELF,
 }
 
+STEP_EQUIPMENT = 6
+STEP_SPELLS = 7
+
 STEP_TITLES = [
     "Roll ability scores",
     "Choose class",
@@ -106,12 +109,18 @@ class CharCreationScreen(Screen):
 
     @property
     def _last_step(self) -> int:
-        return 7 if self._is_caster else 6
+        return STEP_SPELLS if self._is_caster else STEP_EQUIPMENT
+
+    @property
+    def _max_spell_picks(self) -> int:
+        if self._class_type == CharacterClassType.CLERIC:
+            return 2
+        return len(self._available_spells)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static(
-            "Step 1 of 7: Roll ability scores", id="step-title", classes="gold-heading"
+            "Step 1: Roll ability scores", id="step-title", classes="gold-heading"
         )
         yield Vertical(id="step-content")
         with Horizontal(id="nav-buttons"):
@@ -388,7 +397,6 @@ class CharCreationScreen(Screen):
                     classes="gold-heading",
                 )
             )
-            max_picks = 2
         else:
             # MU and Elf get 1 first-level slot at level 1.
             # They "know" all selected spells (spellbook) but can only memorize 1.
@@ -399,11 +407,10 @@ class CharCreationScreen(Screen):
                     classes="gold-heading",
                 )
             )
-            max_picks = len(self._available_spells)
 
         container.mount(
             Static(
-                f"Selected: {len(self._selected_spells)}/{max_picks}",
+                f"Selected: {len(self._selected_spells)}/{self._max_spell_picks}",
                 id="spell-count",
             )
         )
@@ -442,6 +449,8 @@ class CharCreationScreen(Screen):
     def class_selected(self, event: RadioSet.Changed) -> None:
         if event.pressed and event.pressed.name:
             self._class_type = CharacterClassType[event.pressed.name]
+            self._selected_spells.clear()
+            self._available_spells.clear()
 
     @on(RadioSet.Changed, "#alignment-radio")
     def alignment_selected(self, event: RadioSet.Changed) -> None:
@@ -454,9 +463,9 @@ class CharCreationScreen(Screen):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Dispatch row selection to the appropriate step handler."""
-        if self.step == 6:
+        if self.step == STEP_EQUIPMENT:
             self._handle_shop_purchase(event)
-        elif self.step == 7:
+        elif self.step == STEP_SPELLS:
             self._handle_spell_toggle(event)
 
     def _handle_shop_purchase(self, event: DataTable.RowSelected) -> None:
@@ -500,31 +509,25 @@ class CharCreationScreen(Screen):
         if spell_name in self._selected_spells:
             self._selected_spells.remove(spell_name)
         else:
-            # Enforce max picks for Clerics
-            if self._class_type == CharacterClassType.CLERIC:
-                max_picks = 2
-            else:
-                max_picks = len(self._available_spells)
-            if len(self._selected_spells) >= max_picks:
+            if len(self._selected_spells) >= self._max_spell_picks:
                 self.notify(
-                    f"You can select up to {max_picks} spells.", severity="warning"
+                    f"You can select up to {self._max_spell_picks} spells.",
+                    severity="warning",
                 )
                 return
             self._selected_spells.append(spell_name)
 
         # Update the selected column and count display in-place
         table = self.query_one("#spell-table", DataTable)
-        for idx, name in enumerate(self._available_spells):
+        for name in self._available_spells:
             selected = "[x]" if name in self._selected_spells else "[ ]"
             row_key = f"spell_{name}"
             table.update_cell(row_key, "Selected", Text(selected, justify="center"))
 
-        if self._class_type == CharacterClassType.CLERIC:
-            max_picks = 2
-        else:
-            max_picks = len(self._available_spells)
         count_display = self.query_one("#spell-count", Static)
-        count_display.update(f"Selected: {len(self._selected_spells)}/{max_picks}")
+        count_display.update(
+            f"Selected: {len(self._selected_spells)}/{self._max_spell_picks}"
+        )
 
     # --- Validation ---
 
