@@ -823,10 +823,10 @@ def test_spell_choices_filter_to_known_spells(default_party, weak_goblin_party):
         auto_resolve_intents=False,
     )
 
-    # Find a MU (equipped with only Magic Missile by equip_party)
+    # Find a MU (equipped with Magic Missile and Sleep by equip_party)
     mu_cid, mu_pc = _find_pc_with_class(engine, CharacterClassType.MAGIC_USER)
 
-    # Verify MU only has Magic Missile in inventory
+    # Verify MU has Magic Missile (and Sleep) in inventory
     known_spell_names = {s.name for s in mu_pc.inventory.spells}
     assert "Magic Missile" in known_spell_names
 
@@ -848,7 +848,7 @@ def test_spell_choices_filter_to_known_spells(default_party, weak_goblin_party):
             f"Spell choice '{spell_name}' not in PC's known spells: {known_spell_names}"
         )
 
-    # Spells NOT in inventory should not appear (e.g., Sleep if MU doesn't have it)
+    # Only spells in inventory should appear as choices
     choice_spell_names = {c.ui_args.get("spell_name") for c in spell_choices}
     for name in choice_spell_names:
         assert name in known_spell_names

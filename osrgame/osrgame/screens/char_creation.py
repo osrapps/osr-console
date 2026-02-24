@@ -1,4 +1,8 @@
-"""7-step character creation wizard following OSE SRD procedure."""
+"""Character creation wizard following OSE SRD procedure.
+
+Non-casters complete in 7 steps; casters (Cleric, Magic-User, Elf) get an
+8th step for spell selection.
+"""
 
 from textual import on
 from textual.app import ComposeResult
@@ -32,9 +36,11 @@ from osrlib.enums import AbilityType, CharacterClassType
 from osrlib.item_factories import (
     ArmorFactory,
     EquipmentFactory,
+    SpellFactory,
     WeaponFactory,
     armor_data,
     equipment_data,
+    spell_data,
     weapon_data,
 )
 from osrlib.player_character import Alignment, PlayerCharacter
@@ -52,6 +58,12 @@ PLAYABLE_CLASSES = [
     CharacterClassType.THIEF,
 ]
 
+CASTER_CLASSES = {
+    CharacterClassType.CLERIC,
+    CharacterClassType.MAGIC_USER,
+    CharacterClassType.ELF,
+}
+
 STEP_TITLES = [
     "Roll ability scores",
     "Choose class",
@@ -60,11 +72,12 @@ STEP_TITLES = [
     "Roll hit points",
     "Name your character",
     "Buy equipment",
+    "Choose spells",
 ]
 
 
 class CharCreationScreen(Screen):
-    """7-step character creation wizard."""
+    """Character creation wizard with conditional spell selection step."""
 
     BINDINGS = [
         ("escape", "cancel", "Cancel"),
@@ -82,6 +95,18 @@ class CharCreationScreen(Screen):
         self._gold: int = 0
         self._purchased_items: list[str] = []
         self._use_3d6: bool = True
+        self._selected_spells: list[str] = []
+        self._available_spells: list[str] = []
+
+    # --- Properties ---
+
+    @property
+    def _is_caster(self) -> bool:
+        return self._class_type in CASTER_CLASSES
+
+    @property
+    def _last_step(self) -> int:
+        return 7 if self._is_caster else 6
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -101,11 +126,12 @@ class CharCreationScreen(Screen):
         await self._render_step()
 
     def watch_step(self, step: int) -> None:
+        total = self._last_step + 1
         title = self.query_one("#step-title", Static)
-        title.update(f"Step {step + 1} of 7: {STEP_TITLES[step]}")
+        title.update(f"Step {step + 1} of {total}: {STEP_TITLES[step]}")
         self.query_one("#btn-back").disabled = step == 0
         btn_next = self.query_one("#btn-next", Button)
-        btn_next.label = "Finish" if step == 6 else "Next"
+        btn_next.label = "Finish" if step == self._last_step else "Next"
 
     # --- Navigation ---
 
@@ -113,7 +139,7 @@ class CharCreationScreen(Screen):
     async def next_step(self) -> None:
         if not self._check_step_complete():
             return
-        if self.step == 6:
+        if self.step == self._last_step:
             self._finish()
         else:
             self.step += 1
@@ -167,6 +193,7 @@ class CharCreationScreen(Screen):
             self._render_step_hp,
             self._render_step_name,
             self._render_step_equipment,
+            self._render_step_spells,
         ][self.step]
         render_fn(content)
 
@@ -339,6 +366,61 @@ class CharCreationScreen(Screen):
                 )
             )
 
+    def _render_step_spells(self, container: Vertical) -> None:
+        """Render the spell selection step for caster classes."""
+        self._available_spells = []
+
+        # Determine which spells this class can learn at spell level 1
+        for name, info in spell_data.items():
+            if info["spell_level"] != 1:
+                continue
+            if self._class_type not in info["usable_by"]:
+                continue
+            self._available_spells.append(name)
+
+        if self._class_type == CharacterClassType.CLERIC:
+            # Clerics get no spell slots at level 1; they unlock casting at level 2.
+            # Let them pick up to 2 spells they'll have ready when they level up.
+            container.mount(
+                Static(
+                    "Clerics gain spell slots at level 2. Choose up to 2 spells to\n"
+                    "prepare for when you reach that level.",
+                    classes="gold-heading",
+                )
+            )
+            max_picks = 2
+        else:
+            # MU and Elf get 1 first-level slot at level 1.
+            # They "know" all selected spells (spellbook) but can only memorize 1.
+            container.mount(
+                Static(
+                    "Select the spells for your spellbook. You have 1 spell slot\n"
+                    "at level 1, but known spells remain available as you level up.",
+                    classes="gold-heading",
+                )
+            )
+            max_picks = len(self._available_spells)
+
+        container.mount(
+            Static(
+                f"Selected: {len(self._selected_spells)}/{max_picks}",
+                id="spell-count",
+            )
+        )
+
+        table = DataTable(id="spell-table", cursor_type="row")
+        container.mount(table)
+        table.add_columns("Spell", "Level", "Selected")
+        for name in self._available_spells:
+            info = spell_data[name]
+            selected = "[x]" if name in self._selected_spells else "[ ]"
+            table.add_row(
+                name,
+                Text(str(info["spell_level"]), justify="center"),
+                Text(selected, justify="center"),
+                key=f"spell_{name}",
+            )
+
     # --- Event handlers ---
 
     @on(Button.Pressed, "#btn-reroll")
@@ -371,9 +453,14 @@ class CharCreationScreen(Screen):
         self._name = event.value.strip()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Dispatch row selection to the appropriate step handler."""
+        if self.step == 6:
+            self._handle_shop_purchase(event)
+        elif self.step == 7:
+            self._handle_spell_toggle(event)
+
+    def _handle_shop_purchase(self, event: DataTable.RowSelected) -> None:
         """Buy an item from the shop table."""
-        if self.step != 6:
-            return
         event.stop()
         row_idx = event.cursor_row
         if row_idx < 0 or row_idx >= len(self._shop_items):
@@ -400,6 +487,44 @@ class CharCreationScreen(Screen):
                     id="purchased-list",
                 )
             )
+
+    def _handle_spell_toggle(self, event: DataTable.RowSelected) -> None:
+        """Toggle a spell selection on/off."""
+        event.stop()
+        row_idx = event.cursor_row
+        if row_idx < 0 or row_idx >= len(self._available_spells):
+            return
+
+        spell_name = self._available_spells[row_idx]
+
+        if spell_name in self._selected_spells:
+            self._selected_spells.remove(spell_name)
+        else:
+            # Enforce max picks for Clerics
+            if self._class_type == CharacterClassType.CLERIC:
+                max_picks = 2
+            else:
+                max_picks = len(self._available_spells)
+            if len(self._selected_spells) >= max_picks:
+                self.notify(
+                    f"You can select up to {max_picks} spells.", severity="warning"
+                )
+                return
+            self._selected_spells.append(spell_name)
+
+        # Update the selected column and count display in-place
+        table = self.query_one("#spell-table", DataTable)
+        for idx, name in enumerate(self._available_spells):
+            selected = "[x]" if name in self._selected_spells else "[ ]"
+            row_key = f"spell_{name}"
+            table.update_cell(row_key, "Selected", Text(selected, justify="center"))
+
+        if self._class_type == CharacterClassType.CLERIC:
+            max_picks = 2
+        else:
+            max_picks = len(self._available_spells)
+        count_display = self.query_one("#spell-count", Static)
+        count_display.update(f"Selected: {len(self._selected_spells)}/{max_picks}")
 
     # --- Validation ---
 
@@ -444,6 +569,14 @@ class CharCreationScreen(Screen):
                 pc.inventory.add_item(item)
             except Exception:
                 pass  # Skip items that can't be created
+
+        # Add selected spells to inventory
+        for spell_name in self._selected_spells:
+            try:
+                spell = SpellFactory.create_spell(spell_name)
+                pc.inventory.add_item(spell)
+            except Exception:
+                pass
 
         # Auto-equip the first weapon and armor
         for item in pc.inventory.all_items:
