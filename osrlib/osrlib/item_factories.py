@@ -519,6 +519,18 @@ spell_data = {
         "range": 0,
         "usable_by": {CharacterClassType.CLERIC},
     },
+    "Shield": {
+        "spell_level": 1,
+        "damage_die": None,
+        "range": 0,
+        "usable_by": {CharacterClassType.MAGIC_USER, CharacterClassType.ELF},
+    },
+    "Bless": {
+        "spell_level": 2,
+        "damage_die": None,
+        "range": 0,
+        "usable_by": {CharacterClassType.CLERIC},
+    },
 }
 
 
@@ -649,12 +661,14 @@ def equip_magic_user(character: "PlayerCharacter"):
     backpack = EquipmentFactory.create_item("Backpack")
     spellbook = EquipmentFactory.create_item("Spell Book")
     magic_missile = SpellFactory.create_spell("Magic Missile")
+    sleep_spell = SpellFactory.create_spell("Sleep")
 
     character.inventory.add_item(dagger)
     character.inventory.add_item(robe)
     character.inventory.add_item(backpack)
     character.inventory.add_item(spellbook)
     character.inventory.add_item(magic_missile)
+    character.inventory.add_item(sleep_spell)
 
     character.inventory.equip_item(dagger)
 
